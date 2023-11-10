@@ -63,6 +63,54 @@ class Type(ABC):
         """
         return is_compatible_type(self, t_right)
 
+####
+class _ListType(Type):
+    """Represents a list type composed of elements of a given type."""
+    def __init__(self, values=None):
+        if values is None:
+            self._values = []
+            self._elements_type = None
+        else:
+            self._values = values
+            self._elements_type = type(self._values[0])
+
+    def __repr__(self) -> str:
+        values_str = ", ".join(map(str, self._values))
+        return f"[{values_str}]"
+
+    def __getitem__(self, index):
+        return self._values[index] @property
+
+    def elements_type(self) -> Type:
+        """Returns the type of elements in this list."""
+        return self._elements_type @property
+
+    def is_list_type(self) -> bool:
+        """Returns true iff is a list type."""
+        return True
+    def insert_element(self, element, position=None):
+        """Inserts an element at the specified position in the list."""
+        if not isinstance(element, self._elements_type):
+            raise TypeError("The element type is not compatible with the list type.")
+        if position is None:
+            self._values.append(element)
+        else:
+            if position < 0 or position > len(self._values):
+                raise IndexError("Insertion position out of range.")
+            self._values.insert(position, element)
+
+    def remove_element(self, position=None):
+        """Removes the element at the specified position from the list."""
+        if position is None:
+            if len(self._values) > 0: self._values.pop()
+            else:
+                raise IndexError("List is empty, cannot remove elements.")
+        else:
+            if position < 0 or position >= len(self._values):
+                raise IndexError("Deletion position out of range.")
+            self._values.pop(position)
+
+###
 
 class _BoolType(Type):
     """Represents the boolean type."""
