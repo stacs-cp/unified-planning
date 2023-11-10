@@ -63,7 +63,7 @@ class Type(ABC):
         """
         return is_compatible_type(self, t_right)
 
-####
+
 class _ListType(Type):
     """Represents a list type composed of elements of a given type."""
     def __init__(self, values=None):
@@ -79,15 +79,18 @@ class _ListType(Type):
         return f"[{values_str}]"
 
     def __getitem__(self, index):
-        return self._values[index] @property
+        return self._values[index]
 
+    @property
     def elements_type(self) -> Type:
         """Returns the type of elements in this list."""
-        return self._elements_type @property
+        return self._elements_type
 
+    @property
     def is_list_type(self) -> bool:
         """Returns true iff is a list type."""
         return True
+
     def insert_element(self, element, position=None):
         """Inserts an element at the specified position in the list."""
         if not isinstance(element, self._elements_type):
@@ -110,7 +113,6 @@ class _ListType(Type):
                 raise IndexError("Deletion position out of range.")
             self._values.pop(position)
 
-###
 
 class _BoolType(Type):
     """Represents the boolean type."""
