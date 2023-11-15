@@ -454,7 +454,13 @@ def BoolType() -> unified_planning.model.types.Type:
     """Returns the global environment's boolean type."""
     return get_environment().type_manager.BoolType()
 
+def ListType(
+        min_elements: Optional[int] = None, max_elements: Optional[int] = None, 
+        elements_type: Optional[Type] = None
+) -> unified_planning.model.types.Type:
+    return get_environment().type_manager.ListType(min_elements, max_elements, elements_type)
 
+        
 def IntType(
     lower_bound: Optional[int] = None, upper_bound: Optional[int] = None
 ) -> unified_planning.model.types.Type:

@@ -24,6 +24,10 @@ from fractions import Fraction
 class Type(ABC):
     """Base class for representing a `Type`."""
 
+    def is_list_type(self) -> bool:
+        """Returns true iff is a list type."""
+        return True
+
     def is_bool_type(self) -> bool:
         """Returns `True` iff is `boolean Type`."""
         return False
@@ -64,22 +68,34 @@ class Type(ABC):
         return is_compatible_type(self, t_right)
 
 
-class _ListType(Type):
-    """Represents a list type composed of elements of a given type."""
-    def __init__(self, values=None):
-        if values is None:
-            self._values = []
-            self._elements_type = None
-        else:
-            self._values = values
-            self._elements_type = type(self._values[0])
+'''
+class _VectorType(Type):
+    """Represents a vector composed of elements of a given type."""
+    def __init__(self, elements_type: Optional[Type] = None):
+        self._elements_type = elements_type
 
     def __repr__(self) -> str:
-        values_str = ", ".join(map(str, self._values))
-        return f"[{values_str}]"
+        return f"vector[{self._elements_type}]"
+'''
 
-    def __getitem__(self, index):
-        return self._values[index]
+
+class _ListType(Type):
+    """Represents a list composed of elements of a given type."""
+    def __init__(self, min_elements: Optional[int] = None,
+                 max_elements: Optional[int] = None, elements_type: Optional[Type] = None):
+        Type.__init__(self)
+        assert min_elements is None or isinstance(
+            min_elements, int
+        ), "typing not respected"
+        assert max_elements is None or isinstance(
+            max_elements, int
+        ), "typing not respected"
+        self._min_elements = min_elements
+        self._max_elements = max_elements
+        self._elements_type = elements_type
+
+    def __repr__(self) -> str:
+        return f"list[{self._min_elements}-{self._max_elements},{self._elements_type}]"
 
     @property
     def elements_type(self) -> Type:
@@ -87,9 +103,22 @@ class _ListType(Type):
         return self._elements_type
 
     @property
+    def min_elements(self) -> Optional[int]:
+        """Returns the type of elements in this list."""
+        return self._min_elements
+
+    @property
+    def max_elements(self) -> Optional[int]:
+        """Returns the type of elements in this list."""
+        return self._max_elements
+
     def is_list_type(self) -> bool:
         """Returns true iff is a list type."""
         return True
+
+'''
+    def is_empty(self):
+        return self._values is None
 
     def insert_element(self, element, position=None):
         """Inserts an element at the specified position in the list."""
@@ -112,7 +141,7 @@ class _ListType(Type):
             if position < 0 or position >= len(self._values):
                 raise IndexError("Deletion position out of range.")
             self._values.pop(position)
-
+'''
 
 class _BoolType(Type):
     """Represents the boolean type."""

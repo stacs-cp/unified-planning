@@ -21,8 +21,9 @@ from unified_planning.model.types import (
     _IntType,
     _RealType,
     _UserType,
+    _ListType,
     BOOL,
-    TIME,
+    TIME
 )
 from unified_planning.model.tamp.types import (
     _MovableType,
@@ -31,7 +32,7 @@ from unified_planning.model.tamp.types import (
 )
 from unified_planning.exceptions import UPTypeError
 from fractions import Fraction
-from typing import Optional, Dict, Tuple, Union, cast
+from typing import Optional, Dict, Tuple, Union, cast, List
 
 
 class TypeManager:
@@ -39,6 +40,8 @@ class TypeManager:
 
     def __init__(self):
         self._bool = BOOL
+        self._list: Dict[Tuple[Optional[int], Optional[int], Optional[Type]], Type] = {}
+        #self._vector: Dict[Tuple[Optional[Type]], Type] = {}
         self._ints: Dict[Tuple[Optional[int], Optional[int]], Type] = {}
         self._reals: Dict[Tuple[Optional[Fraction], Optional[Fraction]], Type] = {}
         self._user_types: Dict[Tuple[str, Optional[Type]], Type] = {}
@@ -46,6 +49,7 @@ class TypeManager:
         self._configuration_types: Dict[Tuple[str, OccupancyMap, int], Type] = {}
 
     def has_type(self, type: Type) -> bool:
+
         """
         Returns `True` if the given type is already defined in this :class:`~unified_planning.Environment`.
 
@@ -76,12 +80,31 @@ class TypeManager:
         elif type.is_user_type():
             assert isinstance(type, _UserType)
             return self._user_types.get((type.name, type.father), None) == type
+        elif type.is_list_type():
+            assert isinstance(type, _ListType)
+            return self._list.get((type.min_elements, type.max_elements, type.elements_type), None) == type
+        #elif type.is_vector_type():
+        #    return type == self._list
         else:
             raise NotImplementedError
 
     def BoolType(self) -> Type:
         """Returns this `Environment's` boolean `Type`."""
         return self._bool
+
+
+    def ListType(
+            self, min_elements: Optional[int] = None, max_elements: Optional[int] = None,
+            elements_type: Optional[Type] = None
+    ) -> Type:
+        """Returns the list type with a specific element type."""
+        k = (min_elements, max_elements, elements_type)
+        if k in self._list:
+            return self._list[k]
+        else:
+            lt = _ListType(min_elements, max_elements, elements_type)
+            self._list[k] = lt
+            return lt
 
     def IntType(
         self, lower_bound: Optional[int] = None, upper_bound: Optional[int] = None
