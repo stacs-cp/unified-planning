@@ -24,7 +24,7 @@ from fractions import Fraction
 class Type(ABC):
     """Base class for representing a `Type`."""
 
-    def is_list_type(self) -> bool:
+    def is_array_type(self) -> bool:
         """Returns true iff is a list type."""
         return True
 
@@ -68,18 +68,7 @@ class Type(ABC):
         return is_compatible_type(self, t_right)
 
 
-'''
-class _VectorType(Type):
-    """Represents a vector composed of elements of a given type."""
-    def __init__(self, elements_type: Optional[Type] = None):
-        self._elements_type = elements_type
-
-    def __repr__(self) -> str:
-        return f"vector[{self._elements_type}]"
-'''
-
-
-class _ListType(Type):
+class _ArrayType(Type):
     """Represents a list composed of elements of a given type."""
     def __init__(self, min_elements: Optional[int] = None,
                  max_elements: Optional[int] = None, elements_type: Optional[Type] = None):
@@ -95,7 +84,7 @@ class _ListType(Type):
         self._elements_type = elements_type
 
     def __repr__(self) -> str:
-        return f"list[{self._min_elements}-{self._max_elements},{self._elements_type}]"
+        return f"array[{self._min_elements}-{self._max_elements},{self._elements_type}]"
 
     @property
     def elements_type(self) -> Type:
@@ -112,7 +101,7 @@ class _ListType(Type):
         """Returns the type of elements in this list."""
         return self._max_elements
 
-    def is_list_type(self) -> bool:
+    def is_array_type(self) -> bool:
         """Returns true iff is a list type."""
         return True
 
@@ -142,6 +131,7 @@ class _ListType(Type):
                 raise IndexError("Deletion position out of range.")
             self._values.pop(position)
 '''
+
 
 class _BoolType(Type):
     """Represents the boolean type."""
