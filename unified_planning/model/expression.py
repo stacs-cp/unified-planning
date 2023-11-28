@@ -17,7 +17,7 @@
 All objects are memoized so that two syntactically equivalent expressions
 are represented by the same object.
 """
-
+import array
 
 import unified_planning as up
 import unified_planning.model.types
@@ -51,12 +51,17 @@ TimeExpression = Union[
     float,
     Fraction,
 ]
+ListExpression = List[Union[
+    TimeExpression,
+    BoolExpression,
+    ConstantExpression,
+]]
 Expression = Union[
     TimeExpression,
     BoolExpression,
     ConstantExpression,
+    ListExpression,
 ]
-
 
 def uniform_numeric_constant(value: NumericConstant) -> Union[Fraction, int]:
     """Utility method to handle NumericConstant polymorphism."""
@@ -148,6 +153,8 @@ class ExpressionManager(object):
                 res.append(self.TimingExp(up.model.timing.Timing(delay=0, timepoint=e)))
             elif isinstance(e, bool):
                 res.append(self.Bool(e))
+            elif isinstance(e, List):
+                res.append(self.List(e))
             elif (
                 isinstance(e, int)
                 or isinstance(e, float)
@@ -181,6 +188,7 @@ class ExpressionManager(object):
                 str,
                 bool,
                 int,
+                list,
                 Fraction,
                 Tuple["up.model.variable.Variable", ...],
             ]
@@ -591,6 +599,21 @@ class ExpressionManager(object):
             raise UPTypeError("Expecting int, got %s" % type(value))
         return self.create_node(
             node_type=OperatorKind.INT_CONSTANT, args=tuple(), payload=value
+        )
+
+    def List(self, value: List) -> "up.model.fnode.FNode":
+        """
+        Return an ``list`` constant.
+
+        :param value: The list that must be promoted to ``FNode``.
+        :return: The ``FNode`` containing the given ``list`` as his payload.
+        """
+        # convert the list to tuple to resolve the hash problem
+        adapted_value = tuple(value)
+        if not isinstance(value, List):
+            raise UPTypeError("Expecting List, got %s" % type(value))
+        return self.create_node(
+            node_type=OperatorKind.LIST_CONSTANT, args=tuple(), payload=adapted_value
         )
 
     def Real(self, value: Fraction) -> "up.model.fnode.FNode":

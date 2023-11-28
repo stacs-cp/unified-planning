@@ -15,7 +15,7 @@
 """This module defines all the types."""
 
 import unified_planning
-from typing import Iterator, Optional, cast
+from typing import Iterator, Optional, cast, List
 from unified_planning.exceptions import UPProblemDefinitionError, UPTypeError
 from abc import ABC
 from fractions import Fraction
@@ -26,7 +26,7 @@ class Type(ABC):
 
     def is_array_type(self) -> bool:
         """Returns true iff is a list type."""
-        return True
+        return False
 
     def is_bool_type(self) -> bool:
         """Returns `True` iff is `boolean Type`."""
@@ -70,40 +70,51 @@ class Type(ABC):
 
 class _ArrayType(Type):
     """Represents a list composed of elements of a given type."""
-    def __init__(self, min_elements: Optional[int] = None,
-                 max_elements: Optional[int] = None, elements_type: Optional[Type] = None):
+    def __init__(self, values: Optional[tuple] = None, n_elements: Optional[int] = None,
+                 elements_type: Optional[Type] = None):
         Type.__init__(self)
-        assert min_elements is None or isinstance(
-            min_elements, int
+        assert n_elements is None or isinstance(
+            n_elements, int
         ), "typing not respected"
-        assert max_elements is None or isinstance(
-            max_elements, int
-        ), "typing not respected"
-        self._min_elements = min_elements
-        self._max_elements = max_elements
-        self._elements_type = elements_type
+
+        if values is not None:
+            assert n_elements is None or len(
+                values) == n_elements, "length of values is not the required in n_elements"
+            self._n_elements = len(values) if n_elements is None else n_elements
+
+            assert (
+                    (elements_type is not None and all(isinstance(element, elements_type) for element in values)) or
+                    (elements_type is None and all(isinstance(element, type(values[0])) for element in values))
+            ), "typing not respected"
+
+            self._elements_type = type(values[0]) if elements_type is None else elements_type
+            self._values = values
+        else:
+            self._values = values
+            self._n_elements = n_elements
+            self._elements_type = elements_type
 
     def __repr__(self) -> str:
-        return f"array[{self._min_elements}-{self._max_elements},{self._elements_type}]"
-
-    @property
-    def elements_type(self) -> Type:
-        """Returns the type of elements in this list."""
-        return self._elements_type
-
-    @property
-    def min_elements(self) -> Optional[int]:
-        """Returns the type of elements in this list."""
-        return self._min_elements
-
-    @property
-    def max_elements(self) -> Optional[int]:
-        """Returns the type of elements in this list."""
-        return self._max_elements
+        return f"array{list(self._values)}" if self._values is not None else f"array[{self._n_elements},{self._elements_type}]"
 
     def is_array_type(self) -> bool:
         """Returns true iff is a list type."""
         return True
+
+    @property
+    def elements_type(self) -> Optional[Type]:
+        """Returns the type of elements in this list."""
+        return self._elements_type
+
+    @property
+    def n_elements(self) -> Optional[int]:
+        """Returns the type of elements in this list."""
+        return self._n_elements
+
+    @property
+    def values(self) -> Optional[tuple]:
+        """Returns the type of elements in this list."""
+        return self._values
 
 '''
     def is_empty(self):

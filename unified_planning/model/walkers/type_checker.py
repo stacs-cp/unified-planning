@@ -195,6 +195,14 @@ class TypeChecker(walkers.dag.DagWalker):
             expression.constant_value(), expression.constant_value()
         )
 
+    @walkers.handles(OperatorKind.LIST_CONSTANT)
+    def walk_identity_list(self, expression, args):
+        assert expression is not None
+        assert len(args) == 0
+        return self.environment.type_manager.ArrayType(
+            expression.constant_value(), None, None
+        )
+
     def walk_plus(self, expression, args):
         has_real = False
         lower = None

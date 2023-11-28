@@ -40,7 +40,7 @@ class TypeManager:
 
     def __init__(self):
         self._bool = BOOL
-        self._arrays: Dict[Tuple[Optional[int], Optional[int], Optional[Type]], Type] = {}
+        self._arrays: Dict[Tuple[Optional[tuple], Optional[int], Optional[Type]], Type] = {}
         #self._vector: Dict[Tuple[Optional[Type]], Type] = {}
         self._ints: Dict[Tuple[Optional[int], Optional[int]], Type] = {}
         self._reals: Dict[Tuple[Optional[Fraction], Optional[Fraction]], Type] = {}
@@ -82,9 +82,7 @@ class TypeManager:
             return self._user_types.get((type.name, type.father), None) == type
         elif type.is_array_type():
             assert isinstance(type, _ArrayType)
-            return self._arrays.get((type.min_elements, type.max_elements, type.elements_type), None) == type
-        #elif type.is_vector_type():
-        #    return type == self._list
+            return self._arrays.get((type.values, type.n_elements, type.elements_type), None) == type
         else:
             raise NotImplementedError
 
@@ -93,15 +91,14 @@ class TypeManager:
         return self._bool
 
     def ArrayType(
-            self, min_elements: Optional[int] = None, max_elements: Optional[int] = None,
-            elements_type: Optional[Type] = None
+            self, values: Optional[tuple] = None, n_elements: Optional[int] = None, elements_type: Optional[Type] = None
     ) -> Type:
         """Returns the list type with a specific element type."""
-        k = (min_elements, max_elements, elements_type)
+        k = (values, n_elements, elements_type)
         if k in self._arrays:
             return self._arrays[k]
         else:
-            at = _ArrayType(min_elements, max_elements, elements_type)
+            at = _ArrayType(values, n_elements, elements_type)
             self._arrays[k] = at
             return at
 

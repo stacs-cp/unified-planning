@@ -35,6 +35,7 @@ class OperatorKind(Enum):
     OBJECT_EXP = auto()
     TIMING_EXP = auto()
     BOOL_CONSTANT = auto()
+    LIST_CONSTANT = auto()
     INT_CONSTANT = auto()
     REAL_CONSTANT = auto()
     PLUS = auto()
@@ -50,7 +51,6 @@ class OperatorKind(Enum):
     SOMETIME_AFTER = auto()
     AT_MOST_ONCE = auto()
     DOT = auto()
-
 
 BOOL_OPERATORS = frozenset(
     [
