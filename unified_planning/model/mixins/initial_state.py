@@ -47,6 +47,7 @@ class InitialStateMixin:
             "up.model.fluent.Fluent",
             "up.model.object.Object",
             bool,
+            list,
         ],
     ):
         """
@@ -59,8 +60,15 @@ class InitialStateMixin:
         """
         fluent_exp, value_exp = self._env.expression_manager.auto_promote(fluent, value)
         assert fluent_exp.is_fluent_exp(), "fluent field must be a fluent"
-        if not fluent_exp.type.is_compatible(value_exp.type):
-            raise UPTypeError("Initial value assignment has not compatible types!")
+        if fluent_exp.type.is_array_type():
+            if fluent_exp.type.values is not None:
+                raise UPTypeError("The fluent already has values!")
+            else:
+                if fluent_exp.type.n_elements != value_exp.type.n_elements or fluent_exp.type.elements_type != value_exp.type.elements_type:
+                    raise UPTypeError("Initial value assignment has not compatible types!")
+        else:
+            if not fluent_exp.type.is_compatible(value_exp.type):
+                raise UPTypeError("Initial value assignment has not compatible types!")
         self._initial_value[fluent_exp] = value_exp
 
     def initial_value(

@@ -95,7 +95,7 @@ class _ArrayType(Type):
             self._elements_type = elements_type
 
     def __repr__(self) -> str:
-        return f"array{list(self._values)}" if self._values is not None else f"array[{self._n_elements},{self._elements_type}]"
+        return f"array[{list(self._values) if self._values is not None else None},{self._n_elements},{self._elements_type}]"
 
     def is_array_type(self) -> bool:
         """Returns true iff is a list type."""
