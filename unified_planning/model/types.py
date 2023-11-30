@@ -76,26 +76,25 @@ class _ArrayType(Type):
         assert n_elements is None or isinstance(
             n_elements, int
         ), "typing not respected"
-
-        if values is not None:
-            assert n_elements is None or len(
-                values) == n_elements, "length of values is not the required in n_elements"
-            self._n_elements = len(values) if n_elements is None else n_elements
-
-            assert (
-                    (elements_type is not None and all(isinstance(element, elements_type) for element in values)) or
-                    (elements_type is None and all(isinstance(element, type(values[0])) for element in values))
-            ), "typing not respected"
-
-            self._elements_type = type(values[0]) if elements_type is None else elements_type
-            self._values = values
-        else:
-            self._values = values
-            self._n_elements = n_elements
-            self._elements_type = elements_type
+        self._values = values
+        self._n_elements = n_elements
+        self._elements_type = elements_type
 
     def __repr__(self) -> str:
         return f"array[{list(self._values) if self._values is not None else None},{self._n_elements},{self._elements_type}]"
+
+    def __getitem__(self, index: int):
+        if self._values is not None:
+            return self._values[index]
+        else:
+            raise IndexError("Index out of range or array is empty.")
+
+    def __setitem__(self, index: int, value):
+        """Allows assigning values to elements using square bracket notation."""
+        if self._values is not None:
+            self._values[index] = value
+        else:
+            raise IndexError("Index out of range or array is empty.")
 
     def is_array_type(self) -> bool:
         """Returns true iff is a list type."""

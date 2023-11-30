@@ -127,6 +127,7 @@ class ExpressionManager(object):
         """
         res = []
         for e in self._polymorph_args_to_iterator(*args):
+            print(e,type(e))
             if isinstance(e, up.model.fluent.Fluent):
                 assert (
                     e.environment == self.environment
@@ -753,3 +754,24 @@ class ExpressionManager(object):
         """
         left, right = self.auto_promote(left, right)
         return self.create_node(node_type=OperatorKind.EQUALS, args=(left, right))
+
+    def ElementPos(self, array: Expression, pos: int, element: Expression) -> "up.model.fnode.FNode":
+        """
+        Creates an expression of the form:
+            ``array[pos] = element``.
+
+        NOTE: Valid for the ArrayType and lists
+
+        :param array: The array of elements.
+        :param pos: The position of an element in the array.
+        :return: The created ``ElementPos`` expression.
+        """
+
+        array, pos, element = self.auto_promote(array, pos, element)
+
+        print(array)
+        print(array.type.values)
+        print(array.type.values[pos])
+        print(element)
+
+        return self.create_node(node_type=OperatorKind.EQUALS, args=(array.type.values[pos], element))

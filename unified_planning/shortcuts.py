@@ -434,6 +434,18 @@ def Equals(left: Expression, right: Expression) -> FNode:
     """
     return get_environment().expression_manager.Equals(left, right)
 
+def ElementPos(array: Expression, pos: int, element: Expression) -> FNode:
+    """
+    Creates an expression of the form:
+        ``array[pos] = element``.
+
+    NOTE: Valid for the ArrayType and lists
+
+    :param array: The array of elements.
+    :param pos: The position of an element in the array.
+    :return: The created ``ElementPos`` expression.
+    """
+    return get_environment().expression_manager.ElementPos(array, pos, element)
 
 def Dot(
     agent: "unified_planning.model.multi_agent.Agent",
