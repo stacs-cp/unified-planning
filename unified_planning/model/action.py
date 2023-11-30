@@ -343,11 +343,18 @@ class InstantaneousAction(Action):
             )
         if not self._environment.type_checker.get_type(condition_exp).is_bool_type():
             raise UPTypeError("Effect condition is not a Boolean condition!")
-        if not fluent_exp.type.is_compatible(value_exp.type):
-            # Value is not assignable to fluent (its type is not a subset of the fluent's type).
-            raise UPTypeError(
-                f"InstantaneousAction effect has an incompatible value type. Fluent type: {fluent_exp.type} // Value type: {value_exp.type}"
-            )
+        if fluent_exp.type.is_array_type():
+            if fluent_exp.type.values is not None:
+                raise UPTypeError("The fluent already has values!")
+            else:
+                if fluent_exp.type.n_elements != value_exp.type.n_elements or fluent_exp.type.elements_type != value_exp.type.elements_type:
+                    raise UPTypeError("Initial value assignment has not compatible types!")
+        else:
+            if not fluent_exp.type.is_compatible(value_exp.type):
+                # Value is not assignable to fluent (its type is not a subset of the fluent's type).
+                raise UPTypeError(
+                    f"InstantaneousAction effect has an incompatible value type. Fluent type: {fluent_exp.type} // Value type: {value_exp.type}"
+                )
         self._add_effect_instance(
             up.model.effect.Effect(fluent_exp, value_exp, condition_exp, forall=forall)
         )
