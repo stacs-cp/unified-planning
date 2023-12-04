@@ -51,7 +51,8 @@ class OperatorKind(Enum):
     SOMETIME_AFTER = auto()
     AT_MOST_ONCE = auto()
     DOT = auto()
-    ELEMENT_POS = auto()
+    STORE = auto()
+    SELECT = auto()
 
 BOOL_OPERATORS = frozenset(
     [
@@ -89,7 +90,7 @@ TRAJECTORY_CONSTRAINTS = frozenset(
 
 LIST_OPERATORS = frozenset(
     [
-        OperatorKind.ELEMENT_POS,
-
+        OperatorKind.STORE,
+        OperatorKind.SELECT,
     ]
 )

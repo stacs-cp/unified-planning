@@ -89,13 +89,6 @@ class _ArrayType(Type):
         else:
             raise IndexError("Index out of range or array is empty.")
 
-    def __setitem__(self, index: int, value):
-        """Allows assigning values to elements using square bracket notation."""
-        if self._values is not None:
-            self._values[index] = value
-        else:
-            raise IndexError("Index out of range or array is empty.")
-
     def is_array_type(self) -> bool:
         """Returns true iff is a list type."""
         return True
@@ -111,7 +104,7 @@ class _ArrayType(Type):
         return self._n_elements
 
     @property
-    def values(self) -> Optional[tuple]:
+    def values(self) -> Optional[list]:
         """Returns the type of elements in this list."""
         return self._values
 

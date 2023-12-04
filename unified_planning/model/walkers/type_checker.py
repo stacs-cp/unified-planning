@@ -391,3 +391,45 @@ class TypeChecker(walkers.dag.DagWalker):
         if not t.is_fluent_exp():
             return None
         return args[0]
+
+    @walkers.handles(OperatorKind.STORE)
+    def walk_store(
+        self, expression: FNode, args: List["unified_planning.model.types.Type"]
+    ) -> Optional["unified_planning.model.types.Type"]:
+        assert expression.is_store()
+
+        values = expression.arg(0)
+        index = expression.arg(1).constant_value()
+        element = expression.arg(2).constant_value()
+
+        # first argument must be a list or ArrayType
+        assert values.type.is_array_type(), "The Store operator only supports ArrayType or lists"
+        # index position out of range
+        assert (index < int(values.type.n_elements)), "The array assignment position is out of range"
+        # element is the same type as array elements
+        assert values.type.elements_type == type(element)
+
+        new_array = []
+        for i in range(values.type.n_elements):
+            if i == index:
+                new_array.append(element)
+            else:
+                new_array.append(values.type.values[i])
+
+        return self.environment.type_manager.ArrayType(tuple(new_array))
+
+    @walkers.handles(OperatorKind.SELECT)
+    def walk_select(
+        self, expression: FNode, args: List["unified_planning.model.types.Type"]
+    ) -> Optional["unified_planning.model.types.Type"]:
+        assert expression.is_select()
+
+        values = expression.arg(0)
+        index = expression.arg(1).constant_value()
+
+        # first argument must be a list or ArrayType
+        assert values.type.is_array_type(), "The Store operator only supports ArrayType or lists"
+        # index position out of range
+        assert (index < int(values.type.n_elements)), "The array assignment position is out of range"
+
+        return values.type.values[index]

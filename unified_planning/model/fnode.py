@@ -72,7 +72,7 @@ class FNode(object):
         elif self.is_real_constant():
             return str(self.constant_value())
         elif self.is_list_constant():
-            return str(self.constant_value())
+            return str(self.list_constant_value())
         elif self.is_fluent_exp():
             return self.fluent().name + self.get_nary_expression_string(", ", self.args)
         elif self.is_dot():
@@ -127,6 +127,10 @@ class FNode(object):
             return self.get_nary_expression_string(" < ", self.args)
         elif self.is_equals():
             return self.get_nary_expression_string(" == ", self.args)
+        elif self.is_store():
+            return f"{self.arg(0)}[{self.arg(1)}] = {self.arg(2)}"
+        elif self.is_select():
+            return f"{self.arg(0)}[{self.arg(1)}]"
         else:
             raise ValueError("Unknown FNode type found")
 
@@ -186,7 +190,7 @@ class FNode(object):
     def list_constant_value(self) -> List:
         """Returns the `list` constant value stored in this expression."""
         assert self.is_list_constant()
-        return self._content.payload
+        return list(self._content.payload)
 
     def bool_constant_value(self) -> bool:
         """Return constant `boolean` value stored in this expression."""
@@ -389,6 +393,13 @@ class FNode(object):
         """Test whether the node is the `DOT` operator."""
         return self.node_type == OperatorKind.DOT
 
+    def is_store(self) -> bool:
+        """Test whether the node is the `DOT` operator."""
+        return self.node_type == OperatorKind.STORE
+
+    def is_select(self) -> bool:
+        """Test whether the node is the `DOT` operator."""
+        return self.node_type == OperatorKind.SELECT
     #
     # Infix operators
     #
@@ -443,6 +454,9 @@ class FNode(object):
 
     def Equals(self, right):
         return self._env.expression_manager.Equals(self, right)
+
+    def Store(self, right):
+        return self._env.expression_manager.Store(self, right)
 
     def And(self, *other):
         return self._env.expression_manager.And(self, *other)
