@@ -168,8 +168,6 @@ class ExpressionManager(object):
                     assert isinstance(number, Fraction)
                     res.append(self.Real(number))
             else:
-                print("expressionnn")
-                print(e.environment, self.environment)
                 assert (
                     e.environment == self.environment
                 ), "Expression has a different environment of the expression manager"
