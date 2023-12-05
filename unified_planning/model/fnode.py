@@ -394,11 +394,11 @@ class FNode(object):
         return self.node_type == OperatorKind.DOT
 
     def is_store(self) -> bool:
-        """Test whether the node is the `DOT` operator."""
+        """Test whether the node is the `STORE` operator."""
         return self.node_type == OperatorKind.STORE
 
     def is_select(self) -> bool:
-        """Test whether the node is the `DOT` operator."""
+        """Test whether the node is the `SELECT` operator."""
         return self.node_type == OperatorKind.SELECT
     #
     # Infix operators

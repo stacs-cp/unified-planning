@@ -351,7 +351,6 @@ class TypeChecker(walkers.dag.DagWalker):
         t = args[0]
         if t is None:
             return None
-
         if t.is_bool_type():
             raise UPTypeError(
                 "The expression '%s' is not well-formed."
@@ -392,6 +391,28 @@ class TypeChecker(walkers.dag.DagWalker):
             return None
         return args[0]
 
+    @walkers.handles(OperatorKind.SELECT)
+    def walk_select(
+        self, expression: FNode, args: List["unified_planning.model.types.Type"]
+    ) -> Optional["unified_planning.model.types.Type"]:
+        assert expression.is_select()
+
+        elements = args[0]
+        index = expression.arg(1).constant_value()
+
+        assert elements.is_array_type(), "The Store operator only supports ArrayType or lists"
+        assert elements.n_elements.upper_bound is None or (index < elements.n_elements.upper_bound), "The array assignment position is out of range"
+        assert (elements.elements is not None), "The array has no values"
+
+        if elements.elements_type == int:
+            return self.environment.type_manager.IntType()
+        elif elements.elements_type == bool:
+            return BOOL
+        else:
+            return None # arreglar i implementar per mes tipus...
+
+
+"""
     @walkers.handles(OperatorKind.STORE)
     def walk_store(
         self, expression: FNode, args: List["unified_planning.model.types.Type"]
@@ -417,19 +438,4 @@ class TypeChecker(walkers.dag.DagWalker):
                 new_array.append(values.type.values[i])
 
         return self.environment.type_manager.ArrayType(tuple(new_array))
-
-    @walkers.handles(OperatorKind.SELECT)
-    def walk_select(
-        self, expression: FNode, args: List["unified_planning.model.types.Type"]
-    ) -> Optional["unified_planning.model.types.Type"]:
-        assert expression.is_select()
-
-        values = expression.arg(0)
-        index = expression.arg(1).constant_value()
-
-        # first argument must be a list or ArrayType
-        assert values.type.is_array_type(), "The Store operator only supports ArrayType or lists"
-        # index position out of range
-        assert (index < int(values.type.n_elements)), "The array assignment position is out of range"
-
-        return values.type.values[index]
+"""

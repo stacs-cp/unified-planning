@@ -483,9 +483,9 @@ def BoolType() -> unified_planning.model.types.Type:
 
 
 def ArrayType(
-        values: Optional[tuple] = None, n_elements: Optional[int] = None, elements_type: Optional[Type] = None
+        elements: Optional[tuple] = None, elements_type: Optional[Type] = None, n_elements: Optional[int] = None
 ) -> unified_planning.model.types.Type:
-    return get_environment().type_manager.ArrayType(values, n_elements, elements_type)
+    return get_environment().type_manager.ArrayType(elements, elements_type, n_elements)
 
         
 def IntType(

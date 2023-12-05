@@ -16,6 +16,8 @@
 
 import unified_planning
 from typing import Iterator, Optional, cast, List
+
+from unified_planning.environment import get_environment
 from unified_planning.exceptions import UPProblemDefinitionError, UPTypeError
 from abc import ABC
 from fractions import Fraction
@@ -69,23 +71,20 @@ class Type(ABC):
 
 
 class _ArrayType(Type):
-    """Represents a list composed of elements of a given type."""
-    def __init__(self, values: Optional[tuple] = None, n_elements: Optional[int] = None,
-                 elements_type: Optional[Type] = None):
+    """Represents a list composed of n_elements elements of a given type elements_type."""
+    def __init__(self, elements: Optional[tuple] = None, elements_type: Optional[Type] = None,
+                 n_elements: Optional[Type] = None):
         Type.__init__(self)
-        assert n_elements is None or isinstance(
-            n_elements, int
-        ), "typing not respected"
-        self._values = values
+        self._elements = elements
+        self._elements_type = elements_type if elements_type is not None else Type
         self._n_elements = n_elements
-        self._elements_type = elements_type
 
     def __repr__(self) -> str:
-        return f"array[{list(self._values) if self._values is not None else None},{self._n_elements},{self._elements_type}]"
+        return f"array[{list(self._elements)},{self._elements_type},{self._n_elements}]"
 
     def __getitem__(self, index: int):
-        if self._values is not None:
-            return self._values[index]
+        if self._elements is not None:
+            return self._elements[index]
         else:
             raise IndexError("Index out of range or array is empty.")
 
@@ -99,14 +98,14 @@ class _ArrayType(Type):
         return self._elements_type
 
     @property
-    def n_elements(self) -> Optional[int]:
+    def n_elements(self) -> Type:
         """Returns the type of elements in this list."""
         return self._n_elements
 
     @property
-    def values(self) -> Optional[list]:
+    def elements(self) -> Optional[list]:
         """Returns the type of elements in this list."""
-        return self._values
+        return self._elements
 
 '''
     def is_empty(self):

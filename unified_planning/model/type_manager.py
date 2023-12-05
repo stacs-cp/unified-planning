@@ -40,7 +40,7 @@ class TypeManager:
 
     def __init__(self):
         self._bool = BOOL
-        self._arrays: Dict[Tuple[Optional[tuple], Optional[int], Optional[Type]], Type] = {}
+        self._arrays: Dict[Tuple[Optional[tuple], Optional[Type], Optional[_IntType]], Type] = {}
         self._ints: Dict[Tuple[Optional[int], Optional[int]], Type] = {}
         self._reals: Dict[Tuple[Optional[Fraction], Optional[Fraction]], Type] = {}
         self._user_types: Dict[Tuple[str, Optional[Type]], Type] = {}
@@ -81,7 +81,7 @@ class TypeManager:
             return self._user_types.get((type.name, type.father), None) == type
         elif type.is_array_type():
             assert isinstance(type, _ArrayType)
-            return self._arrays.get((type.values, type.n_elements, type.elements_type), None) == type
+            return self._arrays.get((type.elements, type.elements_type, type.n_elements), None) == type
         else:
             raise NotImplementedError
 
@@ -90,24 +90,32 @@ class TypeManager:
         return self._bool
 
     def ArrayType(
-            self, values: Optional[tuple] = None, n_elements: Optional[int] = None, elements_type: Optional[Type] = None
+            self, elements: Optional[tuple] = None, elements_type: Optional[Type] = None, n_elements: Optional[int] = None
     ) -> Type:
         """Returns the list type with a specific element type."""
-        if values is not None:
+        assert n_elements is None or isinstance(
+            n_elements, int
+        ), "typing not respected"
+        if elements is None:
+            elements = ()
+            elements_type = elements_type if elements_type is not None else Type
+            n_elements = _IntType(n_elements, n_elements) if n_elements is not None else _IntType()
+        else:
             assert n_elements is None or len(
-                values) == n_elements, "length of values is not the required in n_elements"
-            n_elements = len(values) if n_elements is None else n_elements
+                elements) == n_elements, "length of values is not the required in n_elements"
+            n_elements = len(elements) if n_elements is None else n_elements
             assert (
-                    (elements_type is not None and all(isinstance(element, elements_type) for element in values)) or
-                    (elements_type is None and all(isinstance(element, type(values[0])) for element in values))
+                    (elements_type is not None and all(isinstance(element, elements_type) for element in elements)) or
+                    (elements_type is None and all(isinstance(element, type(elements[0])) for element in elements))
             ), "typing not respected"
-            elements_type = type(values[0]) if elements_type is None else elements_type
-            values = values
-        k = (values, n_elements, elements_type)
+            elements_type = type(elements[0]) if elements_type is None else elements_type
+            elements = elements
+
+        k = (elements, elements_type, n_elements)
         if k in self._arrays:
             return self._arrays[k]
         else:
-            at = _ArrayType(values, n_elements, elements_type)
+            at = _ArrayType(elements, elements_type, n_elements)
             self._arrays[k] = at
             return at
 
