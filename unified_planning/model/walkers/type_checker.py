@@ -62,9 +62,7 @@ class TypeChecker(walkers.dag.DagWalker):
         self, expression: FNode, args: List["unified_planning.model.types.Type"]
     ) -> Optional["unified_planning.model.types.Type"]:
         assert expression is not None
-        print("hey")
         for x in args:
-            print(x)
             if x is None or x != BOOL:
                 return None
         return BOOL
@@ -418,7 +416,6 @@ class TypeChecker(walkers.dag.DagWalker):
         name_element_fluent = str(expression.arg(0)).split('(')[0]+f'_{index}'
         # need to implement if the ArrayType fluent has parameters, each element Fluent has to have them too
         new_fluent = Fluent(name_element_fluent, type_of_element)
-        print("NEW FLUENT - ", new_fluent)
         return new_fluent
 
 
