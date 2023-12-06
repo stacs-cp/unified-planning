@@ -18,6 +18,7 @@ from fractions import Fraction
 import unified_planning.model.types
 import unified_planning.environment
 import unified_planning.model.walkers as walkers
+from unified_planning.model import Fluent
 from unified_planning.model.types import BOOL, TIME, _UserType
 from unified_planning.model.fnode import FNode
 from unified_planning.model.operators import OperatorKind
@@ -61,7 +62,9 @@ class TypeChecker(walkers.dag.DagWalker):
         self, expression: FNode, args: List["unified_planning.model.types.Type"]
     ) -> Optional["unified_planning.model.types.Type"]:
         assert expression is not None
+        print("hey")
         for x in args:
+            print(x)
             if x is None or x != BOOL:
                 return None
         return BOOL
@@ -394,7 +397,7 @@ class TypeChecker(walkers.dag.DagWalker):
     @walkers.handles(OperatorKind.SELECT)
     def walk_select(
         self, expression: FNode, args: List["unified_planning.model.types.Type"]
-    ) -> Optional["unified_planning.model.types.Type"]:
+    ) -> Fluent:
         assert expression.is_select()
 
         elements = args[0]
@@ -405,11 +408,18 @@ class TypeChecker(walkers.dag.DagWalker):
         assert (elements.elements is not None), "The array has no values"
 
         if elements.elements_type == int:
-            return self.environment.type_manager.IntType()
+            type_of_element = self.environment.type_manager.IntType()
         elif elements.elements_type == bool:
-            return BOOL
+            type_of_element = BOOL
         else:
-            return None # arreglar i implementar per mes tipus...
+            type_of_element = elements.elements_type
+
+        # name of the fluent the same of the array+'number of position'
+        name_element_fluent = str(expression.arg(0)).split('(')[0]+f'_{index}'
+        # need to implement if the ArrayType fluent has parameters, each element Fluent has to have them too
+        new_fluent = Fluent(name_element_fluent, type_of_element)
+        print("NEW FLUENT - ", new_fluent)
+        return new_fluent
 
 
 """
