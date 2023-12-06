@@ -344,10 +344,7 @@ class InstantaneousAction(Action):
         if not self._environment.type_checker.get_type(condition_exp).is_bool_type():
             raise UPTypeError("Effect condition is not a Boolean condition!")
         if fluent_exp.type.is_array_type():
-            if fluent_exp.type.values is not None:
-                raise UPTypeError("The fluent already has values!")
-            else:
-                if fluent_exp.type.n_elements != value_exp.type.n_elements or fluent_exp.type.elements_type != value_exp.type.elements_type:
+            if fluent_exp.type.n_elements != value_exp.type.n_elements or fluent_exp.type.elements_type != value_exp.type.elements_type:
                     raise UPTypeError("Initial value assignment has not compatible types!")
         else:
             if not fluent_exp.type.is_compatible(value_exp.type):

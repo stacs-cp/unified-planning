@@ -455,9 +455,6 @@ class FNode(object):
     def Equals(self, right):
         return self._env.expression_manager.Equals(self, right)
 
-    def Store(self, right):
-        return self._env.expression_manager.Store(self, right)
-
     def And(self, *other):
         return self._env.expression_manager.And(self, *other)
 
@@ -499,3 +496,9 @@ class FNode(object):
 
     def Iff(self, right):
         return self._env.expression_manager.Iff(self, right)
+
+    def Store(self, right):
+        return self._env.expression_manager.Store(self, right)
+
+    def Select(self, right):
+        return self._env.expression_manager.Select(self, right)
