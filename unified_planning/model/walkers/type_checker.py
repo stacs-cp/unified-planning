@@ -413,7 +413,7 @@ class TypeChecker(walkers.dag.DagWalker):
             type_of_element = elements.elements_type
 
         # name of the fluent the same of the array+'number of position'
-        name_element_fluent = str(expression.arg(0)).split('(')[0]+f'_{index}'
+        name_element_fluent = expression.arg(0).fluent().name+f'_{index}'
         # implement if the ArrayType fluent has parameters, each element Fluent has to have them too
         if expression.arg(0).fluent().signature:
             new_fluent = Fluent(name_element_fluent, type_of_element, expression.arg(0).fluent().signature)
