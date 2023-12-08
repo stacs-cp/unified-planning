@@ -103,7 +103,7 @@ class TypeManager:
         else:
             assert n_elements is None or len(
                 elements) == n_elements, "length of values is not the required in n_elements"
-            n_elements = len(elements) if n_elements is None else n_elements
+            n_elements = _IntType(len(elements), len(elements)) if n_elements is None else _IntType()
             assert (
                     (elements_type is not None and all(isinstance(element, elements_type) for element in elements)) or
                     (elements_type is None and all(isinstance(element, type(elements[0])) for element in elements))

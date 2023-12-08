@@ -421,12 +421,11 @@ class TypeChecker(walkers.dag.DagWalker):
             new_fluent = Fluent(name_element_fluent, type_of_element)
         return new_fluent
 
-
-"""
     @walkers.handles(OperatorKind.STORE)
     def walk_store(
         self, expression: FNode, args: List["unified_planning.model.types.Type"]
     ) -> Optional["unified_planning.model.types.Type"]:
+        # guardar valor dins d'una variable
         assert expression.is_store()
 
         values = expression.arg(0)
@@ -448,4 +447,3 @@ class TypeChecker(walkers.dag.DagWalker):
                 new_array.append(values.type.values[i])
 
         return self.environment.type_manager.ArrayType(tuple(new_array))
-"""
