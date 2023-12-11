@@ -19,7 +19,7 @@ that defines the types of its parameters.
 """
 
 import unified_planning as up
-from unified_planning.model.types import domain_size, domain_item, _IntType
+from unified_planning.model.types import domain_size, domain_item, _IntType, BOOL
 from unified_planning.environment import get_environment, Environment
 from unified_planning.exceptions import UPTypeError
 from typing import List, OrderedDict, Optional, Union, Iterator, cast
@@ -106,6 +106,30 @@ class Fluent:
         for p in self._signature:
             res += hash(p)
         return res ^ hash(self._name)
+
+    def __getitem__(self, index: int):
+        assert self.type.is_array_type()
+
+        assert self.type.n_elements.upper_bound is None or (
+                    index < self.type.n_elements.upper_bound), "The array assignment position is out of range"
+        assert (self.type.elements is not None), "The array has no values"
+
+        if self.type.elements_type == int:
+            type_of_element = self.environment.type_manager.IntType()
+        elif self.type.elements_type == bool:
+            type_of_element = BOOL
+        else:
+            type_of_element = self.type.elements_type
+
+        # name of the fluent the same of the array+'number of position'
+        name_element_fluent = self.name + f'_{index}'
+        # implement if the ArrayType fluent has parameters, each element Fluent has to have them too
+        if self.signature:
+            new_fluent = Fluent(name_element_fluent, type_of_element, self.signature)
+        else:
+            new_fluent = Fluent(name_element_fluent, type_of_element)
+        return new_fluent
+
 
     @property
     def name(self) -> str:
