@@ -122,13 +122,19 @@ class Fluent:
             type_of_element = self.type.elements_type
 
         # name of the fluent the same of the array+'number of position'
-        name_element_fluent = self.name + f'_{index}'
+        name_element_fluent = self.name + f'[{index}]'
         # implement if the ArrayType fluent has parameters, each element Fluent has to have them too
         if self.signature:
             new_fluent = Fluent(name_element_fluent, type_of_element, self.signature)
         else:
             new_fluent = Fluent(name_element_fluent, type_of_element)
         return new_fluent
+
+    def __setitem__(self, index: int, value):
+        assert self.type.is_array_type()
+        assert self.type.n_elements.upper_bound is None or (
+                index < self.type.n_elements.upper_bound), "The array assignment position is out of range"
+        assert (self.type.elements_type == type(value)), "Type of value not compatible with the array's elements"
 
 
     @property
