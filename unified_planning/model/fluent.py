@@ -108,7 +108,7 @@ class Fluent:
         return res ^ hash(self._name)
 
     def __getitem__(self, index: int):
-        assert self.type.is_array_type()
+        assert self.type.is_array_type(), "The Fluent has not array type"
 
         assert self.type.n_elements.upper_bound is None or (
                     index < self.type.n_elements.upper_bound), "The array assignment position is out of range"
@@ -131,7 +131,7 @@ class Fluent:
         return new_fluent
 
     def __setitem__(self, index: int, value):
-        assert self.type.is_array_type()
+        assert self.type.is_array_type(), "The Fluent has not array type"
         assert self.type.n_elements.upper_bound is None or (
                 index < self.type.n_elements.upper_bound), "The array assignment position is out of range"
         assert (self.type.elements_type == type(value)), "Type of value not compatible with the array's elements"
