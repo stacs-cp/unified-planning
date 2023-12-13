@@ -134,6 +134,10 @@ class FNode(object):
         else:
             raise ValueError("Unknown FNode type found")
 
+    def __getitem__(self, index: int):
+        assert self.fluent().type.is_array_type(), "The FNode has not array type"
+        return self.fluent()[index]
+
     @property
     def node_id(self) -> int:
         """Returns the `id` of this expression."""
