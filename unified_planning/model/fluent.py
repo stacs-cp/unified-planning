@@ -110,9 +110,8 @@ class Fluent:
     def __getitem__(self, index: int):
         assert self.type.is_array_type(), "The Fluent has not array type"
 
-        assert self.type.n_elements.upper_bound is None or (
-                    index < self.type.n_elements.upper_bound), "The array assignment position is out of range"
-        assert (self.type.elements is not None), "The array has no values"
+        assert self.type.n_elements is None or (
+                    index < self.type.n_elements), "The array assignment position is out of range"
 
         if self.type.elements_type == int:
             type_of_element = self.environment.type_manager.IntType()
@@ -129,13 +128,6 @@ class Fluent:
         else:
             new_fluent = Fluent(name_element_fluent, type_of_element)
         return new_fluent
-
-    def __setitem__(self, index: int, value):
-        assert self.type.is_array_type(), "The Fluent has not array type"
-        assert self.type.n_elements.upper_bound is None or (
-                index < self.type.n_elements.upper_bound), "The array assignment position is out of range"
-        assert (self.type.elements_type == type(value)), "Type of value not compatible with the array's elements"
-
 
     @property
     def name(self) -> str:

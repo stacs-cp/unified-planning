@@ -40,7 +40,7 @@ class TypeManager:
 
     def __init__(self):
         self._bool = BOOL
-        self._arrays: Dict[Tuple[Optional[tuple], Optional[Type], Optional[_IntType]], Type] = {}
+        self._arrays: Dict[Tuple[Optional[tuple], Optional[Type], Optional[int]], Type] = {}
         self._ints: Dict[Tuple[Optional[int], Optional[int]], Type] = {}
         self._reals: Dict[Tuple[Optional[Fraction], Optional[Fraction]], Type] = {}
         self._user_types: Dict[Tuple[str, Optional[Type]], Type] = {}
@@ -93,17 +93,10 @@ class TypeManager:
             self, elements: Optional[tuple] = None, elements_type: Optional[Type] = None, n_elements: Optional[int] = None
     ) -> Type:
         """Returns the list type with a specific element type."""
-        assert n_elements is None or isinstance(
-            n_elements, int
-        ), "typing not respected"
-        if elements is None:
-            elements = ()
-            elements_type = elements_type if elements_type is not None else Type
-            n_elements = _IntType(n_elements, n_elements) if n_elements is not None else _IntType()
-        else:
+        if elements is not None:
             assert n_elements is None or len(
                 elements) == n_elements, "length of values is not the required in n_elements"
-            n_elements = _IntType(len(elements), len(elements)) if n_elements is None else _IntType()
+            n_elements = len(elements)
             assert (
                     (elements_type is not None and all(isinstance(element, elements_type) for element in elements)) or
                     (elements_type is None and all(isinstance(element, type(elements[0])) for element in elements))

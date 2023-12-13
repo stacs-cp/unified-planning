@@ -73,14 +73,17 @@ class Type(ABC):
 class _ArrayType(Type):
     """Represents a list composed of n_elements elements of a given type elements_type."""
     def __init__(self, elements: Optional[tuple] = None, elements_type: Optional[Type] = None,
-                 n_elements: Optional[Type] = None):
+                 n_elements: Optional[int] = None):
         Type.__init__(self)
+        assert n_elements is None or isinstance(
+            n_elements, int
+        ), "typing not respected"
         self._elements = elements
-        self._elements_type = elements_type if elements_type is not None else Type
+        self._elements_type = elements_type
         self._n_elements = n_elements
 
     def __repr__(self) -> str:
-        return f"array[{list(self._elements)},{self._elements_type},{self._n_elements}]"
+        return f"array[{list(self._elements) if self._elements is not None else self._elements},{self._elements_type},{self._n_elements}]"
 
     def __getitem__(self, index: int):
         if self._elements is not None:
@@ -98,14 +101,14 @@ class _ArrayType(Type):
         return self._elements_type
 
     @property
-    def n_elements(self) -> Type:
+    def n_elements(self) -> Optional[int]:
         """Returns the type of elements in this list."""
         return self._n_elements
 
     @property
     def elements(self) -> Optional[list]:
         """Returns the type of elements in this list."""
-        return self._elements
+        return list(self._elements) if self._elements is not None else self._elements
 
 '''
     def is_empty(self):
