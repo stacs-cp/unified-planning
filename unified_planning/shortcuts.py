@@ -434,34 +434,6 @@ def Equals(left: Expression, right: Expression) -> FNode:
     """
     return get_environment().expression_manager.Equals(left, right)
 
-
-def Store(arr: Expression, pos: int, element: Expression) -> FNode:
-    """
-    Creates an expression of the form:
-        ``arr[pos] = element``.
-
-    NOTE: Valid assignation for the ArrayType and list
-
-    :param arr: The array of elements.
-    :param pos: The position of an element in the array.
-    :param element: The element to store in the position pos of the array arr.
-    :return: The created ``Store`` expression.
-    """
-    return get_environment().expression_manager.Store(arr, pos, element)
-
-def Select(arr: Expression, pos: int) -> FNode:
-    """
-    Creates an expression of the form:
-        ``arr[pos]``.
-
-    NOTE: Valid assignation for the ArrayType and list
-
-    :param arr: The array of elements.
-    :param pos: The position of an element in the array.
-    :return: The created ``Select`` expression.
-    """
-    return get_environment().expression_manager.Select(arr, pos)
-
 def Dot(
     agent: "unified_planning.model.multi_agent.Agent",
     fluent_exp: Union[FNode, "unified_planning.model.Fluent"],

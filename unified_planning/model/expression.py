@@ -753,34 +753,3 @@ class ExpressionManager(object):
         """
         left, right = self.auto_promote(left, right)
         return self.create_node(node_type=OperatorKind.EQUALS, args=(left, right))
-
-    def Store(self, arr: Expression, pos: int, element: Expression) -> "up.model.fnode.FNode":
-        """
-        Creates an expression of the form:
-            ``arr[pos] = element``.
-
-        NOTE: Valid assignation for the ArrayType and list
-
-        :param arr: The array of elements.
-        :param pos: The position of an element in the array.
-        :param element: The element to store in the position pos of the array arr.
-        :return: The created ``Store`` expression.
-        """
-        assert isinstance(pos, int) and not isinstance(pos, bool), "The positional argument must be an integer"
-        arr, pos, element = self.auto_promote(arr, pos, element)
-        return self.create_node(node_type=OperatorKind.STORE, args=(arr, pos, element))
-
-    def Select(self, arr: Expression, pos: int) -> "up.model.fnode.FNode":
-        """
-        Creates an expression of the form:
-            ``arr[pos]``.
-
-        NOTE: Valid assignation for the ArrayType and list
-
-        :param arr: The array of elements.
-        :param pos: The position of an element in the array.
-        :return: The created ``Select`` expression.
-        """
-        assert isinstance(pos, int) and not isinstance(pos, bool), "The positional argument must be an integer"
-        arr, pos = self.auto_promote(arr, pos)
-        return self.create_node(node_type=OperatorKind.SELECT, args=(arr, pos))

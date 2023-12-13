@@ -127,10 +127,6 @@ class FNode(object):
             return self.get_nary_expression_string(" < ", self.args)
         elif self.is_equals():
             return self.get_nary_expression_string(" == ", self.args)
-        elif self.is_store():
-            return f"{self.arg(0)}[{self.arg(1)}] = {self.arg(2)}"
-        elif self.is_select():
-            return f"{self.arg(0)}[{self.arg(1)}]"
         else:
             raise ValueError("Unknown FNode type found")
 
@@ -397,13 +393,6 @@ class FNode(object):
         """Test whether the node is the `DOT` operator."""
         return self.node_type == OperatorKind.DOT
 
-    def is_store(self) -> bool:
-        """Test whether the node is the `STORE` operator."""
-        return self.node_type == OperatorKind.STORE
-
-    def is_select(self) -> bool:
-        """Test whether the node is the `SELECT` operator."""
-        return self.node_type == OperatorKind.SELECT
     #
     # Infix operators
     #
@@ -500,9 +489,3 @@ class FNode(object):
 
     def Iff(self, right):
         return self._env.expression_manager.Iff(self, right)
-
-    def Store(self, right):
-        return self._env.expression_manager.Store(self, right)
-
-    def Select(self, right):
-        return self._env.expression_manager.Select(self, right)
