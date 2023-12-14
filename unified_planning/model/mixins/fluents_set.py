@@ -142,8 +142,8 @@ class FluentsSetMixin:
             # es crea un fluent per cada element de l'array
             for i in range(fluent.type.n_elements):
                 fluent_i = fluent[i]
-                if self._has_name_method(fluent.name):
-                    msg = f"Name {fluent.name} already defined! Different elements of a problem can have the same name if the environment flag error_used_name is disabled."
+                if self._has_name_method(fluent_i.name):
+                    msg = f"Name {fluent_i.name} already defined! Different elements of a problem can have the same name if the environment flag error_used_name is disabled."
                     if self._env.error_used_name or any(
                             fluent_i.name == f.name for f in self._fluents
                     ):
@@ -157,7 +157,7 @@ class FluentsSetMixin:
                     )
                     self._fluents_defaults[fluent_i] = v_exp
                 elif fluent_i.type in self._initial_defaults:
-                    self._fluents_defaults[fluent] = self._initial_defaults[fluent.type]
+                    self._fluents_defaults[fluent_i] = self._initial_defaults[fluent_i.type]
                 if fluent_i.type.is_user_type():
                     self._add_user_type_method(fluent_i.type)
                 for param in fluent_i.signature:
