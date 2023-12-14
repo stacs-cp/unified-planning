@@ -69,6 +69,7 @@ class FluentsSetMixin:
         """
         for f in self._fluents:
             if f.name == name:
+                print("fluent: ",f)
                 return f
         raise UPValueError(f"Fluent of name: {name} is not defined!")
 
@@ -93,6 +94,7 @@ class FluentsSetMixin:
         :param fluents: The `fluents` that must be added to the `problem`.
         """
         for fluent in fluents:
+            print(fluent)
             self.add_fluent(fluent)
 
     def add_fluent(
@@ -102,7 +104,7 @@ class FluentsSetMixin:
         *,
         default_initial_value: Optional["ConstantExpression"] = None,
         **kwargs: "up.model.types.Type",
-    ) -> List["up.model.fluent.Fluent"]:
+    ) -> "up.model.fluent.Fluent":
         """Adds the given `fluent` to the `problem`.
 
         If the first parameter is not a `Fluent`, the parameters will be passed to the `Fluent` constructor to create it.
@@ -126,7 +128,6 @@ class FluentsSetMixin:
         bool connected[l1=Location, l2=Location]
         >>>
         """
-        fluents = []
         if isinstance(fluent_or_name, up.model.fluent.Fluent):
             assert len(kwargs) == 0 and typename is None
             fluent = fluent_or_name
@@ -139,31 +140,11 @@ class FluentsSetMixin:
             )
 
         if fluent.type.is_array_type():
-            # es crea un fluent per cada element de l'array
+            fluents = []
             for i in range(fluent.type.n_elements):
                 fluent_i = fluent[i]
-                if self._has_name_method(fluent_i.name):
-                    msg = f"Name {fluent_i.name} already defined! Different elements of a problem can have the same name if the environment flag error_used_name is disabled."
-                    if self._env.error_used_name or any(
-                            fluent_i.name == f.name for f in self._fluents
-                    ):
-                        raise UPProblemDefinitionError(msg)
-                    else:
-                        warn(msg)
-                self._fluents.append(fluent_i)
-                if not default_initial_value is None:
-                    (v_exp,) = self.environment.expression_manager.auto_promote(
-                        default_initial_value[i]
-                    )
-                    self._fluents_defaults[fluent_i] = v_exp
-                elif fluent_i.type in self._initial_defaults:
-                    self._fluents_defaults[fluent_i] = self._initial_defaults[fluent_i.type]
-                if fluent_i.type.is_user_type():
-                    self._add_user_type_method(fluent_i.type)
-                for param in fluent_i.signature:
-                    if param.type.is_user_type():
-                        self._add_user_type_method(param.type)
                 fluents.append(fluent_i)
+            self.add_fluents(fluents)
         else:
             if self._has_name_method(fluent.name):
                 msg = f"Name {fluent.name} already defined! Different elements of a problem can have the same name if the environment flag error_used_name is disabled."
@@ -186,8 +167,7 @@ class FluentsSetMixin:
             for param in fluent.signature:
                 if param.type.is_user_type():
                     self._add_user_type_method(param.type)
-            fluents.append(fluent)
-        return fluents
+        return fluent
 
     def clear_fluents(self):
         """
