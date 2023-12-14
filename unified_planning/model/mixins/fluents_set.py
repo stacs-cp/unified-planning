@@ -69,7 +69,6 @@ class FluentsSetMixin:
         """
         for f in self._fluents:
             if f.name == name:
-                print("fluent: ",f)
                 return f
         raise UPValueError(f"Fluent of name: {name} is not defined!")
 
@@ -94,7 +93,6 @@ class FluentsSetMixin:
         :param fluents: The `fluents` that must be added to the `problem`.
         """
         for fluent in fluents:
-            print(fluent)
             self.add_fluent(fluent)
 
     def add_fluent(
