@@ -102,7 +102,7 @@ class FluentsSetMixin:
         *,
         default_initial_value: Optional["ConstantExpression"] = None,
         **kwargs: "up.model.types.Type",
-    ) -> "up.model.fluent.Fluent":
+    ) -> List["up.model.fluent.Fluent"]:
         """Adds the given `fluent` to the `problem`.
 
         If the first parameter is not a `Fluent`, the parameters will be passed to the `Fluent` constructor to create it.
@@ -126,39 +126,68 @@ class FluentsSetMixin:
         bool connected[l1=Location, l2=Location]
         >>>
         """
+        fluents = []
         if isinstance(fluent_or_name, up.model.fluent.Fluent):
             assert len(kwargs) == 0 and typename is None
             fluent = fluent_or_name
             assert (
-                fluent.environment == self._env
+                    fluent.environment == self._env
             ), "Fluent does not have the same environment of the problem"
         else:
             fluent = up.model.fluent.Fluent(
                 fluent_or_name, typename, None, environment=self.environment, **kwargs
             )
-        if self._has_name_method(fluent.name):
-            msg = f"Name {fluent.name} already defined! Different elements of a problem can have the same name if the environment flag error_used_name is disabled."
-            if self._env.error_used_name or any(
-                fluent.name == f.name for f in self._fluents
-            ):
-                raise UPProblemDefinitionError(msg)
-            else:
-                warn(msg)
-        self._fluents.append(fluent)
-        if not default_initial_value is None:
-            (v_exp,) = self.environment.expression_manager.auto_promote(
-                default_initial_value
-            )
-            self._fluents_defaults[fluent] = v_exp
-        elif fluent.type in self._initial_defaults:
-            self._fluents_defaults[fluent] = self._initial_defaults[fluent.type]
-        if fluent.type.is_user_type():
-            self._add_user_type_method(fluent.type)
-        for param in fluent.signature:
-            if param.type.is_user_type():
-                self._add_user_type_method(param.type)
 
-        return fluent
+        if fluent.type.is_array_type():
+            # es crea un fluent per cada element de l'array
+            for i in range(fluent.type.n_elements):
+                fluent_i = fluent[i]
+                if self._has_name_method(fluent.name):
+                    msg = f"Name {fluent.name} already defined! Different elements of a problem can have the same name if the environment flag error_used_name is disabled."
+                    if self._env.error_used_name or any(
+                            fluent_i.name == f.name for f in self._fluents
+                    ):
+                        raise UPProblemDefinitionError(msg)
+                    else:
+                        warn(msg)
+                self._fluents.append(fluent_i)
+                if not default_initial_value is None:
+                    (v_exp,) = self.environment.expression_manager.auto_promote(
+                        default_initial_value[i]
+                    )
+                    self._fluents_defaults[fluent_i] = v_exp
+                elif fluent_i.type in self._initial_defaults:
+                    self._fluents_defaults[fluent] = self._initial_defaults[fluent.type]
+                if fluent_i.type.is_user_type():
+                    self._add_user_type_method(fluent_i.type)
+                for param in fluent_i.signature:
+                    if param.type.is_user_type():
+                        self._add_user_type_method(param.type)
+                fluents.append(fluent_i)
+        else:
+            if self._has_name_method(fluent.name):
+                msg = f"Name {fluent.name} already defined! Different elements of a problem can have the same name if the environment flag error_used_name is disabled."
+                if self._env.error_used_name or any(
+                        fluent.name == f.name for f in self._fluents
+                ):
+                    raise UPProblemDefinitionError(msg)
+                else:
+                    warn(msg)
+            self._fluents.append(fluent)
+            if not default_initial_value is None:
+                (v_exp,) = self.environment.expression_manager.auto_promote(
+                    default_initial_value
+                )
+                self._fluents_defaults[fluent] = v_exp
+            elif fluent.type in self._initial_defaults:
+                self._fluents_defaults[fluent] = self._initial_defaults[fluent.type]
+            if fluent.type.is_user_type():
+                self._add_user_type_method(fluent.type)
+            for param in fluent.signature:
+                if param.type.is_user_type():
+                    self._add_user_type_method(param.type)
+            fluents.append(fluent)
+        return fluents
 
     def clear_fluents(self):
         """
