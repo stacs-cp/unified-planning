@@ -138,11 +138,9 @@ class FluentsSetMixin:
             )
 
         if fluent.type.is_array_type():
-            fluents = []
             for i in range(fluent.type.n_elements):
                 fluent_i = fluent[i]
-                fluents.append(fluent_i)
-            self.add_fluents(fluents)
+                self.add_fluent(fluent_i, default_initial_value=default_initial_value)
         else:
             if self._has_name_method(fluent.name):
                 msg = f"Name {fluent.name} already defined! Different elements of a problem can have the same name if the environment flag error_used_name is disabled."

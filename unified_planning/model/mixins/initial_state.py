@@ -62,7 +62,6 @@ class InitialStateMixin:
             for i in range(fluent.type.n_elements):
                 self.set_initial_value(fluent[i], value[i])
         else:
-
             fluent_exp, value_exp = self._env.expression_manager.auto_promote(fluent, value)
             assert fluent_exp.is_fluent_exp(), "fluent field must be a fluent"
             if fluent_exp.type.is_array_type():
