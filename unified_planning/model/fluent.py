@@ -124,10 +124,9 @@ class Fluent:
         name_element_fluent = self.name + f'[{index}]'
         # implement if the ArrayType fluent has parameters, each element Fluent has to have them too
         if self.signature:
-            new_fluent = Fluent(name_element_fluent, type_of_element, self.signature)
+            return Fluent(name_element_fluent, type_of_element, self.signature)
         else:
-            new_fluent = Fluent(name_element_fluent, type_of_element)
-        return new_fluent
+            return Fluent(name_element_fluent, type_of_element)
 
     @property
     def name(self) -> str:
