@@ -541,7 +541,7 @@ class PDDLWriter:
                 out.write(f" (:action {self._get_mangled_name(a)}")
                 out.write(f"\n  :parameters (")
                 for ap in a.parameters:
-                    if ap.type.is_user_type():
+                    if ap.type.is_user_type() or ap.type.is_int_type():
                         out.write(
                             f" {self._get_mangled_name(ap)} - {self._get_mangled_name(ap.type)}"
                         )
