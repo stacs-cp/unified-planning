@@ -545,8 +545,6 @@ class PDDLWriter:
                         out.write(
                             f" {self._get_mangled_name(ap)} - {self._get_mangled_name(ap.type)}"
                         )
-                    elif ap.type.is_int_type():
-                        pass
                     else:
                         raise UPTypeError("PDDL supports only user type parameters")
                 out.write(")")
