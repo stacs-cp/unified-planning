@@ -48,6 +48,11 @@ class Action(ABC):
         self._parameters: "OrderedDict[str, up.model.parameter.Parameter]" = (
             OrderedDict()
         )
+        self._positions: "OrderedDict[str, up.model.parameter.Parameter]" = (
+            OrderedDict()
+        )
+        # if _positions is not None:
+
         if _parameters is not None:
             assert len(kwargs) == 0
             for n, t in _parameters.items():
@@ -59,12 +64,17 @@ class Action(ABC):
                 )
         else:
             for n, t in kwargs.items():
-                assert self._environment.type_manager.has_type(
-                    t
-                ), "type of parameter does not belong to the same environment of the action"
-                self._parameters[n] = up.model.parameter.Parameter(
-                    n, t, self._environment
-                )
+                if t.is_int_type():
+                    self._positions[n] = up.model.parameter.Parameter(
+                        n, t, self._environment
+                    )
+                else:
+                    assert self._environment.type_manager.has_type(
+                        t
+                    ), "type of parameter does not belong to the same environment of the action"
+                    self._parameters[n] = up.model.parameter.Parameter(
+                        n, t, self._environment
+                    )
 
     @abstractmethod
     def __eq__(self, oth: object) -> bool:
@@ -137,6 +147,16 @@ class Action(ABC):
         if name not in self._parameters:
             raise ValueError(f"Action '{self.name}' has no parameter '{name}'")
         return self._parameters[name]
+
+    @property
+    def positions(self) -> List["up.model.parameter.Parameter"]:
+        """Returns the `list` of the `Action parameters`."""
+        return list(self._positions.values())
+
+    def position(self, name: str) -> "up.model.parameter.Parameter":
+        if name not in self._positions:
+            raise ValueError(f"Action '{self.name}' has no position '{name}'")
+        return self._positions[name]
 
     def __getattr__(self, parameter_name: str) -> "up.model.parameter.Parameter":
         if parameter_name.startswith("_"):
