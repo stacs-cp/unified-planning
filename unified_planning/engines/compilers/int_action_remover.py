@@ -148,6 +148,7 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
         env = problem.environment
         em = env.expression_manager
         tm = env.type_manager
+        print(problem.name, self.name)
         new_problem = Problem(f"{problem.name}_{self.name}", env)
         new_problem.add_objects(problem.all_objects)
 
@@ -158,6 +159,8 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
         new_fluents: Dict[Fluent, Fluent] = {}
         for old_fluent in problem.fluents:
             print(old_fluent)
+        for action in problem.actions:
+            print(action.name, action.parameters)
 
         return CompilerResult(
             new_problem, partial(replace_action, map=new_to_old), self.name

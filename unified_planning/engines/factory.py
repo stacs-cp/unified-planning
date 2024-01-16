@@ -514,22 +514,12 @@ class Factory:
             else:
                 raise up.exceptions.UPNoRequestedEngineAvailableException
         problem_features = list(problem_kind.features)
-        print("problem features: ", problem_features)
         planners_features = []
         # Make sure that optimality guarantees and compilation kind are mutually exclusive
         assert optimality_guarantee is None or compilation_kind is None
 
-        print(self._preference_list)
         for name in self._preference_list:
             EngineClass = self._engines[name]
-            print("EngineClass: ",
-                EngineClass,
-                operation_mode,
-                problem_kind,
-                optimality_guarantee,
-                compilation_kind,
-                plan_kind,
-                anytime_guarantee)
             if self._engine_satisfies_conditions(
                 EngineClass,
                 operation_mode,
@@ -539,10 +529,8 @@ class Factory:
                 plan_kind,
                 anytime_guarantee,
             ):
-                print("if")
                 return EngineClass
             elif getattr(EngineClass, "is_" + operation_mode.value)():
-                print("elif")
                 # The EngineClass satisfies the given OperationMode but does not
                 # satisfy some other features; add it to the error report features if
                 # no NoSuitableEngineAvailable are found.
@@ -560,7 +548,6 @@ class Factory:
                     x.append(str(EngineClass.ensures(anytime_guarantee)))
 
                 planners_features.append(x)
-        print(planners_features)
         if len(planners_features) > 0:
             if optimality_guarantee is not None:
                 starting_line = f"No available engine supports all the problem features with optimality_guarantee: {optimality_guarantee.name}:"
@@ -696,7 +683,6 @@ class Factory:
             error_failed_checks = name is None
             if params is None:
                 params = {}
-            print(params)
             assert isinstance(params, Dict)
             EngineClass = self._get_engine_class(
                 operation_mode,
@@ -920,7 +906,6 @@ class Factory:
                 else:
                     assert isinstance(kind, CompilationKind), "Typing not respected"
                     kinds.append(kind)
-        print(OperationMode.COMPILER, name, names, params, problem_kind, compilation_kind, kinds)
         return self._get_engine(
             OperationMode.COMPILER,
             name,
