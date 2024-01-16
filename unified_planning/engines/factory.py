@@ -517,6 +517,14 @@ class Factory:
         print(self._preference_list)
         for name in self._preference_list:
             EngineClass = self._engines[name]
+            print("EngineClass: ",
+                EngineClass,
+                operation_mode,
+                problem_kind,
+                optimality_guarantee,
+                compilation_kind,
+                plan_kind,
+                anytime_guarantee)
             if self._engine_satisfies_conditions(
                 EngineClass,
                 operation_mode,
