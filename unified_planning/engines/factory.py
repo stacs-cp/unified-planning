@@ -525,8 +525,10 @@ class Factory:
                 plan_kind,
                 anytime_guarantee,
             ):
+                print("if")
                 return EngineClass
             elif getattr(EngineClass, "is_" + operation_mode.value)():
+                print("elif")
                 # The EngineClass satisfies the given OperationMode but does not
                 # satisfy some other features; add it to the error report features if
                 # no NoSuitableEngineAvailable are found.
