@@ -148,19 +148,32 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
         env = problem.environment
         em = env.expression_manager
         tm = env.type_manager
-        print(problem.name, self.name)
         new_problem = Problem(f"{problem.name}_{self.name}", env)
         new_problem.add_objects(problem.all_objects)
+        new_problem.add_fluents(problem.fluents)
 
         int_type = tm.IntType()
         real_type = tm.RealType()
         conditions: List[FNode] = []
 
-        new_fluents: Dict[Fluent, Fluent] = {}
-        for old_fluent in problem.fluents:
-            print(old_fluent)
-        for action in problem.actions:
-            print(action.name, action.parameters)
+        min = max = 0
+        new_parameters = []
+        for old_action in problem.actions:
+            print(old_action)
+            print(old_action.is_conditional())
+            for old_parameter in old_action.parameters:
+                print(old_parameter)
+                if old_parameter.type.is_int_type():
+                    min = old_parameter.type.lower_bound
+                    max = old_parameter.type.upper_bound
+                else:
+                    new_parameters.append(old_parameter)
+
+            for i in range(min, max):
+                print(old_action.name+str(i))
+                new_problem.add_action(Action(old_action.name+str(i), new_parameters, env))
+
+                print(old_action.name, old_action.parameters)
 
         return CompilerResult(
             new_problem, partial(replace_action, map=new_to_old), self.name
