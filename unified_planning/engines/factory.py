@@ -95,6 +95,10 @@ DEFAULT_ENGINES = {
         "unified_planning.engines.compilers.quantifiers_remover",
         "QuantifiersRemover",
     ),
+    "up_int_action_remover": (
+        "unified_planning.engines.compilers.int_action_remover",
+        "IntActionRemover",
+    ),
     "up_usertype_fluents_remover": (
         "unified_planning.engines.compilers.usertype_fluents_remover",
         "UsertypeFluentsRemover",
@@ -151,6 +155,7 @@ DEFAULT_ENGINES_PREFERENCE_LIST = [
     "up_ma_conditional_effects_remover",
     "up_negative_conditions_remover",
     "up_quantifiers_remover",
+    "up_int_action_remover",
     "up_state_invariants_remover",
     "up_usertype_fluents_remover",
     "tarski_grounder",
