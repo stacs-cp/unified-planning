@@ -514,6 +514,7 @@ class Factory:
         # Make sure that optimality guarantees and compilation kind are mutually exclusive
         assert optimality_guarantee is None or compilation_kind is None
 
+        print(self._preference_list)
         for name in self._preference_list:
             EngineClass = self._engines[name]
             if self._engine_satisfies_conditions(
