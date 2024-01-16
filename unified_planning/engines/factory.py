@@ -544,6 +544,7 @@ class Factory:
                     x.append(str(EngineClass.ensures(anytime_guarantee)))
 
                 planners_features.append(x)
+        print(planners_features)
         if len(planners_features) > 0:
             if optimality_guarantee is not None:
                 starting_line = f"No available engine supports all the problem features with optimality_guarantee: {optimality_guarantee.name}:"
