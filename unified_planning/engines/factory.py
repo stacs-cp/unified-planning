@@ -509,6 +509,7 @@ class Factory:
             else:
                 raise up.exceptions.UPNoRequestedEngineAvailableException
         problem_features = list(problem_kind.features)
+        print("problem features: ", problem_features)
         planners_features = []
         # Make sure that optimality guarantees and compilation kind are mutually exclusive
         assert optimality_guarantee is None or compilation_kind is None
@@ -678,6 +679,7 @@ class Factory:
             error_failed_checks = name is None
             if params is None:
                 params = {}
+            print(params)
             assert isinstance(params, Dict)
             EngineClass = self._get_engine_class(
                 operation_mode,
@@ -901,6 +903,7 @@ class Factory:
                 else:
                     assert isinstance(kind, CompilationKind), "Typing not respected"
                     kinds.append(kind)
+        print(OperationMode.COMPILER, name, names, params, problem_kind, compilation_kind, kinds)
         return self._get_engine(
             OperationMode.COMPILER,
             name,
