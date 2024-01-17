@@ -17,6 +17,7 @@
 
 import unified_planning as up
 import unified_planning.engines as engines
+from unified_planning import model
 from unified_planning.engines.mixins.compiler import CompilationKind, CompilerMixin
 from unified_planning.engines.results import CompilerResult
 from unified_planning.model import Problem, ProblemKind, Fluent, FNode, Action
@@ -160,16 +161,22 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
         new_parameters = []
         for old_action in problem.actions:
             print(old_action)
+            print(old_action.preconditions)
+            print(old_action.effects)
             print(old_action.__class__)
+            print(isinstance(old_action.__class__, model.InstantaneousAction))
+            print(old_action.__class__, model.InstantaneousAction == model.InstantaneousAction)
             for old_parameter in old_action.parameters:
                 print(old_parameter)
                 print(old_parameter.type)
                 if old_parameter.type.is_int_type():
-                    if old_parameter.type.lower_bound: #not none
-                        pass
+                    # per cada fluent mirar si estan a les precondicions o efectes
+                    # buscar la i !!!!
+                    for precondition in old_action.preconditions:
+                        print(precondition)
+                    for effect in old_action.effects:
+                        print(effect)
 
-                    min = old_parameter.type.lower_bound
-                    max = old_parameter.type.upper_bound
                 else:
                     new_parameters.append(old_parameter)
             print(min,max)
