@@ -160,18 +160,23 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
         new_parameters = []
         for old_action in problem.actions:
             print(old_action)
-            print(old_action.is_conditional())
+            print(old_action.__class__)
             for old_parameter in old_action.parameters:
                 print(old_parameter)
+                print(old_parameter.type)
                 if old_parameter.type.is_int_type():
+                    if old_parameter.type.lower_bound: #not none
+                        pass
+
                     min = old_parameter.type.lower_bound
                     max = old_parameter.type.upper_bound
                 else:
                     new_parameters.append(old_parameter)
-
+            print(min,max)
             for i in range(min, max):
                 print(old_action.name+str(i))
-                new_problem.add_action(Action(old_action.name+str(i), new_parameters, env))
+                new_action = Action(old_action.name+str(i), new_parameters, env)
+                new_action.add_precondition()
 
                 print(old_action.name, old_action.parameters)
 
