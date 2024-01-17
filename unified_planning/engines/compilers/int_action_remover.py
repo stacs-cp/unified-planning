@@ -168,8 +168,6 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
             print(old_action.effects)
             print(old_action.__class__ == model.InstantaneousAction)
             for old_parameter in old_action.parameters:
-                print(old_parameter)
-                print(old_parameter.type)
                 if old_parameter.type.is_user_type():
                     new_parameters.append(old_parameter)
                 else:
@@ -181,11 +179,14 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
             # fer tambe per precondicions
             for precondition in old_action.preconditions:
                 print("Preconditions")
+
                 print(ints[0])
                 print(intsa[0])
-                print(intsa[0] in str(precondition))
                 print(stri[0])
-                print(stri[0] in str(precondition))
+
+                print(precondition)
+                print(str(precondition))
+
                 print(stri[0] in str(precondition))
                 if ints[0] in precondition:
                     print(precondition.split('['))
