@@ -178,12 +178,12 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
                     stri.append(str(old_parameter.type) + ' ' + old_parameter.name)
 
             # per cada precondicio mirar si apareix la i
+            # fer tambe per precondicions
             for precondition in old_action.preconditions:
                 print("holaaa")
-                print(precondition)
                 print(ints[0])
                 print(intsa[0])
-                print(intsa[0 in precondition])
+                print(intsa[0] in precondition)
                 print(stri[0])
                 print(stri[0] in precondition)
                 print(stri[0] in str(precondition))
