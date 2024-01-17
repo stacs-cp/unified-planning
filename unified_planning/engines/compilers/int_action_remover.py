@@ -184,7 +184,7 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
                     this_fluent = str(precondition).split('[')[0]
                     print(str(precondition).split(int_in[0])[0])
                     print(str(precondition).split(int_in[0])[1])
-                    print(problem.fluent(this_fluent).name)
+
 
             for effect in old_action.effects:
                 print("Effects")
