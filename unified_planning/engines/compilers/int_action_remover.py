@@ -160,11 +160,13 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
         min = max = 0
         new_parameters = []
         ints = []
+        intsa = []
+        stri = []
         for old_action in problem.actions:
             print(old_action)
             print(old_action.preconditions)
             print(old_action.effects)
-            print(old_action.__class__ == model.InstantaneousAction)
+            print(old_action.__class__ == model.InstantaneousAction.__class__)
             for old_parameter in old_action.parameters:
                 print(old_parameter)
                 print(old_parameter.type)
@@ -172,10 +174,18 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
                     new_parameters.append(old_parameter)
                 else:
                     ints.append(old_parameter.name)
+                    intsa.append(old_parameter)
+                    stri.append(str(old_parameter.type) + ' ' + old_parameter.name)
 
             # per cada precondicio mirar si apareix la i
             for precondition in old_action.preconditions:
                 print(precondition)
+                print(ints[0])
+                print(intsa[0])
+                print(intsa[0 in precondition])
+                print(stri[0])
+                print(stri[0] in precondition)
+                print(stri[0] in str(precondition))
                 if ints[0] in precondition:
                     print(precondition.split('['))
                     this_fluent = precondition.split('[')
