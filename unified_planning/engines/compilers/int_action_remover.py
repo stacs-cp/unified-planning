@@ -159,9 +159,7 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
 
         min = max = 0
         new_parameters = []
-        ints = []
-        intsa = []
-        stri = []
+        int_in = []
         for old_action in problem.actions:
             print(old_action)
             print(old_action.preconditions)
@@ -171,28 +169,21 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
                 if old_parameter.type.is_user_type():
                     new_parameters.append(old_parameter)
                 else:
-                    ints.append(old_parameter.name)
-                    intsa.append(old_parameter)
-                    stri.append(str(old_parameter.type) + ' ' + old_parameter.name)
+                    int_in.append(str(old_parameter.type) + ' ' + old_parameter.name)
 
             # per cada precondicio mirar si apareix la i
             # fer tambe per precondicions
             for precondition in old_action.preconditions:
                 print("Preconditions")
-
-                print(ints[0])
-                print(intsa[0])
-                print(stri[0])
-
+                print(int_in[0])
                 print(precondition)
-                print(str(precondition))
+                print(int_in[0] in str(precondition))
 
-                print(stri[0] in str(precondition))
-                if ints[0] in precondition:
-                    print(precondition.split('['))
-                    this_fluent = precondition.split('[')
-                    print(precondition.split(ints[0])[0])
-                    print(precondition.split(ints[0])[1])
+                if int_in[0] in str(precondition):
+                    print(str(precondition).split('['))
+                    this_fluent = str(precondition).split('[')[0]
+                    print(str(precondition).split(int_in[0])[0])
+                    print(str(precondition).split(int_in[0])[1])
                     print(problem.fluent(this_fluent).name)
 
             for effect in old_action.effects:
