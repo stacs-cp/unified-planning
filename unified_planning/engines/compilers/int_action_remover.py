@@ -166,7 +166,7 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
             print(old_action)
             print(old_action.preconditions)
             print(old_action.effects)
-            print(old_action.__class__ == model.InstantaneousAction.__class__)
+            print(old_action.__class__ == model.InstantaneousAction)
             for old_parameter in old_action.parameters:
                 print(old_parameter)
                 print(old_parameter.type)
@@ -179,6 +179,7 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
 
             # per cada precondicio mirar si apareix la i
             for precondition in old_action.preconditions:
+                print("holaaa")
                 print(precondition)
                 print(ints[0])
                 print(intsa[0])
