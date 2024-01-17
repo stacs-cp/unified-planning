@@ -180,12 +180,12 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
             # per cada precondicio mirar si apareix la i
             # fer tambe per precondicions
             for precondition in old_action.preconditions:
-                print("holaaa")
+                print("Preconditions")
                 print(ints[0])
                 print(intsa[0])
-                print(intsa[0] in precondition)
+                print(intsa[0] in str(precondition))
                 print(stri[0])
-                print(stri[0] in precondition)
+                print(stri[0] in str(precondition))
                 print(stri[0] in str(precondition))
                 if ints[0] in precondition:
                     print(precondition.split('['))
@@ -195,6 +195,7 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
                     print(problem.fluent(this_fluent).name)
 
             for effect in old_action.effects:
+                print("Effects")
                 print(effect)
 
             # per cada fluent mirar si estan a les precondicions o efectes
