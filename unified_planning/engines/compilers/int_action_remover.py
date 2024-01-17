@@ -153,51 +153,45 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
         new_problem.add_objects(problem.all_objects)
         new_problem.add_fluents(problem.fluents)
 
-        int_type = tm.IntType()
-        real_type = tm.RealType()
         conditions: List[FNode] = []
 
         min = max = 0
         new_parameters = []
-        int_in = []
+        int_in = None
         for old_action in problem.actions:
             print(old_action)
-            print(old_action.preconditions)
-            print(old_action.effects)
             print(old_action.__class__ == model.InstantaneousAction)
             for old_parameter in old_action.parameters:
                 if old_parameter.type.is_user_type():
                     new_parameters.append(old_parameter)
                 else:
-                    int_in.append(str(old_parameter.type) + ' ' + old_parameter.name)
+                    int_in = (str(old_parameter.type) + ' ' + old_parameter.name)
 
             # per cada precondicio mirar si apareix la i
-            # fer tambe per precondicions
             for precondition in old_action.preconditions:
                 print("Preconditions")
-                print(int_in[0])
+                print(int_in)
                 print(precondition)
-                print(int_in[0] in str(precondition))
+                print(int_in in str(precondition))
 
-                if int_in[0] in str(precondition):
+                if int_in in str(precondition):
                     print(str(precondition).split('['))
                     this_fluent = str(precondition).split('[')[0]
-                    print(str(precondition).split(int_in[0])[0])
-                    print(str(precondition).split(int_in[0])[1])
+                    print(str(precondition).split(int_in)[0])
 
+                    print(str(precondition).split(int_in)[1])
 
-            for effect in old_action.effects:
-                print("Effects")
-                print(effect)
+                    new_precondition = str(precondition).split(int_in)[0] + str(precondition).split(int_in)[1]
+                else:
+                    new_precondition = precondition
 
-            # per cada fluent mirar si estan a les precondicions o efectes
-            # buscar la i !!!!
-            print(min,max)
-            for i in range(min, max):
-                print(old_action.name+str(i))
-                new_action = Action(old_action.name+str(i), new_parameters, env)
-                new_action.add_precondition()
+                #for effect in old_action.effects:
+                    #print("Effects")
+                    #print(effect)
 
+                new_action = Action(old_action.name+str(int_in), new_parameters, env)
+                new_action.add_precondition(new_precondition)
+                print(new_action)
                 print(old_action.name, old_action.parameters)
 
         return CompilerResult(
