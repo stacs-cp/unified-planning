@@ -159,26 +159,35 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
 
         min = max = 0
         new_parameters = []
+        ints = []
         for old_action in problem.actions:
             print(old_action)
             print(old_action.preconditions)
             print(old_action.effects)
-            print(old_action.__class__)
-            print(isinstance(old_action.__class__, model.InstantaneousAction))
-            print(old_action.__class__, model.InstantaneousAction == model.InstantaneousAction)
+            print(old_action.__class__ == model.InstantaneousAction)
             for old_parameter in old_action.parameters:
                 print(old_parameter)
                 print(old_parameter.type)
-                if old_parameter.type.is_int_type():
-                    # per cada fluent mirar si estan a les precondicions o efectes
-                    # buscar la i !!!!
-                    for precondition in old_action.preconditions:
-                        print(precondition)
-                    for effect in old_action.effects:
-                        print(effect)
-
-                else:
+                if old_parameter.type.is_user_type():
                     new_parameters.append(old_parameter)
+                else:
+                    ints.append(old_parameter.name)
+
+            # per cada precondicio mirar si apareix la i
+            for precondition in old_action.preconditions:
+                print(precondition)
+                if ints[0] in precondition:
+                    print(precondition.split('['))
+                    this_fluent = precondition.split('[')
+                    print(precondition.split(ints[0])[0])
+                    print(precondition.split(ints[0])[1])
+                    print(problem.fluent(this_fluent).name)
+
+            for effect in old_action.effects:
+                print(effect)
+
+            # per cada fluent mirar si estan a les precondicions o efectes
+            # buscar la i !!!!
             print(min,max)
             for i in range(min, max):
                 print(old_action.name+str(i))
