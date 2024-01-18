@@ -31,7 +31,7 @@ from unified_planning.engines.compilers.utils import (
 )
 from typing import List, Dict, OrderedDict, Optional, Union, cast
 from functools import partial
-
+from itertools import product
 from unified_planning.shortcuts import Equals
 
 
@@ -154,51 +154,63 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
 
         new_problem = problem.clone()
         new_problem.name = f"{self.name}_{problem.name}"
+        new_problem.clear_actions()
 
         conditions: List[FNode] = []
 
         new_parameters = []
-        int_in = None
-        min = max = 0
+
+        int_parameters = []
+        int_domains = []
+
         # per cada accio mirar els parametres i treure el que es enter
-        for action in new_problem.actions:
-            original_action = problem.action(action.name)
+        for action in problem.actions:
             print(action)
             if isinstance(action, InstantaneousAction):
+                # separar els parametres i els enters
                 for old_parameter in action.parameters:
                     if old_parameter.type.is_user_type():
                         new_parameters.append(old_parameter)
                     else:
-                        int_in = (str(old_parameter.type) + ' ' + old_parameter.name)
-                        min = old_parameter.type.lower_bound
-                        max = old_parameter.type.upper_bound
+                        int_parameters.append(str(old_parameter.type) + ' ' + old_parameter.name)
+                        domain = []
+                        for i in range(old_parameter.type.lower_bound, old_parameter.type.upper_bound):
+                            domain.append(i)
+                        int_domains.append(domain)
 
-                action.clear_preconditions()
-                for precondition in original_action.preconditions:
-                    # si en la precondicion tenim la variable 'i' que volem subsituir...
-                    if int_in in str(precondition):
-                        print("      Precondition")
-                        print(precondition.args)
-                        print(precondition.arg(0)) # cards...
-                        print(precondition.arg(0).args) # cards...
-                        print(precondition.arg(0).fluent()) # integer cards[integer i][p=Person]
+                combinations = list(product(*int_domains))
+                print(combinations)
+                # per cada combinacio possible dels enters
+                # per cada parametre
+                for n in range(0, len(int_parameters)):
 
-                        print(precondition.arg(0).fluent().name)
-                        print(precondition.arg(0).fluent().name.split(int_in)[0])
+                    for i in range(0,1):
+                        # mirem les precondicions
+                        for precondition in action.preconditions:
+                            # si en la precondicion tenim la variable 'i' que volem subsituir...
+                            if int_parameters[n] in str(precondition):
+                                print("      Precondition")
+                                print(precondition)
 
-                        fluent_0 = precondition.arg(0).fluent().name.split(int_in)[0]
-                        fluent_1 = precondition.arg(0).fluent().name.split(int_in)[1]
+                                fluent_0 = precondition.arg(0).fluent().name.split(int_parameters[n])[0]
+                                fluent_1 = precondition.arg(0).fluent().name.split(int_parameters[n])[1]
+                                parameters = precondition.arg(0).arg(0)
 
-                        parameters = precondition.arg(0).arg(0)
+                                # per cada i fer una accio
+                                for i in range(min, max):
+                                    new_action = action.clone()
+                                    new_action.name = action.name + '_' + str(i)
+                                    new_action.parameters = new_parameters
 
-                        for i in range(min, max):
-                            print(i)
-                            new_name = fluent_0 + str(i) + fluent_1
-                            fluent = new_problem.fluent(new_name)
-                            print(fluent)
+                                    print(new_action.name)
+                                    print(new_action.parameters)
 
-                            if precondition.node_type == model.OperatorKind.EQUALS:
-                                Equals(fluent(parameters), precondition.arg(1))
+                                    new_name = fluent_0 + str(i) + fluent_1
+                                    fluent = new_problem.fluent(new_name)
+                                    print(fluent)
+
+                                    if precondition.node_type == model.OperatorKind.EQUALS:
+                                        Equals(fluent(parameters), precondition.arg(1))
 
                     #for effect in old_action.effects:
                         #print("Effects")
