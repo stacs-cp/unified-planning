@@ -170,7 +170,7 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
                     else:
                         int_in = (str(old_parameter.type) + ' ' + old_parameter.name)
                         min = old_parameter.type.lower_bound
-                        max = old_parameter.type.upper_bond
+                        max = old_parameter.type.upper_bound
 
                 action.clear_preconditions()
                 for precondition in original_action.preconditions:
