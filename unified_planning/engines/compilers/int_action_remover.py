@@ -32,6 +32,8 @@ from unified_planning.engines.compilers.utils import (
 from typing import List, Dict, OrderedDict, Optional, Union, cast
 from functools import partial
 
+from unified_planning.shortcuts import Equals
+
 
 class IntActionRemover(engines.engine.Engine, CompilerMixin):
     """
@@ -149,7 +151,9 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
         env = problem.environment
         em = env.expression_manager
         tm = env.type_manager
-        new_problem = Problem(f"{problem.name}_{self.name}", env)
+
+        new_problem = problem.clone()
+        new_problem.name = f"{self.name}_{problem.name}"
         new_problem.add_objects(problem.all_objects)
         new_problem.add_fluents(problem.fluents)
 
@@ -157,49 +161,71 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
 
         new_parameters = []
         int_in = None
-        for old_action in problem.actions:
-            print(old_action)
-            print(old_action.__class__ == model.InstantaneousAction)
-            if isinstance(old_action, InstantaneousAction): print("instantaneous!")
-            for old_parameter in old_action.parameters:
-                if old_parameter.type.is_user_type():
-                    new_parameters.append(old_parameter)
-                else:
-                    int_in = (str(old_parameter.type) + ' ' + old_parameter.name)
+        # per cada accio mirar els parametres i treure el que es enter
+        for action in new_problem.actions:
+            original_action = problem.action(action.name)
+            print(action)
+            if isinstance(action, InstantaneousAction):
+                for old_parameter in action.parameters:
+                    if old_parameter.type.is_user_type():
+                        new_parameters.append(old_parameter)
+                    else:
+                        int_in = (str(old_parameter.type) + ' ' + old_parameter.name)
+                        min = old_parameter.type.lower_bound
+                        max = old_parameter.type.upper_bond
 
-            # per cada precondicio mirar si apareix la i
-            for precondition in old_action.preconditions:
-                print(precondition.args)
-                print(precondition.arg(0))
-                print(precondition.arg(1))
-                print(precondition.node_type)
-                print(precondition.fluent())
-                print(precondition.type)
-                print("Preconditions")
-                print(int_in)
-                print(precondition)
-                print(int_in in str(precondition))
+                action.clear_preconditions()
+                for precondition in original_action.preconditions:
+                    # si en la precondicion tenim la variable 'i' que volem subsituir...
+                    if int_in in str(precondition):
+                        print("      Precondition")
+                        print(precondition.args)
+                        print(precondition.arg(0)) # cards...
+                        print(precondition.arg(0).args) # cards...
+                        print(precondition.arg(0).fluent()) # integer cards[integer i][p=Person]
 
-                if int_in in str(precondition):
-                    print(str(precondition).split('['))
-                    this_fluent = str(precondition).split('[')[0]
-                    print(str(precondition).split(int_in)[0])
+                        print(precondition.arg(0).fluent().name)
+                        print(precondition.arg(0).fluent().name.split(int_in)[0])
 
-                    print(str(precondition).split(int_in)[1])
+                        fluent_0 = precondition.arg(0).fluent().name.split(int_in)[0]
+                        fluent_1 = precondition.arg(0).fluent().name.split(int_in)[1]
 
-                    new_precondition = str(precondition).split(int_in)[0] + str(precondition).split(int_in)[1]
+                        for i in range(min,max):
+                            print(i)
+                            print(fluent_0 + str(i) + fluent_1)
+                            new_name = fluent_0 + str(i) + fluent_1
+                            print(new_problem.fluent(new_name))
+                            fluent = new_problem.fluent(new_name)
+                            fluent.args = precondition.arg(0).args
 
-                else:
-                    new_precondition = precondition
+                        if precondition.node_type == model.OperatorKind.EQUALS:
+                            Equals(precondition.arg(0).fluent, precondition.arg(1))
 
-                #for effect in old_action.effects:
-                    #print("Effects")
-                    #print(effect)
 
-                new_action = Action(old_action.name+str(int_in), new_parameters, env)
-                new_action.add_precondition(new_precondition)
-                print(new_action)
-                print(old_action.name, old_action.parameters)
+                        print(precondition.arg(1)) # 0
+                        print(precondition.node_type.name) # Equals
+                        print(precondition.type)
+
+                    print(int_in)
+                    print(precondition)
+
+                    if int_in in str(precondition):
+                        print(str(precondition).split('['))
+                        this_fluent = str(precondition).split('[')[0]
+                        print(str(precondition).split(int_in)[0])
+
+                        print(str(precondition).split(int_in)[1])
+
+                        new_precondition = str(precondition).split(int_in)[0] + str(precondition).split(int_in)[1]
+
+                    else:
+                        new_precondition = precondition
+
+                    #for effect in old_action.effects:
+                        #print("Effects")
+                        #print(effect)
+
+                    print(action.name, action.parameters)
 
         return CompilerResult(
             new_problem, partial(replace_action, map=new_to_old), self.name
