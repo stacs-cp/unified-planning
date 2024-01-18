@@ -183,13 +183,12 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
 
                 print(int_domains)
                 combinations = list(product(*int_domains))
-                print(combinations)
                 # per cada combinacio possible dels enters -> creem una accio
                 # per cada parametre
                 print(int_parameters.keys())
                 for c in combinations:
                     print(c)
-                    new_action = InstantaneousAction(action.name+'_'+c, parameters, action.environment)
+                    new_action = InstantaneousAction(action.name+'_'+str(c), parameters, action.environment)
                     print(new_action)
 
                     # mirem les precondicions
