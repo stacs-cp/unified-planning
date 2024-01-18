@@ -205,12 +205,14 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
 
                                 print(int_parameters.get(key))
 
+                                fluent_parameter = precondition.arg(0).args(0)
+
                                 new_name = fluent_0 + str(int_parameters.get(key)) + fluent_1
                                 fluent = new_problem.fluent(new_name)
                                 print(fluent)
 
                                 if precondition.node_type == model.OperatorKind.EQUALS:
-                                    Equals(fluent(parameters), precondition.arg(1))
+                                    Equals(fluent(fluent_parameter), precondition.arg(1))
 
                     #for effect in old_action.effects:
                         #print("Effects")
