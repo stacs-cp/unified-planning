@@ -29,7 +29,7 @@ from unified_planning.engines.compilers.utils import (
     add_invariant_condition_apply_function_to_problem_expressions,
     replace_action,
 )
-from typing import List, Dict, OrderedDict, Optional, Union, cast
+from typing import List, Dict, OrderedDict, Optional, Union, cast, Any
 from functools import partial
 from itertools import product
 from unified_planning.shortcuts import Equals
@@ -158,9 +158,8 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
 
         conditions: List[FNode] = []
 
-        new_parameters = []
-
-        int_parameters = []
+        parameters = OrderedDict[str, Any]
+        int_parameters = {}
         int_domains = []
 
         # per cada accio mirar els parametres i treure el que es enter
@@ -168,11 +167,14 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
             print(action)
             if isinstance(action, InstantaneousAction):
                 # separar els parametres i els enters
+                n_i = 0
                 for old_parameter in action.parameters:
                     if old_parameter.type.is_user_type():
-                        new_parameters.append(old_parameter)
+                        parameters[old_parameter.name] = old_parameter.type
                     else:
-                        int_parameters.append(str(old_parameter.type) + ' ' + old_parameter.name)
+                        int_parameters[str(old_parameter.type) + ' ' + old_parameter.name] = n_i
+                        n_i = n_i+1
+
                         domain = []
                         for i in range(old_parameter.type.lower_bound, old_parameter.type.upper_bound+1):
                             domain.append(i)
@@ -181,37 +183,36 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
                 print(int_domains)
                 combinations = list(product(*int_domains))
                 print(combinations)
-                # per cada combinacio possible dels enters
+                # per cada combinacio possible dels enters -> creem una accio
                 # per cada parametre
-                for n in range(0, len(int_parameters)):
+                print(int_parameters.keys())
+                for c in combinations:
+                    print(c)
+                    new_action = InstantaneousAction(action.name+'_'+c, parameters, action.environment)
+                    print(new_action)
 
-                    for i in range(0,1):
-                        # mirem les precondicions
-                        for precondition in action.preconditions:
-                            # si en la precondicion tenim la variable 'i' que volem subsituir...
-                            if int_parameters[n] in str(precondition):
+                    # mirem les precondicions
+                    for precondition in action.preconditions:
+                        # si en la precondicio tenim una clau
+                        for key in int_parameters.keys():
+                            print(key)
+                            if key in str(precondition):
                                 print("      Precondition")
                                 print(precondition)
 
-                                fluent_0 = precondition.arg(0).fluent().name.split(int_parameters[n])[0]
-                                fluent_1 = precondition.arg(0).fluent().name.split(int_parameters[n])[1]
+                                fluent_0 = precondition.arg(0).fluent().name.split()[0]
+                                fluent_1 = precondition.arg(0).fluent().name.split()[1]
                                 parameters = precondition.arg(0).arg(0)
 
-                                # per cada i fer una accio
-                                for i in range(min, max):
-                                    new_action = action.clone()
-                                    new_action.name = action.name + '_' + str(i)
-                                    new_action.parameters = new_parameters
+                                print(new_action.name)
+                                print(new_action.parameters)
 
-                                    print(new_action.name)
-                                    print(new_action.parameters)
+                                new_name = fluent_0 + str(i) + fluent_1
+                                fluent = new_problem.fluent(new_name)
+                                print(fluent)
 
-                                    new_name = fluent_0 + str(i) + fluent_1
-                                    fluent = new_problem.fluent(new_name)
-                                    print(fluent)
-
-                                    if precondition.node_type == model.OperatorKind.EQUALS:
-                                        Equals(fluent(parameters), precondition.arg(1))
+                                if precondition.node_type == model.OperatorKind.EQUALS:
+                                    Equals(fluent(parameters), precondition.arg(1))
 
                     #for effect in old_action.effects:
                         #print("Effects")
