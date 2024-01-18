@@ -170,7 +170,9 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
             # per cada precondicio mirar si apareix la i
             for precondition in old_action.preconditions:
                 print(precondition.args)
-                print(precondition.constant_value())
+                print(precondition.arg(0))
+                print(precondition.arg(1))
+                print(precondition.node_type)
                 print(precondition.fluent())
                 print(precondition.type)
                 print("Preconditions")
