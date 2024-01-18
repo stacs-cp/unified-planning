@@ -217,14 +217,14 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
                         if not precondition_added:
                             new_action.add_precondition(precondition)
 
-                        for effect in action.effects:
-                            print("Effects")
-                            print(effect)
+                    for effect in action.effects:
+                        print("Effects")
+                        print(effect)
 
-                        print(new_action)
-                        print("\n")
+                    print(new_action)
+                    print("\n")
 
-                        new_problem.add_action(new_action)
+                    new_problem.add_action(new_action)
 
         return CompilerResult(
             new_problem, partial(replace_action, map=new_to_old), self.name
