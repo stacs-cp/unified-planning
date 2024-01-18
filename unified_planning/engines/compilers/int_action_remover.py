@@ -154,8 +154,6 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
 
         new_problem = problem.clone()
         new_problem.name = f"{self.name}_{problem.name}"
-        new_problem.add_objects(problem.all_objects)
-        new_problem.add_fluents(problem.fluents)
 
         conditions: List[FNode] = []
 
