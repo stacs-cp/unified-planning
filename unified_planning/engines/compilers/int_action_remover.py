@@ -181,24 +181,24 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
                             domain.append(i)
                         int_domains.append(domain)
 
-                print(int_domains)
                 combinations = list(product(*int_domains))
                 # per cada combinacio possible dels enters -> creem una accio
                 # per cada parametre
-                print(int_parameters.keys())
+
                 for c in combinations:
-                    print(c)
+                    print("      Combination", c)
                     new_action = InstantaneousAction(action.name+str(c), parameters, action.environment)
-                    print(new_action)
 
                     # mirem les precondicions
                     for precondition in action.preconditions:
                         # si en la precondicio tenim una clau
+                        precondition_added = False
+                        # !!!! canviar perque haura de funcionar si en una mateixa precondicio tenim +1 clau
                         for key in int_parameters.keys():
                             print(key)
                             if key in str(precondition):
-                                print("      Precondition")
-                                print(precondition)
+                                precondition_added = True
+                                print("      Precondition:", precondition)
 
                                 fluent_0 = precondition.arg(0).fluent().name.split(key)[0]
                                 fluent_1 = precondition.arg(0).fluent().name.split(key)[1]
@@ -212,13 +212,19 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
                                 print(fluent)
 
                                 if precondition.node_type == model.OperatorKind.EQUALS:
-                                    Equals(fluent(fluent_parameter), precondition.arg(1))
+                                    new_action.add_precondition(Equals(fluent(fluent_parameter), precondition.arg(1)))
 
-                    #for effect in old_action.effects:
-                        #print("Effects")
-                        #print(effect)
+                        if not precondition_added:
+                            new_action.add_precondition(precondition)
 
-                    print(action.name, action.parameters)
+                        for effect in action.effects:
+                            print("Effects")
+                            print(effect)
+
+                        print(new_action)
+                        print("\n")
+
+                        new_problem.add_action(new_action)
 
         return CompilerResult(
             new_problem, partial(replace_action, map=new_to_old), self.name
