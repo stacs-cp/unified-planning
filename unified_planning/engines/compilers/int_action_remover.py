@@ -174,10 +174,11 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
                     else:
                         int_parameters.append(str(old_parameter.type) + ' ' + old_parameter.name)
                         domain = []
-                        for i in range(old_parameter.type.lower_bound, old_parameter.type.upper_bound):
+                        for i in range(old_parameter.type.lower_bound, old_parameter.type.upper_bound+1):
                             domain.append(i)
                         int_domains.append(domain)
 
+                print(int_domains)
                 combinations = list(product(*int_domains))
                 print(combinations)
                 # per cada combinacio possible dels enters
