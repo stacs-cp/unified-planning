@@ -159,6 +159,7 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
 
         new_parameters = []
         int_in = None
+        min = max = 0
         # per cada accio mirar els parametres i treure el que es enter
         for action in new_problem.actions:
             original_action = problem.action(action.name)
@@ -188,33 +189,16 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
                         fluent_0 = precondition.arg(0).fluent().name.split(int_in)[0]
                         fluent_1 = precondition.arg(0).fluent().name.split(int_in)[1]
 
-                        for i in range(min,max):
+                        parameters = precondition.arg(0).arg(0)
+
+                        for i in range(min, max):
                             print(i)
-                            print(fluent_0 + str(i) + fluent_1)
                             new_name = fluent_0 + str(i) + fluent_1
-                            print(new_problem.fluent(new_name))
                             fluent = new_problem.fluent(new_name)
                             print(fluent)
-                            print(fluent(precondition.arg(0).args))
 
                             if precondition.node_type == model.OperatorKind.EQUALS:
-                                Equals(fluent(precondition.arg(0).args), precondition.arg(1))
-
-
-                    print(int_in)
-                    print(precondition)
-
-                    if int_in in str(precondition):
-                        print(str(precondition).split('['))
-                        this_fluent = str(precondition).split('[')[0]
-                        print(str(precondition).split(int_in)[0])
-
-                        print(str(precondition).split(int_in)[1])
-
-                        new_precondition = str(precondition).split(int_in)[0] + str(precondition).split(int_in)[1]
-
-                    else:
-                        new_precondition = precondition
+                                Equals(fluent(parameters), precondition.arg(1))
 
                     #for effect in old_action.effects:
                         #print("Effects")
