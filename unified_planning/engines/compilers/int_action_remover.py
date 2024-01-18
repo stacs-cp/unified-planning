@@ -196,13 +196,11 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
                             fluent = new_problem.fluent(new_name)
                             fluent.args = precondition.arg(0).args
 
-                        if precondition.node_type == model.OperatorKind.EQUALS:
-                            Equals(precondition.arg(0).fluent, precondition.arg(1))
+                            print(fluent)
 
+                            if precondition.node_type == model.OperatorKind.EQUALS:
+                                Equals(fluent, precondition.arg(1))
 
-                        print(precondition.arg(1)) # 0
-                        print(precondition.node_type.name) # Equals
-                        print(precondition.type)
 
                     print(int_in)
                     print(precondition)
