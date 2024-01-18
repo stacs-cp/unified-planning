@@ -158,7 +158,7 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
 
         conditions: List[FNode] = []
 
-        parameters = OrderedDict[str, Any]
+        parameters = {}
         int_parameters = {}
         int_domains = []
 
@@ -169,6 +169,7 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
                 # separar els parametres i els enters
                 n_i = 0
                 for old_parameter in action.parameters:
+                    print(old_parameter)
                     if old_parameter.type.is_user_type():
                         parameters[old_parameter.name] = old_parameter.type
                     else:
