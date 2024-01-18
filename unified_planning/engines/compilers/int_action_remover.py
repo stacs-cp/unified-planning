@@ -188,7 +188,7 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
                 print(int_parameters.keys())
                 for c in combinations:
                     print(c)
-                    new_action = InstantaneousAction(action.name+'_'+str(c), parameters, action.environment)
+                    new_action = InstantaneousAction(action.name+str(c), parameters, action.environment)
                     print(new_action)
 
                     # mirem les precondicions
@@ -200,14 +200,12 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
                                 print("      Precondition")
                                 print(precondition)
 
-                                fluent_0 = precondition.arg(0).fluent().name.split()[0]
-                                fluent_1 = precondition.arg(0).fluent().name.split()[1]
-                                parameters = precondition.arg(0).arg(0)
+                                fluent_0 = precondition.arg(0).fluent().name.split(key)[0]
+                                fluent_1 = precondition.arg(0).fluent().name.split(key)[1]
 
-                                print(new_action.name)
-                                print(new_action.parameters)
+                                print(int_parameters.get(key))
 
-                                new_name = fluent_0 + str(i) + fluent_1
+                                new_name = fluent_0 + str(int_parameters.get(key)) + fluent_1
                                 fluent = new_problem.fluent(new_name)
                                 print(fluent)
 
