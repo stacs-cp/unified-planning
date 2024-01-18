@@ -20,7 +20,7 @@ import unified_planning.engines as engines
 from unified_planning import model
 from unified_planning.engines.mixins.compiler import CompilationKind, CompilerMixin
 from unified_planning.engines.results import CompilerResult
-from unified_planning.model import Problem, ProblemKind, Fluent, FNode, Action
+from unified_planning.model import Problem, ProblemKind, Fluent, FNode, Action, InstantaneousAction
 from unified_planning.model.fluent import get_all_fluent_exp
 from unified_planning.model.types import _RealType, _IntType
 from unified_planning.model.problem_kind_versioning import LATEST_PROBLEM_KIND_VERSION
@@ -155,12 +155,12 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
 
         conditions: List[FNode] = []
 
-        min = max = 0
         new_parameters = []
         int_in = None
         for old_action in problem.actions:
             print(old_action)
             print(old_action.__class__ == model.InstantaneousAction)
+            if isinstance(old_action, InstantaneousAction): print("instantaneous!")
             for old_parameter in old_action.parameters:
                 if old_parameter.type.is_user_type():
                     new_parameters.append(old_parameter)
@@ -169,6 +169,10 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
 
             # per cada precondicio mirar si apareix la i
             for precondition in old_action.preconditions:
+                print(precondition.args)
+                print(precondition.constant_value())
+                print(precondition.fluent())
+                print(precondition.type)
                 print("Preconditions")
                 print(int_in)
                 print(precondition)
@@ -182,6 +186,7 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
                     print(str(precondition).split(int_in)[1])
 
                     new_precondition = str(precondition).split(int_in)[0] + str(precondition).split(int_in)[1]
+
                 else:
                     new_precondition = precondition
 
