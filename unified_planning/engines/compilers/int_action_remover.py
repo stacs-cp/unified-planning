@@ -170,7 +170,7 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
 
         print(node_type, new_arguments)
         if not new_arguments or node_type == model.OperatorKind.FLUENT_EXP:
-            return em.create_node(node_type, new_arguments)
+            return em.create_node(node_type, tuple(new_arguments))
         else:
             list_arguments = []
             for arg in new_arguments:
