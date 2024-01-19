@@ -197,7 +197,8 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
                             print(arg.fluent())
                             if arg.is_fluent_exp():
                                 print("es fluent")
-                                fluent = precondition.arg(0).fluent()
+                                print(arg.fluent())
+                                fluent = arg.fluent()
                                 for key in int_parameters.keys():
                                     if key in str(arg):
                                         fluent_0 = fluent.name.split(key)[0]
