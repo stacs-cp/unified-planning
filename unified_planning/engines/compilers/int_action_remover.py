@@ -136,6 +136,44 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
     ) -> ProblemKind:
         return problem_kind.clone()
 
+    def _manage_node(
+            self,
+            problem: "up.model.AbstractProblem",
+            int_parameters: dict[str, int],
+            c: Any,
+            node_type: "up.model.OperatorKind",
+            args: List["up.model.fnode.FNode"],
+    ) -> "up.model.fnode.FNode":
+
+        env = problem.environment
+        em = env.expression_manager
+
+        new_arguments = []
+        # per cada argument
+        for arg in args:
+            if arg.is_fluent_exp():
+                fluent = arg.fluent()
+                for key in int_parameters.keys():
+                    if key in str(arg):
+                        fluent_0 = fluent.name.split(key)[0]
+                        fluent_1 = fluent.name.split(key)[1]
+                        new_name = fluent_0 + str(c[int_parameters.get(key)]) + fluent_1
+                        fluent = problem.fluent(new_name)
+
+                if fluent.signature is not None:
+                    fluent_parameter = fluent.signature[0]
+                    new_arguments.append(fluent(fluent_parameter))
+                else:
+                    new_arguments.append(fluent)
+            else:
+                new_arguments.append(arg)
+
+        if args != ():
+            return em.create_node(node_type, tuple(self._manage_node(problem, int_parameters, c, arg.node_type, arg.args) for arg in new_arguments))
+        else:
+            return em.create_node(node_type, tuple(new_arguments))
+
+
     def _compile(
         self,
         problem: "up.model.AbstractProblem",
@@ -176,43 +214,20 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
                     else:
                         int_parameters[str(old_parameter.type) + ' ' + old_parameter.name] = n_i
                         n_i = n_i+1
-
                         domain = []
                         for i in range(old_parameter.type.lower_bound, old_parameter.type.upper_bound+1):
                             domain.append(i)
                         int_domains.append(domain)
 
-                print(int_parameters)
-
                 combinations = list(product(*int_domains))
-                print(combinations)
                 # per cada combinacio possible dels enters -> creem una accio
                 for c in combinations:
                     new_action = InstantaneousAction(action.name+str(c), parameters, action.environment)
 
                     # mirem les precondicions
                     for precondition in action.preconditions:
-                        new_arguments = []
-                        # per cada argument
-                        for arg in precondition.args:
-                            if arg.is_fluent_exp():
-                                fluent = arg.fluent()
-                                for key in int_parameters.keys():
-                                    if key in str(arg):
-                                        fluent_0 = fluent.name.split(key)[0]
-                                        fluent_1 = fluent.name.split(key)[1]
-                                        new_name = fluent_0 + str(c[int_parameters.get(key)]) + fluent_1
-                                        fluent = new_problem.fluent(new_name)
-
-                                if fluent.signature is not None:
-                                    fluent_parameter = fluent.signature[0]
-                                    new_arguments.append(fluent(fluent_parameter))
-                                else:
-                                    new_arguments.append(fluent)
-                            else:
-                                new_arguments.append(arg)
-
-                        precondition = em.create_node(precondition.node_type, tuple(new_arguments))
+                        print("PRECONDITION: ", precondition)
+                        precondition = self._manage_node(new_problem, int_parameters, c, precondition.node_type, precondition.args)
                         new_action.add_precondition(precondition)
 
                     for effect in action.effects:
