@@ -168,6 +168,7 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
             else:
                 new_arguments.append(arg)
 
+        print(node_type,new_arguments)
         if args != ():
             return em.create_node(node_type, tuple(self._manage_node(problem, int_parameters, c, arg.node_type, arg.args) for arg in new_arguments))
         else:
