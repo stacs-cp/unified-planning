@@ -147,11 +147,8 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
         assert isinstance(problem, Problem)
 
         new_to_old: Dict[Action, Action] = {}
-
         env = problem.environment
         em = env.expression_manager
-        tm = env.type_manager
-
         new_problem = problem.clone()
         new_problem.name = f"{self.name}_{problem.name}"
         new_problem.clear_actions()
@@ -161,15 +158,16 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
         parameters = {}
         int_parameters = {}
         int_domains = []
+        found_int = 'integer'
 
         # per cada accio mirar els parametres i treure el que es enter
         for action in problem.actions:
             print(action)
+            print('\n')
             if isinstance(action, InstantaneousAction):
-                # separar els parametres i els enters
                 n_i = 0
+                # separar els parametres UserType i IntType
                 for old_parameter in action.parameters:
-                    print(old_parameter)
                     if old_parameter.type.is_user_type():
                         parameters[old_parameter.name] = old_parameter.type
                     else:
@@ -183,8 +181,6 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
 
                 combinations = list(product(*int_domains))
                 # per cada combinacio possible dels enters -> creem una accio
-                # per cada parametre
-
                 for c in combinations:
                     print("      Combination", c)
                     new_action = InstantaneousAction(action.name+str(c), parameters, action.environment)
@@ -192,30 +188,33 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
                     # mirem les precondicions
                     for precondition in action.preconditions:
                         # si en la precondicio tenim una clau
-                        precondition_added = False
                         # !!!! canviar perque haura de funcionar si en una mateixa precondicio tenim +1 clau
-                        for key in int_parameters.keys():
-                            print(key)
-                            if key in str(precondition):
-                                precondition_added = True
-                                print("      Precondition:", precondition)
+                        print(precondition)
+                        new_arguments = []
+                        # per cada argument
+                        for arg in precondition.args:
+                            print(arg)
+                            print(arg.fluent())
+                            if arg.is_fluent_exp():
+                                print("es fluent")
+                                fluent = precondition.arg(0).fluent()
+                                for key in int_parameters.keys():
+                                    if key in str(arg):
+                                        fluent_0 = fluent.name.split(key)[0]
+                                        fluent_1 = fluent.name.split(key)[1]
+                                        new_name = fluent_0 + str(int_parameters.get(key)) + fluent_1
+                                        fluent = new_problem.fluent(new_name)
 
-                                fluent_0 = precondition.arg(0).fluent().name.split(key)[0]
-                                fluent_1 = precondition.arg(0).fluent().name.split(key)[1]
+                                if fluent.signature is not None:
+                                    fluent_parameter = fluent.signature[0]
+                                    new_arguments.append(fluent(fluent_parameter))
+                                else:
+                                    new_arguments.append(fluent)
+                            else:
+                                new_arguments.append(arg)
 
-                                print(int_parameters.get(key))
-
-                                fluent_parameter = precondition.arg(0).arg(0)
-
-                                new_name = fluent_0 + str(int_parameters.get(key)) + fluent_1
-                                fluent = new_problem.fluent(new_name)
-                                print(fluent)
-
-                                if precondition.node_type == model.OperatorKind.EQUALS:
-                                    new_action.add_precondition(Equals(fluent(fluent_parameter), precondition.arg(1)))
-
-                        if not precondition_added:
-                            new_action.add_precondition(precondition)
+                        precondition = em.create_node(precondition.node_type, new_arguments)
+                        new_action.add_precondition(precondition)
 
                     for effect in action.effects:
                         print("Effects")
