@@ -182,7 +182,10 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
                             domain.append(i)
                         int_domains.append(domain)
 
+                print(int_parameters)
+
                 combinations = list(product(*int_domains))
+                print(combinations)
                 # per cada combinacio possible dels enters -> creem una accio
                 for c in combinations:
                     new_action = InstantaneousAction(action.name+str(c), parameters, action.environment)
@@ -198,7 +201,7 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
                                     if key in str(arg):
                                         fluent_0 = fluent.name.split(key)[0]
                                         fluent_1 = fluent.name.split(key)[1]
-                                        new_name = fluent_0 + str(int_parameters.get(key)) + fluent_1
+                                        new_name = fluent_0 + str(c(int_parameters.get(key))) + fluent_1
                                         fluent = new_problem.fluent(new_name)
 
                                 if fluent.signature is not None:
