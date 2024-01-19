@@ -163,7 +163,10 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
         # per cada accio mirar els parametres i treure el que es enter
         for action in problem.actions:
             print(action)
-            print('\n')
+            print('|')
+            print('|')
+            print('|')
+            print('v')
             if isinstance(action, InstantaneousAction):
                 n_i = 0
                 # separar els parametres UserType i IntType
@@ -182,22 +185,14 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
                 combinations = list(product(*int_domains))
                 # per cada combinacio possible dels enters -> creem una accio
                 for c in combinations:
-                    print("      Combination", c)
                     new_action = InstantaneousAction(action.name+str(c), parameters, action.environment)
 
                     # mirem les precondicions
                     for precondition in action.preconditions:
-                        # si en la precondicio tenim una clau
-                        # !!!! canviar perque haura de funcionar si en una mateixa precondicio tenim +1 clau
-                        print(precondition)
                         new_arguments = []
                         # per cada argument
                         for arg in precondition.args:
-                            print(arg)
-                            print(arg.fluent())
                             if arg.is_fluent_exp():
-                                print("es fluent")
-                                print(arg.fluent())
                                 fluent = arg.fluent()
                                 for key in int_parameters.keys():
                                     if key in str(arg):
@@ -214,7 +209,7 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
                             else:
                                 new_arguments.append(arg)
 
-                        precondition = em.create_node(precondition.node_type, new_arguments)
+                        precondition = em.create_node(precondition.node_type, tuple(new_arguments))
                         new_action.add_precondition(precondition)
 
                     for effect in action.effects:
