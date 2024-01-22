@@ -141,7 +141,8 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
             problem: "up.model.AbstractProblem",
             fluent: Fluent,
             int_parameters: dict[str, int],
-            c: Any) -> "up.model.fnode.FNode":
+            c: Any
+    ) -> "up.model.fnode.FNode":
         new_name = fluent.name
         for key in int_parameters.keys():
             if key in str(new_name):
@@ -185,6 +186,7 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
         if not new_arguments:
             return em.create_node(node_type, ())
         else:
+            print(node_type, tuple(new_arguments))
             return em.create_node(node_type, tuple(new_arguments))
 
     def _compile(
