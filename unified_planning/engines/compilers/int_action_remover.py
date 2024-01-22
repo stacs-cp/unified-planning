@@ -146,7 +146,9 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
         for key in int_parameters.keys():
             if key.split('] ')[1] in str(new_value):
                 new_value = c[int_parameters.get(key)]
-        return new_value
+        print(type(new_value))
+        print(new_value.constant_value())
+        return new_value()
 
     def _get_new_fnode(
             self,
