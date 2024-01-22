@@ -136,6 +136,23 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
     ) -> ProblemKind:
         return problem_kind.clone()
 
+    def _get_new_value(
+            self,
+            problem: "up.model.AbstractProblem",
+            value: "up.model.expression.Expression",
+            int_parameters: dict[str, int],
+            c: Any
+    ) -> "up.model.expression.Expression":
+        new_value = value
+        for key in int_parameters.keys():
+            print(key)
+            print(key.split(']')[1])
+            if key in str(new_value):
+                new_value = c[int_parameters.get(key)]
+
+        print(new_value)
+        return new_value
+
     def _get_new_fnode(
             self,
             problem: "up.model.AbstractProblem",
@@ -235,13 +252,13 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
 
                     for effect in action.effects:
                         new_fnode = self._get_new_fnode(problem, effect.fluent.fluent(), int_parameters, c)
-
+                        new_value = self._get_new_value(problem, effect.value, int_parameters, c)
                         if effect.is_increase():
-                            new_action.add_increase_effect(new_fnode, effect.value, effect.condition, effect.forall)
+                            new_action.add_increase_effect(new_fnode, new_value, effect.condition, effect.forall)
                         elif effect.is_decrease():
-                            new_action.add_decrease_effect(new_fnode, effect.value, effect.condition, effect.forall)
+                            new_action.add_decrease_effect(new_fnode, new_value, effect.condition, effect.forall)
                         else:
-                            new_action.add_effect(new_fnode, effect.value, effect.condition, effect.forall)
+                            new_action.add_effect(new_fnode, new_value, effect.condition, effect.forall)
 
                     new_problem.add_action(new_action)
 
