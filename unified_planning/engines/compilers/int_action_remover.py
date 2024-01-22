@@ -147,9 +147,8 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
 
         env = problem.environment
         em = env.expression_manager
-
         new_arguments = []
-        # per cada argument
+
         for arg in args:
             if arg.is_fluent_exp():
                 fluent = arg.fluent()
@@ -160,6 +159,7 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
                         new_name = fluent_0 + str(c[int_parameters.get(key)]) + fluent_1
                         fluent = problem.fluent(new_name)
 
+                # arreglar (+1 parametre)
                 if fluent.signature is not None:
                     fluent_parameter = fluent.signature[0]
                     new_arguments.append(fluent(fluent_parameter))
@@ -168,7 +168,6 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
             else:
                 new_arguments.append(arg)
 
-        print(node_type, new_arguments)
         if not new_arguments:
             return em.create_node(node_type, ())
         else:
@@ -179,8 +178,6 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
                 else:
                     list_arguments.append(self._manage_node(problem, int_parameters, c, arg.node_type, arg.args))
             return em.create_node(node_type, tuple(list_arguments))
-
-
 
     def _compile(
         self,
@@ -208,11 +205,6 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
 
         # per cada accio mirar els parametres i treure el que es enter
         for action in problem.actions:
-            print(action)
-            print('|')
-            print('|')
-            print('|')
-            print('v')
             if isinstance(action, InstantaneousAction):
                 n_i = 0
                 # separar els parametres UserType i IntType
@@ -234,16 +226,23 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
 
                     # mirem les precondicions
                     for precondition in action.preconditions:
-                        print("PRECONDITION: ", precondition)
-                        precondition = self._manage_node(new_problem, int_parameters, c, precondition.node_type, precondition.args)
-                        new_action.add_precondition(precondition)
+                        new_precondition = self._manage_node(new_problem, int_parameters, c, precondition.node_type, precondition.args)
+                        new_action.add_precondition(new_precondition)
 
                     for effect in action.effects:
                         print("Effects")
                         print(effect)
-
-                    print(new_action)
-                    print("\n")
+                        print(effect.fluent, effect.value, effect.kind)
+                        if effect.is_increase():
+                            print("increase")
+                        elif effect.is_decrease():
+                            print("decrease")
+                        elif effect.is_forall():
+                            print("forall")
+                        elif effect.is_conditional():
+                            print("conditional")
+                        else:
+                            print("assignment")
 
                     new_problem.add_action(new_action)
 
