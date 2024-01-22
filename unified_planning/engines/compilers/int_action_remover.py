@@ -138,16 +138,13 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
 
     def _get_new_value(
             self,
-            problem: "up.model.AbstractProblem",
             value: "up.model.expression.Expression",
             int_parameters: dict[str, int],
             c: Any
     ) -> "up.model.expression.Expression":
         new_value = value
         for key in int_parameters.keys():
-            print(key)
             if key.split('] ')[1] in str(new_value):
-                print(new_value)
                 new_value = c[int_parameters.get(key)]
         return new_value
 
@@ -190,7 +187,7 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
             if arg.is_fluent_exp():
                 new_arguments.append(self._get_new_fnode(problem, arg.fluent(), int_parameters, c))
             elif arg.is_constant():
-                new_arguments.append(arg)
+                new_arguments.append(self._get_new_value(arg, int_parameters, c))
             else:
                 new_arguments.append(self._manage_node(problem, int_parameters, c, arg.node_type, arg.args))
 
