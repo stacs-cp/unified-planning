@@ -136,7 +136,7 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
     ) -> ProblemKind:
         return problem_kind.clone()
 
-    def _get_new_fluent(
+    def _get_new_fnode(
             self,
             problem: "up.model.AbstractProblem",
             fluent: Fluent,
@@ -172,10 +172,11 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
 
         for arg in args:
             if arg.is_fluent_exp():
-                new_arguments.append(self._get_new_fluent(problem, arg.fluent(), int_parameters, c))
+                new_arguments.append(self._get_new_fnode(problem, arg.fluent(), int_parameters, c))
             else:
                 new_arguments.append(arg)
 
+        print(node_type, args, new_arguments)
         if not new_arguments:
             return em.create_node(node_type, ())
         else:
@@ -240,7 +241,7 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
                         print("Effects")
                         print(effect)
                         print(effect.fluent, effect.value, effect.kind)
-                        new_fnode = self._get_new_fluent(problem, effect.fluent.fluent(), int_parameters, c)
+                        new_fnode = self._get_new_fnode(problem, effect.fluent.fluent(), int_parameters, c)
 
                         if effect.is_increase():
                             print("increase")
