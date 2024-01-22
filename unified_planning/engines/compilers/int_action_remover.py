@@ -233,7 +233,8 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
                         print("Effects")
                         print(effect)
                         print(effect.fluent, effect.value, effect.kind)
-                        fluent = effect.fluent
+                        fluent = effect.fluent.fluent()
+                        print(fluent)
                         for key in int_parameters.keys():
                             if key in str(fluent):
                                 fluent_0 = fluent.name.split(key)[0]
