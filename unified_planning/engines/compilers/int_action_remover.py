@@ -142,13 +142,13 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
             fluent: Fluent,
             int_parameters: dict[str, int],
             c: Any) -> "up.model.fnode.FNode":
-
+        new_name = fluent.name
         for key in int_parameters.keys():
-            if key in str(fluent):
-                fluent_0 = fluent.name.split(key)[0]
-                fluent_1 = fluent.name.split(key)[1]
+            if key in str(new_name):
+                fluent_0 = new_name.split(key)[0]
+                fluent_1 = new_name.split(key)[1]
                 new_name = fluent_0 + str(c[int_parameters.get(key)]) + fluent_1
-                fluent = problem.fluent(new_name)
+        fluent = problem.fluent(new_name)
 
         # arreglar (+1 parametre)
         if fluent.signature:
