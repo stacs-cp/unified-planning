@@ -156,7 +156,7 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
             fluent_parameter = fluent.signature[0]
             return fluent(fluent_parameter)
         else:
-            return fluent
+            return fluent()
 
     def _manage_node(
             self,
