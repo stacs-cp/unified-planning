@@ -233,8 +233,23 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
                         print("Effects")
                         print(effect)
                         print(effect.fluent, effect.value, effect.kind)
+                        fluent = effect.fluent
+                        for key in int_parameters.keys():
+                            if key in str(fluent):
+                                fluent_0 = fluent.name.split(key)[0]
+                                fluent_1 = fluent.name.split(key)[1]
+                                new_name = fluent_0 + str(c[int_parameters.get(key)]) + fluent_1
+                                fluent = problem.fluent(new_name)
+
+                        # arreglar (+1 parametre)
+                        if fluent.signature is not None:
+                            fluent_parameter = fluent.signature[0]
+                        else:
+                            fluent_parameter = None
+
                         if effect.is_increase():
                             print("increase")
+                            new_effect = model.Effect(fluent(fluent_parameter), effect.value, True, effect.kind)
                         elif effect.is_decrease():
                             print("decrease")
                         elif effect.is_forall():
@@ -243,6 +258,8 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
                             print("conditional")
                         else:
                             print("assignment")
+
+                        new_action.add_effect(new_effect)
 
                     new_problem.add_action(new_action)
 
