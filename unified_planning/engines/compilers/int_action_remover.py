@@ -151,7 +151,7 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
                 fluent = problem.fluent(new_name)
 
         # arreglar (+1 parametre)
-        if fluent.signature is not None:
+        if fluent.signature:
             fluent_parameter = fluent.signature[0]
             return fluent(fluent_parameter)
         else:
