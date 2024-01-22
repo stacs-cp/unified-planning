@@ -173,20 +173,17 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
         for arg in args:
             if arg.is_fluent_exp():
                 new_arguments.append(self._get_new_fnode(problem, arg.fluent(), int_parameters, c))
-            else:
+            elif arg.is_constant():
                 new_arguments.append(arg)
+            else:
+                new_arguments.append(self._manage_node(problem, int_parameters, c, arg.node_type, arg.args))
 
-        print(node_type, args, new_arguments)
+        print(node_type, args)
+        print(new_arguments)
         if not new_arguments:
             return em.create_node(node_type, ())
         else:
-            list_arguments = []
-            for arg in new_arguments:
-                if arg.is_fluent_exp():
-                    list_arguments.append(arg)
-                else:
-                    list_arguments.append(self._manage_node(problem, int_parameters, c, arg.node_type, arg.args))
-            return em.create_node(node_type, tuple(list_arguments))
+            return em.create_node(node_type, tuple(new_arguments))
 
     def _compile(
         self,
