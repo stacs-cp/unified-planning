@@ -247,7 +247,7 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
 
                     for effect in action.effects:
                         new_fnode = self._get_new_fnode(problem, effect.fluent.fluent(), int_parameters, c)
-                        new_value = self._get_new_value(problem, effect.value, int_parameters, c)
+                        new_value = self._get_new_value(effect.value, int_parameters, c)
                         if effect.is_increase():
                             new_action.add_increase_effect(new_fnode, new_value, effect.condition, effect.forall)
                         elif effect.is_decrease():
