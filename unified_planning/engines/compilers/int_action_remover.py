@@ -178,8 +178,6 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
             else:
                 new_arguments.append(self._manage_node(problem, int_parameters, c, arg.node_type, arg.args))
 
-        print(node_type, args)
-        print(new_arguments)
         if not new_arguments:
             return em.create_node(node_type, ())
         else:
@@ -235,24 +233,13 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
                         new_action.add_precondition(new_precondition)
 
                     for effect in action.effects:
-                        print("Effects")
-                        print(effect)
-                        print(effect.fluent, effect.value, effect.kind)
                         new_fnode = self._get_new_fnode(problem, effect.fluent.fluent(), int_parameters, c)
 
                         if effect.is_increase():
-                            print("increase")
                             new_action.add_increase_effect(new_fnode, effect.value, effect.condition, effect.forall)
                         elif effect.is_decrease():
-                            print("decrease")
                             new_action.add_decrease_effect(new_fnode, effect.value, effect.condition, effect.forall)
-                        elif effect.is_forall():
-                            print("forall")
-                        elif effect.is_conditional():
-                            print("conditional")
-                            new_action.add_effect(new_fnode, effect.value, effect.condition)
                         else:
-                            print("assignment")
                             new_action.add_effect(new_fnode, effect.value, effect.condition, effect.forall)
 
                     new_problem.add_action(new_action)

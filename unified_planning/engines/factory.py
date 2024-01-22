@@ -636,10 +636,6 @@ class Factory:
         anytime_guarantee: Optional["AnytimeGuarantee"] = None,
         problem: Optional["up.model.AbstractProblem"] = None,
     ) -> "up.engines.engine.Engine":
-        print(operation_mode, OperationMode.COMPILER)
-        print(operation_mode == OperationMode.COMPILER)
-        print(compilation_kinds)
-        print(compilation_kinds is not None)
         if names is not None and operation_mode != OperationMode.COMPILER:
             assert name is None
             assert problem is None, "Parallel simulation is not supported"
