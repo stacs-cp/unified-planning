@@ -247,14 +247,15 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
                             new_action.add_increase_effect(new_fnode, effect.value, effect.condition, effect.forall)
                         elif effect.is_decrease():
                             print("decrease")
+                            new_action.add_decrease_effect(new_fnode, effect.value, effect.condition, effect.forall)
                         elif effect.is_forall():
                             print("forall")
                         elif effect.is_conditional():
                             print("conditional")
+                            new_action.add_effect(new_fnode, effect.value, effect.condition)
                         else:
                             print("assignment")
-
-
+                            new_action.add_effect(new_fnode, effect.value, effect.condition, effect.forall)
 
                     new_problem.add_action(new_action)
 
