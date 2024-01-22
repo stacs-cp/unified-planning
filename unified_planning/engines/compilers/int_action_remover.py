@@ -244,7 +244,7 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
 
                         if effect.is_increase():
                             print("increase")
-                            new_effect = model.Effect(new_fnode, effect.value, effect.condition, effect.kind)
+                            new_action.add_increase_effect(new_fnode, effect.value, effect.condition, effect.forall)
                         elif effect.is_decrease():
                             print("decrease")
                         elif effect.is_forall():
@@ -254,7 +254,7 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
                         else:
                             print("assignment")
 
-                        new_action.add_effect(new_effect)
+
 
                     new_problem.add_action(new_action)
 
