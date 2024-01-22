@@ -172,21 +172,16 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
         new_arguments = []
 
         for arg in args:
-            print(arg)
             if arg.is_fluent_exp():
-                print("fluent")
                 new_arguments.append(self._get_new_fnode(problem, arg.fluent(), int_parameters, c))
             elif arg.is_constant():
-                print("constant")
                 new_arguments.append(arg)
             else:
-                print("other")
                 new_arguments.append(self._manage_node(problem, int_parameters, c, arg.node_type, arg.args))
 
         if not new_arguments:
             return em.create_node(node_type, ())
         else:
-            print(node_type, tuple(new_arguments))
             return em.create_node(node_type, tuple(new_arguments))
 
     def _compile(
@@ -235,7 +230,6 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
 
                     # mirem les precondicions
                     for precondition in action.preconditions:
-                        print(precondition.node_type, precondition.args)
                         new_precondition = self._manage_node(new_problem, int_parameters, c, precondition.node_type, precondition.args)
                         new_action.add_precondition(new_precondition)
 
