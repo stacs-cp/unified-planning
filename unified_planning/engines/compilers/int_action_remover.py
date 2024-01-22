@@ -171,6 +171,7 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
         new_arguments = []
 
         for arg in args:
+            print(arg)
             if arg.is_fluent_exp():
                 new_arguments.append(self._get_new_fnode(problem, arg.fluent(), int_parameters, c))
             elif arg.is_constant():
@@ -229,6 +230,7 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
 
                     # mirem les precondicions
                     for precondition in action.preconditions:
+                        print(precondition.node_type, precondition.args)
                         new_precondition = self._manage_node(new_problem, int_parameters, c, precondition.node_type, precondition.args)
                         new_action.add_precondition(new_precondition)
 
