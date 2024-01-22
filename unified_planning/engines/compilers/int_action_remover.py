@@ -136,6 +136,27 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
     ) -> ProblemKind:
         return problem_kind.clone()
 
+    def _get_new_fluent(
+            self,
+            problem: "up.model.AbstractProblem",
+            fluent: Fluent,
+            int_parameters: dict[str, int],
+            c: Any) -> "up.model.fnode.FNode":
+
+        for key in int_parameters.keys():
+            if key in str(fluent):
+                fluent_0 = fluent.name.split(key)[0]
+                fluent_1 = fluent.name.split(key)[1]
+                new_name = fluent_0 + str(c[int_parameters.get(key)]) + fluent_1
+                fluent = problem.fluent(new_name)
+
+        # arreglar (+1 parametre)
+        if fluent.signature is not None:
+            fluent_parameter = fluent.signature[0]
+            return fluent(fluent_parameter)
+        else:
+            return fluent
+
     def _manage_node(
             self,
             problem: "up.model.AbstractProblem",
@@ -151,20 +172,7 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
 
         for arg in args:
             if arg.is_fluent_exp():
-                fluent = arg.fluent()
-                for key in int_parameters.keys():
-                    if key in str(arg):
-                        fluent_0 = fluent.name.split(key)[0]
-                        fluent_1 = fluent.name.split(key)[1]
-                        new_name = fluent_0 + str(c[int_parameters.get(key)]) + fluent_1
-                        fluent = problem.fluent(new_name)
-
-                # arreglar (+1 parametre)
-                if fluent.signature is not None:
-                    fluent_parameter = fluent.signature[0]
-                    new_arguments.append(fluent(fluent_parameter))
-                else:
-                    new_arguments.append(fluent)
+                new_arguments.append(self._get_new_fluent(problem, arg.fluent(), int_parameters, c))
             else:
                 new_arguments.append(arg)
 
@@ -201,7 +209,6 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
         parameters = {}
         int_parameters = {}
         int_domains = []
-        found_int = 'integer'
 
         # per cada accio mirar els parametres i treure el que es enter
         for action in problem.actions:
@@ -233,24 +240,11 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
                         print("Effects")
                         print(effect)
                         print(effect.fluent, effect.value, effect.kind)
-                        fluent = effect.fluent.fluent()
-                        print(fluent)
-                        for key in int_parameters.keys():
-                            if key in str(fluent):
-                                fluent_0 = fluent.name.split(key)[0]
-                                fluent_1 = fluent.name.split(key)[1]
-                                new_name = fluent_0 + str(c[int_parameters.get(key)]) + fluent_1
-                                fluent = problem.fluent(new_name)
-
-                        # arreglar (+1 parametre)
-                        if fluent.signature is not None:
-                            fluent_parameter = fluent.signature[0]
-                        else:
-                            fluent_parameter = None
+                        new_fnode = self._get_new_fluent(problem, effect.fluent.fluent(), int_parameters, c)
 
                         if effect.is_increase():
                             print("increase")
-                            new_effect = model.Effect(fluent(fluent_parameter), effect.value, True, effect.kind)
+                            new_effect = model.Effect(new_fnode, effect.value, True, effect.kind)
                         elif effect.is_decrease():
                             print("decrease")
                         elif effect.is_forall():
