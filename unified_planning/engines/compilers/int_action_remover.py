@@ -146,8 +146,7 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
         new_value = value
         for key in int_parameters.keys():
             print(key)
-            print(key.split('] ')[1])
-            if key in str(new_value):
+            if key.split('] ')[1] in str(new_value):
                 print(new_value)
                 new_value = c[int_parameters.get(key)]
         return new_value
