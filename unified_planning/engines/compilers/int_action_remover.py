@@ -185,6 +185,8 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
 
         for arg in args:
             print(arg)
+            print(arg.type)
+            print(arg.node_type)
             print("isfluent: ", arg.is_fluent_exp())
             print("isconst: ", arg.is_constant())
             print("isint: ", arg.is_int_constant())
