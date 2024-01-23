@@ -143,9 +143,6 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
             c: Any
     ) -> "up.model.fnode.FNode":
         new_value = value
-        print(value.node_type)
-        print(value.args)
-        print(value.environment)
         for key in int_parameters.keys():
             if key.split('] ')[1] in str(new_value):
                 new_value = c[int_parameters.get(key)]
@@ -165,7 +162,6 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
                 fluent_1 = new_name.split(key)[1]
                 new_name = fluent_0 + str(c[int_parameters.get(key)]) + fluent_1
         fluent = problem.fluent(new_name)
-        print("new_fluent: ", fluent)
         # arreglar (+1 parametre)
         if fluent.signature:
             fluent_parameter = fluent.signature[0]
@@ -187,26 +183,15 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
         new_arguments = []
 
         for arg in args:
-            print(arg)
-            print(arg.type)
-            print(arg.node_type)
-            print(arg.args)
-            print("isfluent: ", arg.is_fluent_exp())
-            print("isconst: ", arg.is_constant())
-            print("isint: ", arg.is_int_constant())
-            print("isparam: ", arg.is_parameter_exp())
             if arg.is_fluent_exp():
-                print("fluent: ", arg.fluent())
                 new_arguments.append(self._get_new_fnode(problem, arg.fluent(), int_parameters, c))
             elif arg.is_parameter_exp():
-                print("arg: ", arg, type(arg))
                 new = self._get_new_value(arg, int_parameters, c)
-                print("new: ", new, type(new))
                 new_arguments.append(new)
+            elif arg.is_constant():
+                new_arguments.append(arg)
             else:
                 new_arguments.append(self._manage_node(problem, int_parameters, c, arg.node_type, arg.args))
-            print("new arguments: ", new_arguments)
-        print(new_arguments)
         if not new_arguments:
             return em.create_node(node_type, ())
         else:
