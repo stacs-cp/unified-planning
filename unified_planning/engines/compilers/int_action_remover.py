@@ -138,15 +138,17 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
 
     def _get_new_value(
             self,
-            value: "up.model.expression.Expression",
+            value: "up.model.fnode.FNode",
             int_parameters: dict[str, int],
             c: Any
     ) -> "up.model.expression.Expression":
         new_value = value
+        print(value.node_type)
+        print(value.environment)
         for key in int_parameters.keys():
             if key.split('] ')[1] in str(new_value):
                 new_value = c[int_parameters.get(key)]
-        return new_value
+        return FNode(new_value, value.node_id, value.environment)
 
     def _get_new_fnode(
             self,
@@ -195,7 +197,7 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
             if arg.is_fluent_exp():
                 print("fluent: ", arg.fluent())
                 new_arguments.append(self._get_new_fnode(problem, arg.fluent(), int_parameters, c))
-            elif arg.is_constant() or arg.is_parameter_exp():
+            elif arg.is_parameter_exp():
                 print("arg: ", arg, type(arg))
                 new = self._get_new_value(arg, int_parameters, c)
                 print("new: ", new, type(new))
