@@ -32,7 +32,7 @@ from unified_planning.engines.compilers.utils import (
 from typing import List, Dict, OrderedDict, Optional, Union, cast, Any
 from functools import partial
 from itertools import product
-from unified_planning.shortcuts import Equals
+from unified_planning.shortcuts import Equals, Int
 
 
 class IntActionRemover(engines.engine.Engine, CompilerMixin):
@@ -141,7 +141,7 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
             value: "up.model.fnode.FNode",
             int_parameters: dict[str, int],
             c: Any
-    ) -> "up.model.expression.Expression":
+    ) -> "up.model.fnode.FNode":
         new_value = value
         print(value.node_type)
         print(value.args)
@@ -149,7 +149,7 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
         for key in int_parameters.keys():
             if key.split('] ')[1] in str(new_value):
                 new_value = c[int_parameters.get(key)]
-        return new_value.constant_value()
+        return Int(new_value)
 
     def _get_new_fnode(
             self,
