@@ -186,12 +186,7 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
             if arg.is_fluent_exp():
                 new_arguments.append(self._get_new_fnode(problem, arg.fluent(), int_parameters, c))
             elif arg.is_parameter_exp():
-                new = self._get_new_value(arg, int_parameters, c)
-                print(new)
-                print(type(new))
-                print(new.constant_value())
-                print(new.type)
-                new_arguments.append(new)
+                new_arguments.append(self._get_new_value(arg, int_parameters, c))
             elif arg.is_constant():
                 new_arguments.append(arg)
             else:
