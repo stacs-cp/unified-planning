@@ -162,12 +162,7 @@ class IntActionRemover(engines.engine.Engine, CompilerMixin):
                 fluent_1 = new_name.split(key)[1]
                 new_name = fluent_0 + str(c[int_parameters.get(key)]) + fluent_1
         fluent = problem.fluent(new_name)
-        # arreglar (+1 parametre)
-        if fluent.signature:
-            fluent_parameter = fluent.signature[0]
-            return fluent(fluent_parameter)
-        else:
-            return fluent()
+        return fluent(*fluent.signature)
 
     def _manage_node(
             self,

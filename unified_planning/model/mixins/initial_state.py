@@ -16,6 +16,7 @@
 from typing import Union, Dict, Any
 
 import unified_planning as up
+from unified_planning import model
 from unified_planning.exceptions import (
     UPProblemDefinitionError,
     UPTypeError,
@@ -59,8 +60,15 @@ class InitialStateMixin:
         :param value: The `value` assigned in the initial state to the given `fluent`.
         """
         if fluent.type.is_array_type() and isinstance(value, list):
-            for i in range(fluent.type.n_elements):
-                self.set_initial_value(self._env.expression_manager.FluentExp(fluent[i], fluent.args), value[i])
+            if isinstance(fluent, model.fnode.FNode):
+                args = fluent.args
+                fluent = fluent.fluent()
+                for i in range(fluent.type.n_elements):
+                    self.set_initial_value(fluent[i](*args), value[i])
+            else:
+                for i in range(fluent.type.n_elements):
+                    self.set_initial_value(fluent[i], value[i])
+
         else:
             fluent_exp, value_exp = self._env.expression_manager.auto_promote(fluent, value)
             assert fluent_exp.is_fluent_exp(), "fluent field must be a fluent"
