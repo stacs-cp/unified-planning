@@ -122,6 +122,7 @@ class ExpressionManager(object):
         """
         res = []
         for e in self._polymorph_args_to_iterator(*args):
+            print(e)
             if isinstance(e, up.model.fluent.Fluent):
                 assert (
                     e.environment == self.environment
@@ -160,6 +161,8 @@ class ExpressionManager(object):
                 else:
                     assert isinstance(number, Fraction)
                     res.append(self.Real(number))
+            elif isinstance(e, List):
+                res.append(self.List(e))
             else:
                 assert (
                     e.environment == self.environment
@@ -182,6 +185,7 @@ class ExpressionManager(object):
                 bool,
                 int,
                 Fraction,
+                list,
                 Tuple["up.model.variable.Variable", ...],
             ]
         ] = None,
@@ -604,6 +608,20 @@ class ExpressionManager(object):
             raise UPTypeError("Expecting Fraction, got %s" % type(value))
         return self.create_node(
             node_type=OperatorKind.REAL_CONSTANT, args=tuple(), payload=value
+        )
+
+    def List(self, value: List) -> "up.model.fnode.FNode":
+        """
+        Return an ``list`` constant.
+        :param value: The list that must be promoted to ``FNode``.
+        :return: The ``FNode`` containing the given ``list`` as his payload.
+        """
+        # convert the list to tuple to resolve the hash problem
+        adapted_value = tuple(value)
+        if not isinstance(value, List):
+            raise UPTypeError("Expecting List, got %s" % type(value))
+        return self.create_node(
+            node_type=OperatorKind.LIST_CONSTANT, args=tuple(), payload=adapted_value
         )
 
     def Plus(

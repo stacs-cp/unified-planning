@@ -20,6 +20,7 @@ from unified_planning.model.types import (
     Type,
     _IntType,
     _RealType,
+    _ArrayType,
     _UserType,
     BOOL,
     TIME,
@@ -41,6 +42,7 @@ class TypeManager:
         self._bool = BOOL
         self._ints: Dict[Tuple[Optional[int], Optional[int]], Type] = {}
         self._reals: Dict[Tuple[Optional[Fraction], Optional[Fraction]], Type] = {}
+        self._arrays: Dict[Tuple[Optional[tuple], Optional[Type], Optional[int]], Type] = {}
         self._user_types: Dict[Tuple[str, Optional[Type]], Type] = {}
         self._movable_types: Dict[Tuple[str, Optional[Type]], Type] = {}
         self._configuration_types: Dict[Tuple[str, OccupancyMap, int], Type] = {}
@@ -60,6 +62,9 @@ class TypeManager:
         elif type.is_real_type():
             assert isinstance(type, _RealType)
             return self._reals.get((type.lower_bound, type.upper_bound), None) == type
+        elif type.is_array_type():
+            assert isinstance(type, _ArrayType)
+            return self._arrays.get((type.elements, type.elements_type, type.n_elements), None) == type
         elif type.is_time_type():
             return type == TIME
         elif type.is_movable_type():
@@ -130,6 +135,30 @@ class TypeManager:
             rt = _RealType(lower_bound, upper_bound)
             self._reals[k] = rt
             return rt
+
+    def ArrayType(
+            self, elements: Optional[tuple] = None, elements_type: Optional[Type] = None,
+            n_elements: Optional[int] = None
+    ) -> Type:
+        """Returns the list type with a specific element type."""
+        if elements is not None:
+            assert n_elements is None or len(
+                elements) == n_elements, "length of values is not the required in n_elements"
+            n_elements = len(elements)
+            assert (
+                    (elements_type is not None and all(isinstance(element, elements_type) for element in elements)) or
+                    (elements_type is None and all(isinstance(element, type(elements[0])) for element in elements))
+            ), "typing not respected"
+            elements_type = type(elements[0]) if elements_type is None else elements_type
+            elements = elements
+
+        k = (elements, elements_type, n_elements)
+        if k in self._arrays:
+            return self._arrays[k]
+        else:
+            at = _ArrayType(elements, elements_type, n_elements)
+            self._arrays[k] = at
+            return at
 
     def UserType(self, name: str, father: Optional[Type] = None) -> Type:
         """

@@ -71,6 +71,8 @@ class FNode(object):
             return str(self.constant_value())
         elif self.is_real_constant():
             return str(self.constant_value())
+        elif self.is_list_constant():
+            return str(self.list_constant_value())
         elif self.is_fluent_exp():
             return self.fluent().name + self.get_nary_expression_string(", ", self.args)
         elif self.is_dot():
@@ -172,6 +174,7 @@ class FNode(object):
             self.node_type == OperatorKind.BOOL_CONSTANT
             or self.node_type == OperatorKind.INT_CONSTANT
             or self.node_type == OperatorKind.REAL_CONSTANT
+            or self.node_type == OperatorKind.LIST_CONSTANT
             or self.node_type == OperatorKind.OBJECT_EXP
         )
 
@@ -194,6 +197,11 @@ class FNode(object):
         """Return constant `real` value stored in this expression."""
         assert self.is_real_constant()
         return self._content.payload
+
+    def list_constant_value(self) -> List:
+        """Returns the `list` constant value stored in this expression."""
+        assert self.is_list_constant()
+        return list(self._content.payload)
 
     def fluent(self) -> "unified_planning.model.fluent.Fluent":
         """Return the `Fluent` stored in this expression."""
@@ -268,6 +276,10 @@ class FNode(object):
     def is_real_constant(self) -> bool:
         """Test whether the expression is a `real` constant."""
         return self.node_type == OperatorKind.REAL_CONSTANT
+
+    def is_list_constant(self) -> bool:
+        """Test whether the expression is a `real` constant."""
+        return self.node_type == OperatorKind.LIST_CONSTANT
 
     def is_true(self) -> bool:
         """Test whether the expression is the `True` Boolean constant."""

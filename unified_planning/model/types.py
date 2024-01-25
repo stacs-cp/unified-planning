@@ -36,6 +36,10 @@ class Type(ABC):
         """Returns `True` iff is `real` `Type`."""
         return False
 
+    def is_array_type(self) -> bool:
+        """Returns true iff is a list type."""
+        return False
+
     def is_int_type(self) -> bool:
         """Returns `True` iff is `integer Type`."""
         return False
@@ -224,6 +228,45 @@ class _RealType(Type):
     def is_real_type(self) -> bool:
         return True
 
+class _ArrayType(Type):
+    """Represents a list composed of n_elements elements of a given type elements_type."""
+    def __init__(self, elements: Optional[tuple] = None, elements_type: Optional[Type] = None,
+                 n_elements: Optional[int] = None):
+        Type.__init__(self)
+        assert n_elements is None or isinstance(
+            n_elements, int
+        ), "typing not respected"
+        self._elements = elements
+        self._elements_type = elements_type
+        self._n_elements = n_elements
+
+    def __repr__(self) -> str:
+        return f"array[{list(self._elements) if self._elements is not None else self._elements},{self._elements_type},{self._n_elements}]"
+
+    def __getitem__(self, index: int):
+        if self._elements is not None:
+            return self._elements[index]
+        else:
+            raise IndexError("Index out of range or array is empty.")
+
+    def is_array_type(self) -> bool:
+        """Returns true iff is a list type."""
+        return True
+
+    @property
+    def elements_type(self) -> Optional[Type]:
+        """Returns the type of elements in this list."""
+        return self._elements_type
+
+    @property
+    def n_elements(self) -> Optional[int]:
+        """Returns the type of elements in this list."""
+        return self._n_elements
+
+    @property
+    def elements(self) -> Optional[list]:
+        """Returns the type of elements in this list."""
+        return list(self._elements) if self._elements is not None else self._elements
 
 BOOL = _BoolType()
 TIME = _TimeType()

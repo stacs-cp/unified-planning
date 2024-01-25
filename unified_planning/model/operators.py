@@ -37,6 +37,7 @@ class OperatorKind(Enum):
     BOOL_CONSTANT = auto()
     INT_CONSTANT = auto()
     REAL_CONSTANT = auto()
+    LIST_CONSTANT = auto()
     PLUS = auto()
     MINUS = auto()
     TIMES = auto()
