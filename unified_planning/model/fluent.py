@@ -107,6 +107,12 @@ class Fluent:
             res += hash(p)
         return res ^ hash(self._name)
 
+    def __getitem__(self, index: "up.model.parameter.Parameter"):
+        assert self.type.is_array_type(), "The Fluent has not array type"
+        assert index.type.is_int_type(), "The parameter has not an integer type"
+        # crear un nou Fluent de tipus dels elements de l'array
+        return Fluent(self.name+'['+str(index.name)+']', self.type.elements_type, self.signature, self.environment)
+
     @property
     def name(self) -> str:
         """Returns the `Fluent` `name`."""
