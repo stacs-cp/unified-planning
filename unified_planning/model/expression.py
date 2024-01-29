@@ -51,10 +51,20 @@ TimeExpression = Union[
     float,
     Fraction,
 ]
+ListExpression = Union[
+    list,
+    List[Union[
+        TimeExpression,
+        BoolExpression,
+        ConstantExpression,
+    ]]
+]
+
 Expression = Union[
     TimeExpression,
     BoolExpression,
     ConstantExpression,
+    ListExpression,
 ]
 
 

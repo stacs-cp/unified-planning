@@ -58,6 +58,8 @@ def convert_type_str(s: str, problem: Problem) -> model.types.Type:
             lower_bound=fractions.Fraction(s.split("[")[1].split(",")[0]),
             upper_bound=fractions.Fraction(s.split(",")[1].split("]")[0]),
         )
+    elif s == "up:list":
+        return problem.environment.type_manager.ArrayType()
     else:
         assert not s.startswith("up:"), f"Unhandled builtin type: {s}"
         return problem.user_type(s)
@@ -139,6 +141,7 @@ class ProtobufReader(Converter):
     def _convert_expression(
         self, msg: proto.Expression, problem: Problem
     ) -> model.Expression:
+        print("convert expression")
         if msg.kind == proto.ExpressionKind.Value("CONSTANT"):
             assert msg.atom is not None
             return self.convert(msg.atom, problem)
@@ -250,6 +253,7 @@ class ProtobufReader(Converter):
         self, msg: proto.Atom, problem: Problem
     ) -> Union[model.FNode, model.Fluent, model.Object]:
         field = msg.WhichOneof("content")
+        print("convert atom")
 
         value = getattr(msg, field)
         if field == "int":
@@ -258,6 +262,8 @@ class ProtobufReader(Converter):
             return problem.environment.expression_manager.Real(
                 fractions.Fraction(value.numerator, value.denominator)
             )
+        elif field == "list":
+            return problem.environment.expression_manager.ArrayType(value)
         elif field == "boolean":
             return problem.environment.expression_manager.Bool(value)
         else:

@@ -178,7 +178,7 @@ class FNode(object):
             or self.node_type == OperatorKind.OBJECT_EXP
         )
 
-    def constant_value(self) -> Union[bool, int, Fraction]:
+    def constant_value(self) -> Union[bool, int, Fraction, list]:
         """Returns the constant value stored in this expression."""
         assert self.is_constant()
         return self._content.payload

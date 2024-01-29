@@ -294,6 +294,10 @@ class ConverterToPDDLString(walkers.DagWalker):
         frac = expression.constant_value()
         return str(self.convert_fraction(frac))
 
+    def walk_list_constant(self, expression, args):
+        assert len(args) == 0
+        return str(expression.constant_value())
+
     def walk_int_constant(self, expression, args):
         assert len(args) == 0
         return str(expression.constant_value())

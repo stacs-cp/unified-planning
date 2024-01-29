@@ -66,7 +66,7 @@ BOOL_OPERATORS = frozenset(
 )
 
 CONSTANTS = frozenset(
-    [OperatorKind.BOOL_CONSTANT, OperatorKind.REAL_CONSTANT, OperatorKind.INT_CONSTANT]
+    [OperatorKind.BOOL_CONSTANT, OperatorKind.REAL_CONSTANT, OperatorKind.INT_CONSTANT, OperatorKind.LIST_CONSTANT]
 )
 
 IRA_RELATIONS = frozenset([OperatorKind.LE, OperatorKind.LT])

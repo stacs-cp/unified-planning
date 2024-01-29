@@ -99,6 +99,12 @@ class IdentityDagWalker(walkers.dag.DagWalker):
     ) -> FNode:
         return self.manager.Real(expression.real_constant_value())
 
+    def walk_list_constant(
+        self, expression: FNode, args: List[FNode], **kwargs
+    ) -> FNode:
+        print("walk_list_constant: ", expression)
+        return self.manager.List(expression.list_constant_value())
+
     def walk_param_exp(self, expression: FNode, args: List[FNode], **kwargs) -> FNode:
         return self.manager.ParameterExp(expression.parameter())
 
