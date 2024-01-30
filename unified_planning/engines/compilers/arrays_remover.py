@@ -177,7 +177,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
 
                 combinations = list(product(*domain))
                 for combination in combinations:
-                    new_name = fluent.name + [f'_{c}' for c in combination]
+                    new_name = fluent.name + [f'_{str(c)}' for c in combination]
                     new_default_value = default_value
                     for i in combination:
                         new_default_value = new_default_value[i]
