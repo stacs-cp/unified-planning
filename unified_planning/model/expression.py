@@ -128,7 +128,6 @@ class ExpressionManager(object):
         """
         res = []
         for e in self._polymorph_args_to_iterator(*args):
-            print("res: ", res, type(res))
             if isinstance(e, up.model.fluent.Fluent):
                 assert (
                     e.environment == self.environment
