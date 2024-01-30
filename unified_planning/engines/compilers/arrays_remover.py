@@ -175,16 +175,15 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                     this_fluent = this_fluent.elements_type
 
                 combinations = list(product(*domain))
-                print("combinations: ", combinations)
                 for combination in combinations:
-                    new_name = fluent.name + f'[{combination}]'
+                    new_name = fluent.name + f'[{list(combination)}]'
                     print(new_name, new_type)
                     new_default_value = default_value
                     for i in combination:
                         new_default_value = new_default_value[i]
                     print(new_default_value)
                     new_problem.add_fluent(model.Fluent(new_name, new_type, fluent.signature, fluent.environment),
-                                                       default_initial_value=new_default_value)
+                                           default_initial_value=new_default_value)
             else:
                 new_problem.add_fluent(fluent)
         print("old: ", problem.fluents)
