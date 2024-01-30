@@ -183,11 +183,8 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                     for i in combination:
                         new_default_value = new_default_value[i]
                     print(new_default_value)
-                    print(list(new_default_value))
-
-
                     new_problem.add_fluent(model.Fluent(new_name, new_type, fluent.signature, fluent.environment),
-                                                       default_initial_value=0)
+                                                       default_initial_value=new_default_value)
             else:
                 new_problem.add_fluent(fluent)
         print("old: ", problem.fluents)
