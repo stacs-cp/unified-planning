@@ -167,10 +167,9 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                 new_type = fluent.type.elements_type
                 for i in range(fluent.type.n_elements):
                     new_name = fluent.name + f'[{i}]'
-                    print("default: ", problem.fluents_defaults.get(fluent))
-                    print(type(problem.fluents_defaults.get(fluent)))
+                    print("default: ", problem.fluents_defaults.get(fluent).constant_value()[i])
                     new_problem.add_fluent(model.Fluent(new_name, new_type, fluent.signature, fluent.environment),
-                                           default_initial_value=problem.fluents_defaults.get(fluent)[i])
+                                           default_initial_value=problem.fluents_defaults.get(fluent).constant_value()[i])
             else:
                 new_problem.add_fluent(fluent)
 
