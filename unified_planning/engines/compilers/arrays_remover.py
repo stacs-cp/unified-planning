@@ -161,23 +161,23 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
         new_problem.clear_actions()
         # transformar fluents i valors inicials
         for fluent in problem.fluents:
-            print(fluent)
-            print(type(fluent))
-            print(fluent.type)
             this_fluent = fluent.type
             domain = []
             while this_fluent.is_array_type():
                 domain_in = []
-                for i in range(0, this_fluent.n_elements+1):
+                for i in range(0, this_fluent.n_elements):
                     domain_in.append(i)
                 domain.append(domain_in)
                 this_fluent = this_fluent.elements_type
 
-            print(domain)
+            combinations = list(product(*domain))
+            for combination in combinations:
+                print(combination)
+                new_type = this_fluent.elements_type
+                new_name = fluent.name + f'[{combination}]'
+                print(new_name,new_type)
 
-            for i in range(fluent.type.n_elements):
-                new_type = fluent.type.elements_type
-                print("nt: ", new_type)
+
                 new_name = fluent.name + f'[{i}]'
                 new_default_value = list(problem.fluents_defaults.get(fluent).constant_value())[i]
                 while new_type.is_array_type():
