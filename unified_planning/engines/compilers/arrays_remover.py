@@ -18,6 +18,7 @@
 from itertools import product
 import unified_planning as up
 import unified_planning.engines as engines
+from unified_planning import model
 from unified_planning.engines.mixins.compiler import CompilationKind, CompilerMixin
 from unified_planning.engines.results import CompilerResult
 from unified_planning.model import (
@@ -156,12 +157,19 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
         new_problem.clear_timed_goals()
         new_problem.clear_goals()
         new_problem.clear_quality_metrics()
+        new_problem.clear_fluents()
         for fluent in problem.fluents:
             print(fluent)
             if fluent.type.is_array_type():
-                print(fluent.name)
-                print(fluent.type)
-                print(fluent.signature)
+                new_type = fluent.type.elements_type
+                for i in range(fluent.type.n_elements):
+                    new_name = fluent.name + f'[{i}]'
+                    new_problem.add_fluent(new_name, new_type, fluent.signature, fluent.environment)
+            else:
+                new_problem.add_fluent(fluent)
+
+            print(problem.fluents)
+            print(new_problem.fluents)
 
         #for action in new_problem.actions:
         #    if isinstance(action, InstantaneousAction):
