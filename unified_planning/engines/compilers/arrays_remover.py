@@ -161,18 +161,25 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
         new_problem.clear_actions()
         # transformar fluents i valors inicials
         for fluent in problem.fluents:
+            print(fluent)
             if fluent.type.is_array_type():
-                new_type = fluent.type.elements_type
                 for i in range(fluent.type.n_elements):
+                    new_type = fluent.type.elements_type
+                    print(new_type)
                     new_name = fluent.name + f'[{i}]'
+                    print(new_name)
+                    while new_type.is_array_type():
+                        new_type = new_type.elements_type
+                        new_name = new_name + f'[{i}]'
                     new_problem.add_fluent(model.Fluent(new_name, new_type, fluent.signature, fluent.environment),
-                                           default_initial_value=problem.fluents_defaults.get(fluent).constant_value()[i])
-            else:
-                new_problem.add_fluent(fluent)
+                                               default_initial_value=problem.fluents_defaults.get(fluent).constant_value()[i])
 
-            print("old: ", problem.fluents)
-            print("new: ", new_problem.fluents)
-            print(new_problem.fluents_defaults)
+            else:
+                new_problem.add_fluent(fluent, default_initial_value=problem.fluents_defaults.get(fluent))
+
+        print("old: ", problem.fluents)
+        print("new: ", new_problem.fluents)
+        print(new_problem.fluents_defaults)
 
         # transformar valors inicials fluents
         for fluent_default in problem.fluents_defaults:
