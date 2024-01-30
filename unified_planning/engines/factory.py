@@ -95,9 +95,9 @@ DEFAULT_ENGINES = {
         "unified_planning.engines.compilers.quantifiers_remover",
         "QuantifiersRemover",
     ),
-    "up_int_action_remover": (
-        "unified_planning.engines.compilers.int_action_remover",
-        "IntActionRemover",
+    "up_arrays_remover": (
+        "unified_planning.engines.compilers.arrays_remover",
+        "ArraysRemover",
     ),
     "up_usertype_fluents_remover": (
         "unified_planning.engines.compilers.usertype_fluents_remover",
