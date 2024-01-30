@@ -162,6 +162,8 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
         # transformar fluents i valors inicials
         for fluent in problem.fluents:
             print(fluent)
+            print(type(fluent))
+            print(fluent.type)
             if fluent.type.is_array_type():
                 for i in range(fluent.type.n_elements):
                     new_type = fluent.type.elements_type
