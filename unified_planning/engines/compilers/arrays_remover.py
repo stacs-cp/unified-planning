@@ -159,7 +159,8 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
         # new_problem.clear_quality_metrics()
         new_problem.clear_fluents()
         new_problem.clear_actions()
-        # transformar fluents i valors inicials
+
+        # FLUENTS AND DEFAULT_VALUES
         for fluent in problem.fluents:
             default_value = problem.fluents_defaults.get(fluent).constant_value()
             if fluent.type.is_array_type():
@@ -176,7 +177,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
 
                 combinations = list(product(*domain))
                 for combination in combinations:
-                    new_name = fluent.name + f'{list(combination)}'
+                    new_name = fluent.name + [f'_{c}' for c in combination]
                     new_default_value = default_value
                     for i in combination:
                         new_default_value = new_default_value[i]
@@ -184,18 +185,13 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                                            default_initial_value=new_default_value)
             else:
                 new_problem.add_fluent(fluent, default_initial_value=default_value)
-        print("old: ", problem.fluents)
-        print("new: ", new_problem.fluents)
-        print(new_problem.fluents_defaults)
 
-        # transformar valors inicials fluents
-        for fluent_default in problem.fluents_defaults:
-            pass
-
-        # transformar accions
+        # ACTIONS
         for action in problem.actions:
             if isinstance(action, InstantaneousAction):
                 pass
+
+        # GOALS
 
         return CompilerResult(
             new_problem, partial(replace_action, map=new_to_old), self.name
