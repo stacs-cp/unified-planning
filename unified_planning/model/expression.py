@@ -53,13 +53,9 @@ TimeExpression = Union[
 ]
 ListExpression = Union[
     list,
-    List[Union[
-        TimeExpression,
-        BoolExpression,
-        ConstantExpression,
-    ]]
+    List,
+    List["Expression"],
 ]
-
 Expression = Union[
     TimeExpression,
     BoolExpression,
@@ -626,12 +622,18 @@ class ExpressionManager(object):
         :return: The ``FNode`` containing the given ``list`` as his payload.
         """
         # convert the list to tuple to resolve the hash problem
-        adapted_value = tuple(value)
+        adapted_value = self.List_Helper(value)
         if not isinstance(value, List):
             raise UPTypeError("Expecting List, got %s" % type(value))
         return self.create_node(
             node_type=OperatorKind.LIST_CONSTANT, args=tuple(), payload=adapted_value
         )
+
+    def List_Helper(self, value):
+        for i in range(len(value)):
+            if type(value[i]) is list:
+                value[i] = tuple(self.List_Helper(value[i]))
+        return tuple(value)
 
     def Plus(
         self, *args: Union[Expression, Iterable[Expression]]
