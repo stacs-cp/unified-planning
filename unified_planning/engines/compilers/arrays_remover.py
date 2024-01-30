@@ -161,34 +161,36 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
         new_problem.clear_actions()
         # transformar fluents i valors inicials
         for fluent in problem.fluents:
-            this_fluent = fluent.type
-            new_type = this_fluent.elements_type
-            domain = []
-            while this_fluent.is_array_type():
-                domain_in = []
-                for i in range(0, this_fluent.n_elements):
-                    domain_in.append(i)
-                domain.append(domain_in)
+            if fluent.type.is_array_type():
+                this_fluent = fluent.type
                 new_type = this_fluent.elements_type
-                this_fluent = this_fluent.elements_type
+                domain = []
+                while this_fluent.is_array_type():
+                    domain_in = []
+                    for i in range(0, this_fluent.n_elements):
+                        domain_in.append(i)
+                    domain.append(domain_in)
+                    new_type = this_fluent.elements_type
+                    this_fluent = this_fluent.elements_type
 
-            combinations = list(product(*domain))
-            for combination in combinations:
-                new_name = fluent.name + f'[{combination}]'
-                print(new_name,new_type)
+                combinations = list(product(*domain))
+                for combination in combinations:
+                    new_name = fluent.name + f'[{combination}]'
+                    print(new_name,new_type)
 
+                    print(problem.fluents_defaults.get(fluent).constant_value())
 
-                new_default_value = list(problem.fluents_defaults.get(fluent).constant_value())[i]
-                while new_type.is_array_type():
-                    print("nt: ", new_type)
-                    new_type = new_type.elements_type
-                    for j in range(new_type.n_elements):
-                        new_name = new_name + f'[{j}]'
-                        new_default_value = list(new_default_value)[i]
+                    while new_type.is_array_type():
+                        print("nt: ", new_type)
+                        new_type = new_type.elements_type
+                        for j in range(new_type.n_elements):
+                            new_name = new_name + f'[{j}]'
+                            new_default_value = list(new_default_value)[i]
 
-                new_problem.add_fluent(model.Fluent(new_name, new_type, fluent.signature, fluent.environment),
-                                                   default_initial_value=0)
-
+                    new_problem.add_fluent(model.Fluent(new_name, new_type, fluent.signature, fluent.environment),
+                                                       default_initial_value=0)
+            else:
+                new_problem.add_fluent(fluent)
         print("old: ", problem.fluents)
         print("new: ", new_problem.fluents)
         print(new_problem.fluents_defaults)
