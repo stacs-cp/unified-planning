@@ -89,6 +89,7 @@ FEATURES = {
     "FLUENTS_TYPE": [
         "INT_FLUENTS",
         "REAL_FLUENTS",
+        "ARRAY_FLUENTS",
         "OBJECT_FLUENTS",
         "NUMERIC_FLUENTS",  # deprecated
     ],
