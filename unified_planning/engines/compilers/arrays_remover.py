@@ -159,15 +159,12 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
         # new_problem.clear_quality_metrics()
         new_problem.clear_fluents()
         new_problem.clear_actions()
-        # transformar fluents
-        print(problem.fluents_defaults)
+        # transformar fluents i valors inicials
         for fluent in problem.fluents:
-            print(fluent)
             if fluent.type.is_array_type():
                 new_type = fluent.type.elements_type
                 for i in range(fluent.type.n_elements):
                     new_name = fluent.name + f'[{i}]'
-                    print("default: ", problem.fluents_defaults.get(fluent).constant_value()[i])
                     new_problem.add_fluent(model.Fluent(new_name, new_type, fluent.signature, fluent.environment),
                                            default_initial_value=problem.fluents_defaults.get(fluent).constant_value()[i])
             else:
@@ -175,9 +172,9 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
 
             print("old: ", problem.fluents)
             print("new: ", new_problem.fluents)
+            print(new_problem.fluents_defaults)
 
         # transformar valors inicials fluents
-        print(problem.fluents_defaults)
         for fluent_default in problem.fluents_defaults:
             pass
 
