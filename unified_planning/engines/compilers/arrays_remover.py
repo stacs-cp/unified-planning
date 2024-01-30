@@ -164,23 +164,28 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
             print(fluent)
             print(type(fluent))
             print(fluent.type)
-            if fluent.type.is_array_type():
-                for i in range(fluent.type.n_elements):
-                    new_type = fluent.type.elements_type
+            this_fluent = fluent.type
+            elements_domain = []
+            while this_fluent.is_array_type():
+                elements_domain.append(this_fluent.n_elements)
+                this_fluent = this_fluent.elements_type
+
+            print(elements_domain)
+
+            for i in range(fluent.type.n_elements):
+                new_type = fluent.type.elements_type
+                print("nt: ", new_type)
+                new_name = fluent.name + f'[{i}]'
+                new_default_value = list(problem.fluents_defaults.get(fluent).constant_value())[i]
+                while new_type.is_array_type():
                     print("nt: ", new_type)
-                    new_name = fluent.name + f'[{i}]'
-                    print(new_name)
-                    while new_type.is_array_type():
-                        print("nt: ", new_type)
-                        new_type = new_type.elements_type
-                        new_name = new_name + f'[{i}]'
+                    new_type = new_type.elements_type
+                    for j in range(new_type.n_elements):
+                        new_name = new_name + f'[{j}]'
+                        new_default_value = list(new_default_value)[i]
 
-                    print(problem.fluents_defaults.get(fluent).constant_value())
-                    new_problem.add_fluent(model.Fluent(new_name, new_type, fluent.signature, fluent.environment),
-                                               default_initial_value=problem.fluents_defaults.get(fluent).constant_value()[i])
-
-            else:
-                new_problem.add_fluent(fluent, default_initial_value=problem.fluents_defaults.get(fluent))
+                new_problem.add_fluent(model.Fluent(new_name, new_type, fluent.signature, fluent.environment),
+                                                   default_initial_value=0)
 
         print("old: ", problem.fluents)
         print("new: ", new_problem.fluents)
