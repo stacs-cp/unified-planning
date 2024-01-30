@@ -158,6 +158,10 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
         new_problem.clear_quality_metrics()
         for fluent in problem.fluents:
             print(fluent)
+            if fluent.type.is_array_type():
+                print(fluent.name)
+                print(fluent.type)
+                print(fluent.signature)
 
         #for action in new_problem.actions:
         #    if isinstance(action, InstantaneousAction):
