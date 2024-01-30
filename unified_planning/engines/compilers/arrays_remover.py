@@ -165,12 +165,15 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
             print(type(fluent))
             print(fluent.type)
             this_fluent = fluent.type
-            elements_domain = []
+            domain = []
             while this_fluent.is_array_type():
-                elements_domain.append(this_fluent.n_elements)
+                domain_in = []
+                for i in range(0, this_fluent.n_elements+1):
+                    domain_in.append(this_fluent.n_elements)
+                domain.append(domain_in)
                 this_fluent = this_fluent.elements_type
 
-            print(elements_domain)
+            print(domain)
 
             for i in range(fluent.type.n_elements):
                 new_type = fluent.type.elements_type
