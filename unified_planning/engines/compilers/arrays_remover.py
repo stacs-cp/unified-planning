@@ -154,26 +154,36 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
 
         new_problem = problem.clone()
         new_problem.name = f"{self.name}_{problem.name}"
-        new_problem.clear_timed_goals()
-        new_problem.clear_goals()
-        new_problem.clear_quality_metrics()
+        # new_problem.clear_timed_goals()
+        # new_problem.clear_goals()
+        # new_problem.clear_quality_metrics()
         new_problem.clear_fluents()
+        new_problem.clear_actions()
+        # transformar fluents
         for fluent in problem.fluents:
             print(fluent)
             if fluent.type.is_array_type():
                 new_type = fluent.type.elements_type
                 for i in range(fluent.type.n_elements):
                     new_name = fluent.name + f'[{i}]'
-
-                    new_problem.add_fluent(model.Fluent(new_name, new_type, fluent.signature, fluent.environment))
+                    print("default: ", problem.fluents_defaults.get(fluent.name)[i])
+                    new_problem.add_fluent(model.Fluent(new_name, new_type, fluent.signature, fluent.environment),
+                                           default_initial_value=problem.fluents_defaults.get(fluent.name)[i])
             else:
                 new_problem.add_fluent(fluent)
 
-            print(problem.fluents)
-            print(new_problem.fluents)
+            print("old: ", problem.fluents)
+            print("new: ", new_problem.fluents)
 
-        #for action in new_problem.actions:
-        #    if isinstance(action, InstantaneousAction):
+        # transformar valors inicials fluents
+        print(problem.fluents_defaults)
+        for fluent_default in problem.fluents_defaults:
+            problem.add
+
+        # transformar accions
+        for action in problem.actions:
+            if isinstance(action, InstantaneousAction):
+                pass
 
         return CompilerResult(
             new_problem, partial(replace_action, map=new_to_old), self.name
