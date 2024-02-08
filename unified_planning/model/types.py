@@ -15,7 +15,7 @@
 """This module defines all the types."""
 
 import unified_planning
-from typing import Iterator, Optional, cast
+from typing import Iterator, Optional, cast, Union, Iterable
 from unified_planning.exceptions import UPProblemDefinitionError, UPTypeError
 from abc import ABC
 from fractions import Fraction
@@ -231,18 +231,13 @@ class _RealType(Type):
 
 class _ArrayType(Type):
     """Represents a list composed of n_elements elements of a given type elements_type."""
-    def __init__(self, elements: Optional[tuple] = None, elements_type: Optional[Type] = None,
-                 n_elements: Optional[int] = None):
+    def __init__(self, size: int, elements_type: Type = None):
         Type.__init__(self)
-        assert n_elements is None or isinstance(
-            n_elements, int
-        ), "typing not respected"
-        self._elements = elements
+        self._size = size
         self._elements_type = elements_type
-        self._n_elements = n_elements
 
     def __repr__(self) -> str:
-        return f"array[{list(self._elements) if self._elements is not None else self._elements},{self._elements_type},{self._n_elements}]"
+        return f"array[{self._size}, {self._elements_type if self._elements_type is not None else 'Type'}]"
 
     def is_array_type(self) -> bool:
         """Returns true iff is a list type."""
@@ -254,14 +249,10 @@ class _ArrayType(Type):
         return self._elements_type
 
     @property
-    def n_elements(self) -> Optional[int]:
+    def size(self) -> int:
         """Returns the type of elements in this list."""
-        return self._n_elements
+        return self._size
 
-    @property
-    def elements(self) -> Optional[list]:
-        """Returns the type of elements in this list."""
-        return list(self._elements) if self._elements is not None else self._elements
 
 BOOL = _BoolType()
 TIME = _TimeType()
@@ -341,6 +332,14 @@ def is_compatible_type(
         assert isinstance(t_left, _UserType) and isinstance(t_right, _UserType)
         # compatible if t_right is a subclass of t_left
         return t_left in t_right.ancestors
+    if t_left.is_array_type() or t_right.is_array_type():
+        if t_right.is_array_type() and t_right.is_array_type():
+            assert isinstance(t_left, _ArrayType) and isinstance(t_right, _ArrayType)
+            assert t_left.size == t_right.size
+            is_compatible_type(t_left.elements_type, t_right.elements_type)
+            return True
+        else:
+            return False
     if not (
         (t_left.is_int_type() and t_right.is_int_type())
         or (t_left.is_real_type() and t_right.is_real_type())

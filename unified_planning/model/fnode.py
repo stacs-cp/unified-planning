@@ -72,7 +72,7 @@ class FNode(object):
         elif self.is_real_constant():
             return str(self.constant_value())
         elif self.is_list_constant():
-            return str(self.list_constant_value())
+            return str(self.constant_value())
         elif self.is_fluent_exp():
             return self.fluent().name + self.get_nary_expression_string(", ", self.args)
         elif self.is_dot():
@@ -178,7 +178,7 @@ class FNode(object):
             or self.node_type == OperatorKind.OBJECT_EXP
         )
 
-    def constant_value(self) -> Union[bool, int, Fraction, list]:
+    def constant_value(self) -> Union[bool, int, Fraction, list, tuple]:
         """Returns the constant value stored in this expression."""
         assert self.is_constant()
         return self._content.payload
@@ -201,16 +201,7 @@ class FNode(object):
     def list_constant_value(self) -> List:
         """Returns the `list` constant value stored in this expression."""
         assert self.is_list_constant()
-        return self.list_helper(self.constant_value())
-
-    def list_helper(self, value):
-        temp = []
-        for i in range(len(value)):
-            if type(value[i]) is tuple:
-                temp.append(list(self.list_helper(value[i])))
-            else:
-                temp.append(value[i])
-        return temp
+        return self._content.payload
 
     def fluent(self) -> "unified_planning.model.fluent.Fluent":
         """Return the `Fluent` stored in this expression."""

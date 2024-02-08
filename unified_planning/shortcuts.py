@@ -484,9 +484,9 @@ def RealType(
     return get_environment().type_manager.RealType(lower_bound, upper_bound)
 
 def ArrayType(
-        elements: Optional[tuple] = None, elements_type: Optional[Type] = None, n_elements: Optional[int] = None
+        size: int, elements_type: Type = None
 ) -> unified_planning.model.types.Type:
-    return get_environment().type_manager.ArrayType(elements, elements_type, n_elements)
+    return get_environment().type_manager.ArrayType(size, elements_type)
 
 def UserType(
     name: str, father: Optional[Type] = None

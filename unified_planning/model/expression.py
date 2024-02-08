@@ -191,6 +191,7 @@ class ExpressionManager(object):
                 int,
                 Fraction,
                 list,
+                tuple,
                 Tuple["up.model.variable.Variable", ...],
             ]
         ] = None,
@@ -622,18 +623,12 @@ class ExpressionManager(object):
         :return: The ``FNode`` containing the given ``list`` as his payload.
         """
         # convert the list to tuple to resolve the hash problem
-        adapted_value = self.List_Helper(value)
+        adapted_value = tuple(self.auto_promote(value))
         if not isinstance(value, List):
             raise UPTypeError("Expecting List, got %s" % type(value))
         return self.create_node(
             node_type=OperatorKind.LIST_CONSTANT, args=tuple(), payload=adapted_value
         )
-
-    def List_Helper(self, value):
-        for i in range(len(value)):
-            if type(value[i]) is list:
-                value[i] = tuple(self.List_Helper(value[i]))
-        return tuple(value)
 
     def Plus(
         self, *args: Union[Expression, Iterable[Expression]]
@@ -757,5 +752,15 @@ class ExpressionManager(object):
         :param right: The right side of the ``==``.
         :return: The created ``Equals`` expression.
         """
+        # it's a list
+        print("left: ", left)
+        print("right: ", right)
+        if type(left) is list:
+            if len(left) > 0:
+                left = [left]
+        if type(right) is list:
+            if len(right) > 0:
+                right = [right]
+        print(left,right)
         left, right = self.auto_promote(left, right)
         return self.create_node(node_type=OperatorKind.EQUALS, args=(left, right))

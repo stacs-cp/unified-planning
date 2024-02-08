@@ -18,12 +18,34 @@ from fractions import Fraction
 import unified_planning.model.types
 import unified_planning.environment
 import unified_planning.model.walkers as walkers
-from unified_planning.model.types import BOOL, TIME, _UserType
+from unified_planning.model.types import BOOL, TIME, _UserType, _IntType, _ArrayType
 from unified_planning.model.fnode import FNode
 from unified_planning.model.operators import OperatorKind
 from unified_planning.exceptions import UPTypeError
 from typing import List, Optional, cast
 import math
+
+
+def combine_types(types: List["unified_planning.model.types.Type"]) -> "unified_planning.model.types.Type":
+    if types[0].is_int_type():
+        min_int = None
+        max_int = None
+        for t in types:
+            assert t.is_int_type()
+            max_int = t.upper_bound if max_int is None or t.upper_bound > max_int else max_int
+            min_int = t.lower_bound if min_int is None or t.lower_bound < min_int else min_int
+        return _IntType(min_int, max_int)
+    elif types[0].is_array_type():
+        all_types = []
+        size = types[0].size
+        for t in types:
+            assert t.is_array_type()
+            assert t.size == size
+            all_types.append(t.elements_type)
+        return _ArrayType(size, combine_types(all_types))
+    elif types[0].is_user_type():
+        for t in types:
+            print(t)
 
 
 class TypeChecker(walkers.dag.DagWalker):
@@ -191,8 +213,13 @@ class TypeChecker(walkers.dag.DagWalker):
     def walk_identity_list(self, expression, args):
         assert expression is not None
         assert len(args) == 0
+        size = len(expression.constant_value())
+        all_types = []
+        for e in expression.constant_value():
+            all_types.append(e.type)
+        elements_type = combine_types(all_types)
         return self.environment.type_manager.ArrayType(
-            expression.constant_value(), None, None
+            size, elements_type
         )
 
     @walkers.handles(OperatorKind.INT_CONSTANT)
@@ -378,6 +405,9 @@ class TypeChecker(walkers.dag.DagWalker):
                 x.is_int_type() or x.is_real_type()
             ):
                 return None
+            elif t.is_array_type():
+                if not t.is_compatible(x):
+                    return None
         return BOOL
 
     @walkers.handles(OperatorKind.DOT)
