@@ -752,15 +752,11 @@ class ExpressionManager(object):
         :param right: The right side of the ``==``.
         :return: The created ``Equals`` expression.
         """
-        # it's a list
-        print("left: ", left)
-        print("right: ", right)
         if type(left) is list:
             if len(left) > 0:
                 left = [left]
         if type(right) is list:
             if len(right) > 0:
                 right = [right]
-        print(left,right)
         left, right = self.auto_promote(left, right)
         return self.create_node(node_type=OperatorKind.EQUALS, args=(left, right))
