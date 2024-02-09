@@ -753,10 +753,8 @@ class ExpressionManager(object):
         :return: The created ``Equals`` expression.
         """
         if type(left) is list:
-            if len(left) > 0:
-                left = [left]
+            left = [left]
         if type(right) is list:
-            if len(right) > 0:
-                right = [right]
+            right = [right]
         left, right = self.auto_promote(left, right)
         return self.create_node(node_type=OperatorKind.EQUALS, args=(left, right))

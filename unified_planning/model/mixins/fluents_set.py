@@ -145,10 +145,13 @@ class FluentsSetMixin:
             else:
                 warn(msg)
         self._fluents.append(fluent)
+        if fluent.type.is_array_type() and type(default_initial_value) is list:
+            default_initial_value = [default_initial_value]
         if not default_initial_value is None:
             (v_exp,) = self.environment.expression_manager.auto_promote(
                 default_initial_value
             )
+            print(v_exp)
             self._fluents_defaults[fluent] = v_exp
         elif fluent.type in self._initial_defaults:
             self._fluents_defaults[fluent] = self._initial_defaults[fluent.type]
