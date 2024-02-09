@@ -27,7 +27,8 @@ import math
 
 
 def combine_types(types: List["unified_planning.model.types.Type"]) -> "unified_planning.model.types.Type":
-    if types[0].is_int_type():
+    x = types[0]
+    if x.is_int_type():
         min_int = None
         max_int = None
         for t in types:
@@ -35,18 +36,36 @@ def combine_types(types: List["unified_planning.model.types.Type"]) -> "unified_
             max_int = t.upper_bound if max_int is None or t.upper_bound > max_int else max_int
             min_int = t.lower_bound if min_int is None or t.lower_bound < min_int else min_int
         return _IntType(min_int, max_int)
-    elif types[0].is_array_type():
+    elif x.is_array_type():
         all_types = []
-        size = types[0].size
+        size = x.size
         for t in types:
             assert t.is_array_type()
             assert t.size == size
             all_types.append(t.elements_type)
         return _ArrayType(size, combine_types(all_types))
-    elif types[0].is_user_type():
+    elif x.is_user_type():
+        global_user_type = x
         for t in types:
-            print(t)
-
+            assert t.is_user_type()
+            if t == global_user_type or global_user_type.is_compatible(t):
+                pass
+            elif t.is_compatible(global_user_type):
+                global_user_type = t
+            else:
+                # mirar si tenen algun antecesor en comu
+                t = cast(_UserType, t)
+                g = cast(_UserType, global_user_type)
+                g_ancestors = set(g.ancestors)
+                t_ancestors = set(t.ancestors)
+                common_types = list(g_ancestors.intersection(t_ancestors))
+                assert len(common_types) > 0
+                global_user_type = common_types[0]
+        return global_user_type
+    elif x.is_bool_type():
+        for t in types:
+            assert t.is_bool_type()
+        return BOOL
 
 class TypeChecker(walkers.dag.DagWalker):
     """Walker used to retrieve the `Type` of an expression."""
@@ -406,8 +425,10 @@ class TypeChecker(walkers.dag.DagWalker):
             ):
                 return None
             elif t.is_array_type():
-                if not t.is_compatible(x):
+                if not x.is_array_type():
                     return None
+                if not t.is_compatible(x) and not x.is_compatible(t):
+                    return self.walk_equals(expression, args=[t.elements_type, x.elements_type])
         return BOOL
 
     @walkers.handles(OperatorKind.DOT)

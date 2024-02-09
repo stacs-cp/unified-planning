@@ -336,8 +336,7 @@ def is_compatible_type(
         if t_right.is_array_type() and t_right.is_array_type():
             assert isinstance(t_left, _ArrayType) and isinstance(t_right, _ArrayType)
             assert t_left.size == t_right.size
-            is_compatible_type(t_left.elements_type, t_right.elements_type)
-            return True
+            return is_compatible_type(t_left.elements_type, t_right.elements_type)
         else:
             return False
     if not (
