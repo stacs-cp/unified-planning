@@ -142,7 +142,7 @@ class TypeManager:
             elements_type: Type = None
     ) -> Type:
         """Returns the list type with a specific element type."""
-        assert size > 1
+        assert size > 1, "Size of ArrayType must be greater than 1."
         k = (size, elements_type)
         if k in self._arrays:
             return self._arrays[k]
