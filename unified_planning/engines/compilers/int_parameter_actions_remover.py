@@ -242,7 +242,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                 for c in combinations:
                     print(c)
                     print(*[n for n in c])
-                    new_action = InstantaneousAction(action.name + '_' + c, parameters, action.environment)
+                    new_action = InstantaneousAction(action.name + '_' + str(*[n for n in c]), parameters, action.environment)
 
                     # mirem les precondicions
                     for precondition in action.preconditions:
