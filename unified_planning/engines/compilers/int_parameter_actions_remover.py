@@ -241,7 +241,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                 # per cada combinacio possible dels enters -> creem una accio
                 for c in combinations:
                     print(c)
-                    print([str(*n) for n in c])
+                    print(*[n for n in c])
                     new_action = InstantaneousAction(action.name + '_' + c, parameters, action.environment)
 
                     # mirem les precondicions
