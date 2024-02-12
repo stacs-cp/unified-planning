@@ -230,7 +230,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                     if old_parameter.type.is_user_type():
                         parameters[old_parameter.name] = old_parameter.type
                     else:
-                        int_parameters[str(old_parameter.type) + ' ' + old_parameter.name] = n_i
+                        int_parameters[old_parameter.name] = n_i
                         n_i = n_i + 1
                         domain = []
                         for i in range(old_parameter.type.lower_bound, old_parameter.type.upper_bound + 1):
@@ -242,7 +242,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                 print(combinations)
                 print(*combinations)
                 for c in combinations:
-                    print(c)
+                    print(*c)
                     new_action = InstantaneousAction(action.name + '_' + str(c), parameters, action.environment)
 
                     # mirem les precondicions
