@@ -149,11 +149,16 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             int_parameters: dict[str, int],
             c: Any
     ) -> "up.model.fnode.FNode":
+        has_variable = False
         new_value = value
         for key in int_parameters.keys():
             if key in str(new_value):
+                has_variable = True
                 new_value = c[int_parameters.get(key)]
-        return Int(new_value)
+        if has_variable:
+            return Int(new_value)
+        else:
+            return value
 
     def _get_new_fnode(
             self,
