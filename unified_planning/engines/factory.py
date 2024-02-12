@@ -99,6 +99,10 @@ DEFAULT_ENGINES = {
         "unified_planning.engines.compilers.arrays_remover",
         "ArraysRemover",
     ),
+    "up_int_parameter_actions_remover": (
+        "unified_planning.engines.compilers.int_parameter_actions_remover",
+        "IntParameterActionsRemover",
+    ),
     "up_usertype_fluents_remover": (
         "unified_planning.engines.compilers.usertype_fluents_remover",
         "UsertypeFluentsRemover",
@@ -156,6 +160,7 @@ DEFAULT_ENGINES_PREFERENCE_LIST = [
     "up_negative_conditions_remover",
     "up_quantifiers_remover",
     "up_arrays_remover",
+    "up_int_parameter_actions_remover",
     "up_state_invariants_remover",
     "up_usertype_fluents_remover",
     "tarski_grounder",
