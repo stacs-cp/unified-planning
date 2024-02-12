@@ -155,10 +155,10 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
         new_problem = problem.clone()
         new_problem.name = f"{self.name}_{problem.name}"
         # new_problem.clear_timed_goals()
-        # new_problem.clear_goals()
         # new_problem.clear_quality_metrics()
         new_problem.clear_fluents()
         new_problem.clear_actions()
+        new_problem.clear_goals()
 
         # FLUENTS AND DEFAULT_VALUES
         for fluent in problem.fluents:
@@ -190,30 +190,25 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
         for action in problem.actions:
             new_parameters = OrderedDict()
             if isinstance(action, InstantaneousAction):
-                print(type(action.parameters))
                 for p in action.parameters:
                     new_parameters.update({p.name: p.type})
                 new_action = InstantaneousAction(action.name, new_parameters, action.environment)
-                print(action)
                 for precondition in action.preconditions:
-                    print(precondition)
+                    pass
                 for effect in action.effects:
                     if effect.is_increase():
-                        print(effect)
                         if problem.fluent(effect.fluent.fluent().name.split('[')[0]):
-                            print("ho")
                             new_fluent_name = problem.fluent(effect.fluent.fluent().name.split('[')[0]).name
                             new_fluent_position = effect.fluent.fluent().name.split('[')[1].split(']')[0]
-                            print(new_fluent_name)
-                            print(new_fluent_position)
                             new_fluent = new_problem.fluent(new_fluent_name+'_'+new_fluent_position)
-                            print(new_fluent)
                         else:
                             new_fluent = effect.fluent.fluent()
 
                         new_action.add_increase_effect(new_fluent(*effect.fluent.args), effect.value, effect.condition, effect.forall)
-
+                new_problem.add_action(new_action)
         # GOALS
+        for g in problem.goals:
+            print(g)
 
         return CompilerResult(
             new_problem, partial(replace_action, map=new_to_old), self.name
