@@ -162,14 +162,14 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             int_parameters: dict[str, int],
             c: Any
     ) -> "up.model.fnode.FNode":
+        assert fluent.type.is_array_type()
         new_name = fluent.name
         for key in int_parameters.keys():
             if key in str(new_name):
                 fluent_0 = new_name.split(key)[0]
                 fluent_1 = new_name.split(key)[1]
                 new_name = fluent_0 + str(c[int_parameters.get(key)]) + fluent_1
-        fluent = problem.fluent(new_name)
-        return fluent(*fluent.signature)
+        return Fluent(new_name, fluent.type.elements_type, fluent.signature, fluent.environment)(*fluent.signature)
 
     def _manage_node(
             self,
