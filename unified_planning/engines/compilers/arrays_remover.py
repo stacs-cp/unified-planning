@@ -56,7 +56,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
 
     @property
     def name(self):
-        return "qurm"
+        return "arm"
 
     @staticmethod
     def supported_kind() -> ProblemKind:
@@ -169,7 +169,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                 domain = []
                 while this_fluent.is_array_type():
                     domain_in = []
-                    for i in range(0, this_fluent.n_elements):
+                    for i in range(0, this_fluent.size):
                         domain_in.append(i)
                     domain.append(domain_in)
                     new_type = this_fluent.elements_type

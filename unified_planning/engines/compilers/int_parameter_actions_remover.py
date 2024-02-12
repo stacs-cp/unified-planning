@@ -213,7 +213,6 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
 
         new_to_old: Dict[Action, Action] = {}
         env = problem.environment
-        em = env.expression_manager
         new_problem = problem.clone()
         new_problem.name = f"{self.name}_{problem.name}"
         new_problem.clear_actions()
@@ -231,6 +230,8 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                     if old_parameter.type.is_user_type():
                         parameters[old_parameter.name] = old_parameter.type
                     else:
+                        # de moment nomes s'accepten UserType i IntType
+                        assert old_parameter.type.is_int_type()
                         int_parameters[old_parameter.name] = n_i
                         n_i = n_i + 1
                         domain = []
@@ -260,8 +261,6 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                             new_action.add_effect(new_fnode, new_value, effect.condition, effect.forall)
 
                     new_problem.add_action(new_action)
-
-        # GOALS
 
         return CompilerResult(
             new_problem, partial(replace_action, map=new_to_old), self.name
