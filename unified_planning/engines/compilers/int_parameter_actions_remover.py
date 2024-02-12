@@ -240,10 +240,8 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                 combinations = list(product(*int_domains))
                 # per cada combinacio possible dels enters -> creem una accio
                 for c in combinations:
-                    print(c)
                     cadena = '_'.join(map(str, c))
-                    print(cadena)
-                    new_action = InstantaneousAction(action.name + cadena, parameters, action.environment)
+                    new_action = InstantaneousAction(action.name + '_' + cadena, parameters, action.environment)
 
                     # mirem les precondicions
                     for precondition in action.preconditions:
@@ -253,8 +251,6 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
 
                     for effect in action.effects:
                         new_fnode = self._get_new_fnode(problem, effect.fluent.fluent(), int_parameters, c)
-                        print(effect, effect.value, effect.value.type)
-                        print(type(effect.value))
                         new_value = self._get_new_value(effect.value, int_parameters, c)
                         if effect.is_increase():
                             new_action.add_increase_effect(new_fnode, new_value, effect.condition, effect.forall)
