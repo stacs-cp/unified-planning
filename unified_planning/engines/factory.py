@@ -513,6 +513,7 @@ class Factory:
         plan_kind: Optional["PlanKind"] = None,
         anytime_guarantee: Optional["AnytimeGuarantee"] = None,
     ) -> Type["up.engines.engine.Engine"]:
+        print(name)
         if name is not None:
             if name in self._engines:
                 return self._engines[name]
@@ -689,6 +690,8 @@ class Factory:
             if params is None:
                 params = {}
             assert isinstance(params, Dict)
+            print("ec:")
+            print(operation_mode,name,problem_kind,optimality_guarantee,compilation_kind,plan_kind,anytime_guarantee)
             EngineClass = self._get_engine_class(
                 operation_mode,
                 name,
@@ -784,6 +787,7 @@ class Factory:
                 raise UPUsageError(
                     f"{optimality_guarantee} is not a valid OptimalityGuarantee."
                 )
+        print(OperationMode.ONESHOT_PLANNER,name,names,params,problem_kind,optimality_guarantee)
         return self._get_engine(
             OperationMode.ONESHOT_PLANNER,
             name,
