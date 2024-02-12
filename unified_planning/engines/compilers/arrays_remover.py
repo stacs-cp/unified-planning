@@ -201,14 +201,17 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                             new_fluent_name = problem.fluent(effect.fluent.fluent().name.split('[')[0]).name
                             new_fluent_position = effect.fluent.fluent().name.split('[')[1].split(']')[0]
                             new_fluent = new_problem.fluent(new_fluent_name+'_'+new_fluent_position)
+                            print(new_fluent)
                         else:
                             new_fluent = effect.fluent.fluent()
 
                         new_action.add_increase_effect(new_fluent(*effect.fluent.args), effect.value, effect.condition, effect.forall)
                 new_problem.add_action(new_action)
+
         # GOALS
         for g in problem.goals:
             print(g)
+            #print(g.fluent())
 
         return CompilerResult(
             new_problem, partial(replace_action, map=new_to_old), self.name
