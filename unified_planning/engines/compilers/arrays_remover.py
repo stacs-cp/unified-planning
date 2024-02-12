@@ -200,7 +200,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                 for effect in action.effects:
                     if effect.is_increase():
                         print(effect)
-                        if new_problem.fluent(effect.fluent.fluent().name.split('[')[0]):
+                        if problem.fluent(effect.fluent.fluent().name.split('[')[0]):
                             print("ho")
                             new_fluent_name = problem.fluent(effect.fluent.fluent().name.split('[')[0]).name
                             new_fluent_position = effect.fluent.fluent().name.split(']')[1]
