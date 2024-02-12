@@ -211,7 +211,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                         else:
                             new_fluent = effect.fluent.fluent()
 
-                        new_action.add_increase_effect(new_fluent(*effect.fluent.signature), effect.value, effect.condition, effect.forall)
+                        new_action.add_increase_effect(new_fluent(*effect.fluent.args), effect.value, effect.condition, effect.forall)
 
         # GOALS
 
