@@ -19,6 +19,8 @@ from itertools import product
 import unified_planning as up
 import unified_planning.engines as engines
 from unified_planning import model
+from collections import OrderedDict
+from typing import OrderedDict as OrderedDictType
 from unified_planning.engines.mixins.compiler import CompilationKind, CompilerMixin
 from unified_planning.engines.results import CompilerResult
 from unified_planning.model import (
@@ -41,7 +43,7 @@ from unified_planning.engines.compilers.utils import (
     replace_action,
     updated_minimize_action_costs,
 )
-from typing import Dict, List, Optional, Tuple, Any
+from typing import Dict, List, Optional, Tuple, Any, OrderedDict
 from functools import partial
 
 from unified_planning.shortcuts import Int
@@ -217,7 +219,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
         new_problem.name = f"{self.name}_{problem.name}"
         new_problem.clear_actions()
 
-        parameters = {}
+        parameters: OrderedDictType[str, Any] = OrderedDict()
         int_parameters = {}
         int_domains = []
 
@@ -228,7 +230,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                 # separar els parametres UserType i IntType
                 for old_parameter in action.parameters:
                     if old_parameter.type.is_user_type():
-                        parameters[old_parameter.name] = old_parameter.type
+                        parameters.update({old_parameter.name: old_parameter.type})
                     else:
                         # de moment nomes s'accepten UserType i IntType
                         assert old_parameter.type.is_int_type()
