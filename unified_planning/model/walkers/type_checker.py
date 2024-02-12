@@ -61,6 +61,9 @@ def combine_types(types: List["unified_planning.model.types.Type"]) -> "unified_
                 common_types = list(g_ancestors.intersection(t_ancestors))
                 assert len(common_types) > 0
                 global_user_type = common_types[0]
+                for ct in common_types:
+                    if len(str(ct)) > len(str(global_user_type)):
+                        global_user_type = ct
         return global_user_type
     elif x.is_bool_type():
         for t in types:
