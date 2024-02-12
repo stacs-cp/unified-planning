@@ -189,7 +189,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
         # ACTIONS
         for action in problem.actions:
             if isinstance(action, InstantaneousAction):
-                print(action.parameters)
+                print(type(action.parameters))
                 new_action = InstantaneousAction(action.name, action.parameters, action.environment)
                 print(action)
                 for precondition in action.preconditions:
