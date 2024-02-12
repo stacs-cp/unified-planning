@@ -163,6 +163,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             c: Any
     ) -> "up.model.fnode.FNode":
         new_name = fluent.name
+        print(int_parameters.keys())
         for key in int_parameters.keys():
             print(key, new_name)
             if key in str(new_name):
@@ -235,9 +236,11 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                         for i in range(old_parameter.type.lower_bound, old_parameter.type.upper_bound + 1):
                             domain.append(i)
                         int_domains.append(domain)
-
+                print(int_parameters)
                 combinations = list(product(*int_domains))
                 # per cada combinacio possible dels enters -> creem una accio
+                print(combinations)
+                print(*combinations)
                 for c in combinations:
                     print(c)
                     new_action = InstantaneousAction(action.name + '_' + str(c), parameters, action.environment)
