@@ -163,15 +163,11 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             c: Any
     ) -> "up.model.fnode.FNode":
         new_name = fluent.name
-        print(int_parameters.keys())
         for key in int_parameters.keys():
-            print(key, new_name)
             if key in str(new_name):
-                print("si")
                 fluent_0 = new_name.split(key)[0]
                 fluent_1 = new_name.split(key)[1]
                 new_name = fluent_0 + str(c[int_parameters.get(key)]) + fluent_1
-        print(new_name)
         return Fluent(new_name, fluent.type, fluent.signature, fluent.environment)(*fluent.signature)
 
     def _manage_node(
@@ -236,14 +232,10 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                         for i in range(old_parameter.type.lower_bound, old_parameter.type.upper_bound + 1):
                             domain.append(i)
                         int_domains.append(domain)
-                print(int_parameters)
                 combinations = list(product(*int_domains))
                 # per cada combinacio possible dels enters -> creem una accio
-                print(combinations)
-                print(*combinations)
                 for c in combinations:
-                    print(*c)
-                    new_action = InstantaneousAction(action.name + '_' + str(c), parameters, action.environment)
+                    new_action = InstantaneousAction(action.name + '_' + str(*c), parameters, action.environment)
 
                     # mirem les precondicions
                     for precondition in action.preconditions:
@@ -253,7 +245,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
 
                     for effect in action.effects:
                         new_fnode = self._get_new_fnode(problem, effect.fluent.fluent(), int_parameters, c)
-                        print(effect.value, effect.value.type, effect.value.node_type)
+                        print(effect, effect.value, effect.value.type)
                         if effect.value.type.is_int_type():
                             new_action.add_increase_effect(new_fnode, effect.value, effect.condition, effect.forall)
                         else:
