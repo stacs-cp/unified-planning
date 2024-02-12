@@ -189,7 +189,21 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
         # ACTIONS
         for action in problem.actions:
             if isinstance(action, InstantaneousAction):
-                pass
+                new_action = InstantaneousAction(action.name, action.parameters, action.environment)
+                print(action)
+                for precondition in action.preconditions:
+                    print(precondition)
+                for effect in action.effects:
+                    if effect.is_increase():
+                        print(effect)
+                        if new_problem.fluent(effect.fluent.fluent().name.split('[')[0]):
+                            print("ho")
+                            new_fluent = new_problem.fluent(effect.fluent.fluent().name.split('[')[0])
+                            print(new_fluent)
+                        else:
+                            new_fluent = effect.fluent.fluent()
+
+                        new_action.add_increase_effect(new_fluent, effect.value, effect.condition, effect.forall)
 
         # GOALS
 
