@@ -72,7 +72,7 @@ class FNode(object):
         elif self.is_real_constant():
             return str(self.constant_value())
         elif self.is_list_constant():
-            return str(self.constant_value())
+            return str(list(self.constant_value()))
         elif self.is_fluent_exp():
             return self.fluent().name + self.get_nary_expression_string(", ", self.args)
         elif self.is_dot():
