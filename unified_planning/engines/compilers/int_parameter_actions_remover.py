@@ -246,7 +246,8 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                     for effect in action.effects:
                         new_fnode = self._get_new_fnode(problem, effect.fluent.fluent(), int_parameters, c)
                         print(effect, effect.value, effect.value.type)
-                        if effect.value.type.is_int_type():
+                        print(type(effect.value))
+                        if type(effect.value) is int:
                             new_action.add_increase_effect(new_fnode, effect.value, effect.condition, effect.forall)
                         else:
                             new_value = self._get_new_value(effect.value, int_parameters, c)
