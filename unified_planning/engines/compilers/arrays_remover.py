@@ -202,7 +202,11 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                         print(effect)
                         if new_problem.fluent(effect.fluent.fluent().name.split('[')[0]):
                             print("ho")
-                            new_fluent = new_problem.fluent(effect.fluent.fluent().name.split('[')[0])
+                            new_fluent_name = problem.fluent(effect.fluent.fluent().name.split('[')[0]).name
+                            new_fluent_position = effect.fluent.fluent().name.split(']')[1]
+                            print(new_fluent_name)
+                            print(new_fluent_position)
+                            new_fluent = new_problem.fluent(new_fluent_name+'_'+new_fluent_position)
                             print(new_fluent)
                         else:
                             new_fluent = effect.fluent.fluent()
