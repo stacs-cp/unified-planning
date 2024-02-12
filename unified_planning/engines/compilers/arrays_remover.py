@@ -41,7 +41,7 @@ from unified_planning.engines.compilers.utils import (
     replace_action,
     updated_minimize_action_costs,
 )
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, OrderedDict
 from functools import partial
 
 
@@ -188,9 +188,12 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
 
         # ACTIONS
         for action in problem.actions:
+            new_parameters = OrderedDict()
             if isinstance(action, InstantaneousAction):
                 print(type(action.parameters))
-                new_action = InstantaneousAction(action.name, action.parameters, action.environment)
+                for p in action.parameters:
+                    new_parameters.update({p.name: p.type})
+                new_action = InstantaneousAction(action.name, new_parameters, action.environment)
                 print(action)
                 for precondition in action.preconditions:
                     print(precondition)

@@ -219,7 +219,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
         new_problem.name = f"{self.name}_{problem.name}"
         new_problem.clear_actions()
 
-        parameters: OrderedDictType[str, Any] = OrderedDict()
+        parameters = OrderedDict()
         int_parameters = {}
         int_domains = []
 
