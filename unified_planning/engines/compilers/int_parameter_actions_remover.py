@@ -151,7 +151,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
     ) -> "up.model.fnode.FNode":
         new_value = value
         for key in int_parameters.keys():
-            if key.split('] ')[1] in str(new_value):
+            if key in str(new_value):
                 new_value = c[int_parameters.get(key)]
         return Int(new_value)
 
