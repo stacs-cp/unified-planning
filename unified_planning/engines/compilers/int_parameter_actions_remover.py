@@ -240,7 +240,9 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                 combinations = list(product(*int_domains))
                 # per cada combinacio possible dels enters -> creem una accio
                 for c in combinations:
-                    new_action = InstantaneousAction(action.name + '_' + str(*c), parameters, action.environment)
+                    print(c)
+                    print([str(*n) for n in c])
+                    new_action = InstantaneousAction(action.name + '_' + c, parameters, action.environment)
 
                     # mirem les precondicions
                     for precondition in action.preconditions:
@@ -252,16 +254,13 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                         new_fnode = self._get_new_fnode(problem, effect.fluent.fluent(), int_parameters, c)
                         print(effect, effect.value, effect.value.type)
                         print(type(effect.value))
-                        if type(effect.value) is int:
-                            new_action.add_increase_effect(new_fnode, effect.value, effect.condition, effect.forall)
+                        new_value = self._get_new_value(effect.value, int_parameters, c)
+                        if effect.is_increase():
+                            new_action.add_increase_effect(new_fnode, new_value, effect.condition, effect.forall)
+                        elif effect.is_decrease():
+                            new_action.add_decrease_effect(new_fnode, new_value, effect.condition, effect.forall)
                         else:
-                            new_value = self._get_new_value(effect.value, int_parameters, c)
-                            if effect.is_increase():
-                                new_action.add_increase_effect(new_fnode, new_value, effect.condition, effect.forall)
-                            elif effect.is_decrease():
-                                new_action.add_decrease_effect(new_fnode, new_value, effect.condition, effect.forall)
-                            else:
-                                new_action.add_effect(new_fnode, new_value, effect.condition, effect.forall)
+                            new_action.add_effect(new_fnode, new_value, effect.condition, effect.forall)
 
                     new_problem.add_action(new_action)
 
