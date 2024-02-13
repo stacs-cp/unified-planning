@@ -135,6 +135,22 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
     ) -> ProblemKind:
         return problem_kind.clone()
 
+    def get_new_fnode(
+            self,
+            problem: "up.model.AbstractProblem",
+            position: int,
+            this_fnode: "up.model.fnode.FNode",
+    ) -> "up.model.fnode.FNode":
+        print(this_fnode)
+        if this_fnode.is_fluent_exp():
+            print("fluent: ", this_fnode.fluent())
+            new_name_fluent = this_fnode.fluent().name + '_' + str(position)
+            new_fluent = problem.fluent(new_name_fluent)
+            assert new_fluent, "This fluent doesn't exist in the new problem"
+            return new_fluent(*this_fnode.args)
+        if this_fnode.is_constant():
+            return this_fnode.constant_value()[position]
+
     def _compile(
         self,
         problem: "up.model.AbstractProblem",
@@ -194,9 +210,8 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                 for effect in action.effects:
                     if effect.is_increase():
                         if problem.fluent(effect.fluent.fluent().name.split('[')[0]):
-                            new_fluent_name = problem.fluent(effect.fluent.fluent().name.split('[')[0]).name
-                            new_fluent_position = effect.fluent.fluent().name.split('[')[1].split(']')[0]
-                            new_fluent = new_problem.fluent(new_fluent_name+'_'+new_fluent_position)
+                            new_fluent = self.get_new_fluent(new_problem, effect.fluent.fluent().name)
+                            print("new_fluent: ", new_fluent)
                         else:
                             new_fluent = effect.fluent.fluent()
 
@@ -208,43 +223,36 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
             print(g)
             print(g.args)
             print(g.node_type)
-            new_arguments: Tuple["up.model.fnode.FNode"]
-            if g.arg(0).type.is_array_type() and g.arg(1).type.is_array_type():
+            left = g.arg(0)
+            right = g.arg(1)
+            print("left: ", left)
+            print("right: ", right)
+            if left.type.is_array_type() and right.type.is_array_type():
                 print("goal amb arrays")
-                if g.arg(0).is_fluent_exp():
-                    this_fluent = g.arg(0).fluent().type
-                    value = g.arg(1).constant_value()
+                # assumim que esquerra es fluent i dreta constant_value
+                print("range: ", left.type.size)
+                for i in range(left.type.size):
+                    print(i)
+                    print(self.get_new_fnode(new_problem, i, left))
+                    print(self.get_new_fnode(new_problem, i, right))
+                    em.create_node(g.node_type, tuple([self.get_new_fnode(new_problem, i, left), self.get_new_fnode(new_problem, i, right)]))
+
+                self.pair_array_values(left, right)
+
+                this_fluent = left.fluent().type
+                value = right.constant_value()
+
+                print(this_fluent)
+
+                if problem.fluent(this_fluent.fluent().name.split('[')[0]):
+                    new_fluent = self.get_new_fluent(new_problem, effect.fluent.fluent().name)
+                    print("new_fluent: ", new_fluent)
                 else:
-                    this_fluent = g.arg(1).fluent().type
-                    value = g.arg(0).constant_value()
-                # fins que no sigui array_type
+                    new_fluent = effect.fluent.fluent()
+
 
                 print("this_fluent: ", this_fluent)
                 print("value: ", value)
-
-                new_type = this_fluent.elements_type
-                domain = []
-                while this_fluent.is_array_type():
-                    domain_in = []
-                    for i in range(0, this_fluent.size):
-                        domain_in.append(i)
-                    domain.append(domain_in)
-                    new_type = this_fluent.elements_type
-                    this_fluent = this_fluent.elements_type
-                    print("this_fluent: ", this_fluent)
-
-                print(this_fluent)
-                combinations = list(product(*domain))
-                for combination in combinations:
-                    new_name = fluent.name + ''.join(f'_{str(c)}' for c in combination)
-                    new_default_value = default_value
-                    for i in combination:
-                        new_default_value = new_default_value[i]
-
-
-
-
-                em.create_node(g.node_type, tuple(new_arguments))
             else:
                 new_problem.add_goal(g)
 
