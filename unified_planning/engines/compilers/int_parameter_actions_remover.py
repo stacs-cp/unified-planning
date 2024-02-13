@@ -171,7 +171,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
     ) -> "up.model.fnode.FNode":
         new_name = fluent.name
         for key in int_parameters.keys():
-            if key in str(new_name):
+            if '['+key+']' in str(new_name):
                 fluent_0 = new_name.split('['+key+']')[0]
                 new_name = fluent_0 + '[' + str(c[int_parameters.get(key)]) + ']'
         return Fluent(new_name, fluent.type, fluent.signature, fluent.environment)(*fluent.signature)
@@ -243,8 +243,6 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                 # per cada combinacio possible dels enters -> creem una accio
                 for c in combinations:
                     cadena = '_'.join(map(str, c))
-                    print(parameters)
-                    print(type(parameters))
                     new_action = InstantaneousAction(action.name + '_' + cadena, parameters, action.environment)
 
                     # mirem les precondicions
