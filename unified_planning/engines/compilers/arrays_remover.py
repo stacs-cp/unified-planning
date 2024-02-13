@@ -142,7 +142,11 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
             position: Optional[int] = None,
     ) -> "up.model.fnode.FNode":
         if this_fnode.is_fluent_exp():
-            if this_fnode.fluent().name.find('[') != -1:
+            if this_fnode.fluent().type.is_array_type():
+                assert position
+                new_fluent_name = this_fnode.fluent().name + '_' + str(position)
+                return new_problem.fluent(new_fluent_name)(*this_fnode.args)
+            elif this_fnode.fluent().name.find('[') != -1:
                 if position is None:
                     position = this_fnode.fluent().name.split('[')[1].split(']')[0]
                 new_name_fluent = this_fnode.fluent().name.split('[')[0] + '_' + str(position)
