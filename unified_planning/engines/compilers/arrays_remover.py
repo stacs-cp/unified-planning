@@ -207,23 +207,39 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
         for g in problem.goals:
             print(g)
             print(g.args)
-            print(g.type)
             print(g.node_type)
             new_arguments: Tuple["up.model.fnode.FNode"]
             if g.arg(0).type.is_array_type() and g.arg(1).type.is_array_type():
                 print("goal amb arrays")
                 if g.arg(0).is_fluent_exp():
-                    this_fluent = g.arg(0).fluent()
+                    this_fluent = g.arg(0).fluent().type
                     value = g.arg(1).constant_value()
                 else:
-                    this_fluent = g.arg(1).fluent()
+                    this_fluent = g.arg(1).fluent().type
                     value = g.arg(0).constant_value()
+                # fins que no sigui array_type
 
-                print(problem.fluents, this_fluent.name)
-                for fp in problem.fluents:
-                    if this_fluent.name in str(fp):
-                        print("fp:",fp)
-                        print("yes")
+                print("this_fluent: ", this_fluent)
+                print("value: ", value)
+
+                new_type = this_fluent.elements_type
+                domain = []
+                while this_fluent.is_array_type():
+                    domain_in = []
+                    for i in range(0, this_fluent.size):
+                        domain_in.append(i)
+                    domain.append(domain_in)
+                    new_type = this_fluent.elements_type
+                    this_fluent = this_fluent.elements_type
+                    print("this_fluent: ", this_fluent)
+
+                print(this_fluent)
+                combinations = list(product(*domain))
+                for combination in combinations:
+                    new_name = fluent.name + ''.join(f'_{str(c)}' for c in combination)
+                    new_default_value = default_value
+                    for i in combination:
+                        new_default_value = new_default_value[i]
 
 
 
