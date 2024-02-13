@@ -212,7 +212,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                         if problem.fluent(effect.fluent.fluent().name.split('[')[0]):
                             position = effect.fluent.fluent().name.split('[')[1].split(']')[0]
                             print(position)
-                            new_fnode = self.get_new_fnode(new_problem, position, effect.fluent.fluent())
+                            new_fnode = self.get_new_fnode(new_problem, position, effect.fluent.fluent()(**effect.fluent.args))
                             print("new_fnode: ", new_fnode)
                         else:
                             new_fnode = effect.fluent.fluent()(**effect.fluent.args)
