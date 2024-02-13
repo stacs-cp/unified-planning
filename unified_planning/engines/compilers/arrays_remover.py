@@ -231,7 +231,8 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
             right = g.arg(1)
             if left.type.is_array_type() and right.type.is_array_type():
                 for i in range(left.type.size):
-                    new_problem.add_goal(em.create_node(g.node_type, tuple([self.get_new_fnode(new_problem, i, left), self.get_new_fnode(new_problem, i, right)])))
+                    print("news de goal: ",self.treat_fnode(new_problem, left, i), self.treat_fnode(new_problem, right, i))
+                    new_problem.add_goal(em.create_node(g.node_type, tuple([self.treat_fnode(new_problem, left, i), self.treat_fnode(new_problem, right, i)])))
             elif left.is_fluent_exp():
                 this_fluent = left.fluent()
                 if this_fluent.name.split('[')[0]:
