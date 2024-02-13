@@ -135,17 +135,22 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
     ) -> ProblemKind:
         return problem_kind.clone()
 
-    def get_new_fnode(
+    def treat_fnode(
             self,
-            problem: "up.model.AbstractProblem",
-            position: int,
+            new_problem: "up.model.AbstractProblem",
             this_fnode: "up.model.fnode.FNode",
+            position: Optional[int] = None,
     ) -> "up.model.fnode.FNode":
         if this_fnode.is_fluent_exp():
-            new_name_fluent = this_fnode.fluent().name + '_' + str(position)
-            new_fluent = problem.fluent(new_name_fluent)
-            assert new_fluent, "This fluent doesn't exist in the new problem"
-            return new_fluent(*this_fnode.args)
+            if this_fnode.fluent().name.split('[')[0]:
+                if position is None:
+                    position = this_fnode.fluent().name.split('[')[1].split(']')[0]
+                new_name_fluent = this_fnode.fluent().name.split('[')[0] + '_' + str(position)
+                assert new_problem.fluent(new_name_fluent), "Fluent doesn't exist in the problem"
+                return new_problem.fluent(new_name_fluent)(*this_fnode.args)
+            else:
+                return this_fnode
+
         elif this_fnode.is_constant():
             return this_fnode.constant_value()[position]
 
@@ -207,14 +212,14 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                     pass
                 for effect in action.effects:
                     if effect.is_increase():
-                        if problem.fluent(effect.fluent.fluent().name.split('[')[0]):
-                            position = effect.fluent.fluent().name.split('[')[1].split(']')[0]
-                            fluent = problem.fluent(effect.fluent.fluent().name.split('[')[0])
-                            new_fnode = self.get_new_fnode(new_problem, position, fluent(*effect.fluent.args))
-                        else:
-                            new_fnode = effect.fluent.fluent()(*effect.fluent.args)
+                        # effect.fluent and effect.value
+                        print(effect.fluent, effect.value)
+                        print("to:")
+                        new_fnode = self.treat_fnode(new_problem, effect.fluent)
+                        new_value = self.treat_fnode(new_problem, effect.value)
+                        print(new_fnode, new_value)
 
-                        new_action.add_increase_effect(new_fnode, effect.value, effect.condition, effect.forall)
+                        new_action.add_increase_effect(new_fnode, new_value, effect.condition, effect.forall)
                 new_problem.add_action(new_action)
 
         # GOALS
@@ -224,8 +229,13 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
             if left.type.is_array_type() and right.type.is_array_type():
                 for i in range(left.type.size):
                     new_problem.add_goal(em.create_node(g.node_type, tuple([self.get_new_fnode(new_problem, i, left), self.get_new_fnode(new_problem, i, right)])))
-            else:
-                new_problem.add_goal(g)
+            elif left.is_fluent_exp():
+                this_fluent = left.fluent()
+                if this_fluent.name.split('[')[0]:
+                    position = this_fluent.name.split('[')[1].split(']')[0]
+                    fluent = problem(this_fluent.name.split('[')[0])
+                    self.get_new_fnode(new_problem, position, fluent(*this_fluent))
+                    new_problem.add_goal(g)
 
         return CompilerResult(
             new_problem, partial(replace_action, map=new_to_old), self.name
