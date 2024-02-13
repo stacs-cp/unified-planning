@@ -237,22 +237,6 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                     print(self.get_new_fnode(new_problem, i, right))
                     em.create_node(g.node_type, tuple([self.get_new_fnode(new_problem, i, left), self.get_new_fnode(new_problem, i, right)]))
 
-                self.pair_array_values(left, right)
-
-                this_fluent = left.fluent().type
-                value = right.constant_value()
-
-                print(this_fluent)
-
-                if problem.fluent(this_fluent.fluent().name.split('[')[0]):
-                    new_fluent = self.get_new_fluent(new_problem, effect.fluent.fluent().name)
-                    print("new_fluent: ", new_fluent)
-                else:
-                    new_fluent = effect.fluent.fluent()
-
-
-                print("this_fluent: ", this_fluent)
-                print("value: ", value)
             else:
                 new_problem.add_goal(g)
 
