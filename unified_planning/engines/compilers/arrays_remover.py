@@ -148,7 +148,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
             new_fluent = problem.fluent(new_name_fluent)
             assert new_fluent, "This fluent doesn't exist in the new problem"
             return new_fluent(*this_fnode.args)
-        if this_fnode.is_constant():
+        elif this_fnode.is_constant():
             return this_fnode.constant_value()[position]
 
     def _compile(
@@ -238,12 +238,11 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                     print(i)
                     print(self.get_new_fnode(new_problem, i, left))
                     print(self.get_new_fnode(new_problem, i, right))
-                    em.create_node(g.node_type, tuple([self.get_new_fnode(new_problem, i, left), self.get_new_fnode(new_problem, i, right)]))
-
+                    new_problem.add_goal(em.create_node(g.node_type, tuple([self.get_new_fnode(new_problem, i, left), self.get_new_fnode(new_problem, i, right)])))
             else:
                 new_problem.add_goal(g)
 
-            new_problem.add_goal()
+
 
         return CompilerResult(
             new_problem, partial(replace_action, map=new_to_old), self.name
