@@ -172,9 +172,8 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
         new_name = fluent.name
         for key in int_parameters.keys():
             if key in str(new_name):
-                fluent_0 = new_name.split(key)[0]
-                fluent_1 = new_name.split(key)[1]
-                new_name = fluent_0 + str(c[int_parameters.get(key)]) + fluent_1
+                fluent_0 = new_name.split('['+key+']')[0]
+                new_name = fluent_0 + '[' + str(c[int_parameters.get(key)]) + ']'
         return Fluent(new_name, fluent.type, fluent.signature, fluent.environment)(*fluent.signature)
 
     def _manage_node(
