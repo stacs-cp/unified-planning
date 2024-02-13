@@ -220,11 +220,8 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                 for effect in action.effects:
                     if effect.is_increase():
                         # effect.fluent and effect.value
-                        print(effect.fluent, effect.value)
-                        print("to:")
                         new_fnode = self.treat_fnode(new_problem, effect.fluent)
                         new_value = self.treat_fnode(new_problem, effect.value)
-                        print(new_fnode, new_value)
 
                         new_action.add_increase_effect(new_fnode, new_value, effect.condition, effect.forall)
                 new_problem.add_action(new_action)
@@ -235,7 +232,6 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
             right = g.arg(1)
             if left.type.is_array_type() and right.type.is_array_type():
                 for i in range(left.type.size):
-                    print("news de goal: ", self.treat_fnode(new_problem, left, i), self.treat_fnode(new_problem, right, i))
                     new_problem.add_goal(em.create_node(g.node_type, tuple([self.treat_fnode(new_problem, left, i), self.treat_fnode(new_problem, right, i)])))
             else:
                 new_problem.add_goal(em.create_node(g.node_type, tuple(
