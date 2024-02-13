@@ -210,12 +210,14 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                 for effect in action.effects:
                     if effect.is_increase():
                         if problem.fluent(effect.fluent.fluent().name.split('[')[0]):
-                            new_fluent = self.get_new_fluent(new_problem, effect.fluent.fluent().name)
-                            print("new_fluent: ", new_fluent)
+                            position = effect.fluent.fluent().name.split('[')[1].split(']')[0]
+                            print(position)
+                            new_fnode = self.get_new_fnode(new_problem, position, effect.fluent.fluent())
+                            print("new_fnode: ", new_fnode)
                         else:
-                            new_fluent = effect.fluent.fluent()
+                            new_fnode = effect.fluent.fluent()(**effect.fluent.args)
 
-                        new_action.add_increase_effect(new_fluent(*effect.fluent.args), effect.value, effect.condition, effect.forall)
+                        new_action.add_increase_effect(new_fnode, effect.value, effect.condition, effect.forall)
                 new_problem.add_action(new_action)
 
         # GOALS
