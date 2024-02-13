@@ -155,7 +155,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
             if position is None:
                 return this_fnode
             else:
-                return this_fnode[position]
+                return this_fnode.constant_value()[position]
 
     def _compile(
         self,
@@ -231,15 +231,11 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
             right = g.arg(1)
             if left.type.is_array_type() and right.type.is_array_type():
                 for i in range(left.type.size):
-                    print("news de goal: ",self.treat_fnode(new_problem, left, i), self.treat_fnode(new_problem, right, i))
+                    print("news de goal: ", self.treat_fnode(new_problem, left, i), self.treat_fnode(new_problem, right, i))
                     new_problem.add_goal(em.create_node(g.node_type, tuple([self.treat_fnode(new_problem, left, i), self.treat_fnode(new_problem, right, i)])))
-            elif left.is_fluent_exp():
-                this_fluent = left.fluent()
-                if this_fluent.name.split('[')[0]:
-                    position = this_fluent.name.split('[')[1].split(']')[0]
-                    fluent = problem(this_fluent.name.split('[')[0])
-                    self.get_new_fnode(new_problem, position, fluent(*this_fluent))
-                    new_problem.add_goal(g)
+            else:
+                new_problem.add_goal(em.create_node(g.node_type, tuple(
+                    [self.treat_fnode(new_problem, left), self.treat_fnode(new_problem, right)])))
 
         return CompilerResult(
             new_problem, partial(replace_action, map=new_to_old), self.name
