@@ -152,7 +152,10 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                 return this_fnode
 
         elif this_fnode.is_constant():
-            return this_fnode.constant_value()[position]
+            if position is None:
+                return this_fnode
+            else:
+                return this_fnode[position]
 
     def _compile(
         self,
