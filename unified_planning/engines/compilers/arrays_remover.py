@@ -141,9 +141,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
             position: int,
             this_fnode: "up.model.fnode.FNode",
     ) -> "up.model.fnode.FNode":
-        print(this_fnode)
         if this_fnode.is_fluent_exp():
-            print("fluent: ", this_fnode.fluent())
             new_name_fluent = this_fnode.fluent().name + '_' + str(position)
             new_fluent = problem.fluent(new_name_fluent)
             assert new_fluent, "This fluent doesn't exist in the new problem"
@@ -211,10 +209,8 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                     if effect.is_increase():
                         if problem.fluent(effect.fluent.fluent().name.split('[')[0]):
                             position = effect.fluent.fluent().name.split('[')[1].split(']')[0]
-                            print(position)
                             fluent = problem.fluent(effect.fluent.fluent().name.split('[')[0])
                             new_fnode = self.get_new_fnode(new_problem, position, fluent(*effect.fluent.args))
-                            print("new_fnode: ", new_fnode)
                         else:
                             new_fnode = effect.fluent.fluent()(*effect.fluent.args)
 
@@ -223,26 +219,13 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
 
         # GOALS
         for g in problem.goals:
-            print(g)
-            print(g.args)
-            print(g.node_type)
             left = g.arg(0)
             right = g.arg(1)
-            print("left: ", left)
-            print("right: ", right)
             if left.type.is_array_type() and right.type.is_array_type():
-                print("goal amb arrays")
-                # assumim que esquerra es fluent i dreta constant_value
-                print("range: ", left.type.size)
                 for i in range(left.type.size):
-                    print(i)
-                    print(self.get_new_fnode(new_problem, i, left))
-                    print(self.get_new_fnode(new_problem, i, right))
                     new_problem.add_goal(em.create_node(g.node_type, tuple([self.get_new_fnode(new_problem, i, left), self.get_new_fnode(new_problem, i, right)])))
             else:
                 new_problem.add_goal(g)
-
-
 
         return CompilerResult(
             new_problem, partial(replace_action, map=new_to_old), self.name
