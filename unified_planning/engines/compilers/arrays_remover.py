@@ -41,7 +41,7 @@ from unified_planning.engines.compilers.utils import (
     replace_action,
     updated_minimize_action_costs,
 )
-from typing import Dict, List, Optional, Tuple, OrderedDict
+from typing import Dict, List, Optional, Tuple, OrderedDict, Any
 from functools import partial
 
 
@@ -146,6 +146,8 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
 
         new_to_old: Dict[Action, Action] = {}
 
+        env = problem.environment
+        em = env.expression_manager
         new_problem = problem.clone()
         new_problem.name = f"{self.name}_{problem.name}"
         # new_problem.clear_timed_goals()
@@ -195,7 +197,6 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                             new_fluent_name = problem.fluent(effect.fluent.fluent().name.split('[')[0]).name
                             new_fluent_position = effect.fluent.fluent().name.split('[')[1].split(']')[0]
                             new_fluent = new_problem.fluent(new_fluent_name+'_'+new_fluent_position)
-                            print(new_fluent)
                         else:
                             new_fluent = effect.fluent.fluent()
 
@@ -205,7 +206,33 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
         # GOALS
         for g in problem.goals:
             print(g)
-            #print(g.fluent())
+            print(g.args)
+            print(g.type)
+            print(g.node_type)
+            new_arguments: Tuple["up.model.fnode.FNode"]
+            if g.arg(0).type.is_array_type() and g.arg(1).type.is_array_type():
+                print("goal amb arrays")
+                if g.arg(0).is_fluent_exp():
+                    this_fluent = g.arg(0).fluent()
+                    value = g.arg(1).constant_value()
+                else:
+                    this_fluent = g.arg(1).fluent()
+                    value = g.arg(0).constant_value()
+
+                print(problem.fluents, this_fluent.name)
+                for fp in problem.fluents:
+                    if this_fluent.name in str(fp):
+                        print("fp:",fp)
+                        print("yes")
+
+
+
+
+                em.create_node(g.node_type, tuple(new_arguments))
+            else:
+                new_problem.add_goal(g)
+
+            new_problem.add_goal()
 
         return CompilerResult(
             new_problem, partial(replace_action, map=new_to_old), self.name

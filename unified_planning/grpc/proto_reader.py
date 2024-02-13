@@ -141,7 +141,6 @@ class ProtobufReader(Converter):
     def _convert_expression(
         self, msg: proto.Expression, problem: Problem
     ) -> model.Expression:
-        print("convert expression")
         if msg.kind == proto.ExpressionKind.Value("CONSTANT"):
             assert msg.atom is not None
             return self.convert(msg.atom, problem)
@@ -253,7 +252,6 @@ class ProtobufReader(Converter):
         self, msg: proto.Atom, problem: Problem
     ) -> Union[model.FNode, model.Fluent, model.Object]:
         field = msg.WhichOneof("content")
-        print("convert atom")
 
         value = getattr(msg, field)
         if field == "int":
