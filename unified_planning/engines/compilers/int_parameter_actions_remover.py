@@ -164,11 +164,12 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
 
     def _remove_keys(
             self,
-            problem: "up.model.AbstractProblem",
+            new_problem: "up.model.AbstractProblem",
             fluent: Fluent,
             int_parameters: dict[str, int],
             c: Any
     ) -> "up.model.fnode.FNode":
+        print(fluent.name)
         new_name = fluent.name
         for key in int_parameters.keys():
             print("new_name: ", new_name)
@@ -176,7 +177,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                 fluent_0 = new_name.split('['+key+']')[0]
                 fluent_1 = new_name.split('['+key+']')[1]
                 new_name = fluent_0 + '[' + str(c[int_parameters.get(key)]) + ']' + fluent_1
-        return Fluent(new_name, fluent.type, fluent.signature, fluent.environment)(*fluent.signature)
+        return new_problem.fluent(new_name)(*fluent.signature)
 
     def _manage_node(
             self,
@@ -186,7 +187,8 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             node_type: "up.model.OperatorKind",
             args: List["up.model.fnode.FNode"],
     ) -> "up.model.fnode.FNode":
-
+        print("Manage node:")
+        print(node_type, args)
         env = problem.environment
         em = env.expression_manager
         new_arguments = []
@@ -195,7 +197,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             if arg.is_fluent_exp():
                 new_arguments.append(self._remove_keys(problem, arg.fluent(), int_parameters, c))
             elif arg.is_parameter_exp():
-                # ?
+                print("parameter: ", arg.parameter)
                 new_arguments.append(self._get_new_value(arg, int_parameters, c))
             elif arg.is_constant():
                 new_arguments.append(arg)
@@ -221,7 +223,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
         new_problem.name = f"{self.name}_{problem.name}"
         new_problem.clear_actions()
 
-        parameters = OrderedDict()
+        new_parameters = OrderedDict()
         int_parameters = {}
         int_domains = []
 
@@ -232,7 +234,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                 # separar els parametres UserType i IntType
                 for old_parameter in action.parameters:
                     if old_parameter.type.is_user_type():
-                        parameters.update({old_parameter.name: old_parameter.type})
+                        new_parameters.update({old_parameter.name: old_parameter.type})
                     else:
                         # de moment nomes s'accepten UserType i IntType
                         assert old_parameter.type.is_int_type()
@@ -246,16 +248,17 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                 # per cada combinacio possible dels enters -> creem una accio
                 for c in combinations:
                     cadena = '_'.join(map(str, c))
-                    new_action = InstantaneousAction(action.name + '_' + cadena, parameters, action.environment)
+                    new_action = InstantaneousAction(action.name + '_' + cadena, new_parameters, action.environment)
 
-                    # mirem les precondicions
+                    # precondicions
                     for precondition in action.preconditions:
-                        new_precondition = self._manage_node(new_problem, int_parameters, c, precondition.node_type,
-                                                             precondition.args)
+                        print("PRECONDITION: ", precondition)
+                        print(precondition.type)
+                        new_precondition = self._manage_node(int_parameters, c, precondition.node_type, precondition.args)
                         new_action.add_precondition(new_precondition)
 
                     for effect in action.effects:
-                        new_fnode = self._get_new_fnode(problem, effect.fluent.fluent(), int_parameters, c)
+                        new_fnode = self._remove_keys(problem, effect.fluent.fluent(), int_parameters, c)
                         new_value = self._get_new_value(effect.value, int_parameters, c)
                         if effect.is_increase():
                             new_action.add_increase_effect(new_fnode, new_value, effect.condition, effect.forall)
