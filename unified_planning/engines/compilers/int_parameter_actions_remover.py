@@ -254,8 +254,8 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                         new_action.add_precondition(new_precondition)
 
                     for effect in action.effects:
-                        new_fnode = self._remove_keys(effect.fluent, int_parameters, c)
-                        new_value = self._remove_keys(effect.value, int_parameters, c)
+                        new_fnode = self._manage_node(em, effect.fluent, int_parameters, c)
+                        new_value = self._manage_node(em, effect.value, int_parameters, c)
                         if effect.is_increase():
                             new_action.add_increase_effect(new_fnode, new_value, effect.condition, effect.forall)
                         elif effect.is_decrease():
