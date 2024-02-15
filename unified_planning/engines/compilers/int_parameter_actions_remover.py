@@ -181,7 +181,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
 
     def _manage_node(
             self,
-            problem: "up.model.AbstractProblem",
+            new_problem: "up.model.AbstractProblem",
             int_parameters: dict[str, int],
             c: Any,
             node_type: "up.model.OperatorKind",
@@ -189,20 +189,20 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
     ) -> "up.model.fnode.FNode":
         print("Manage node:")
         print(node_type, args)
-        env = problem.environment
+        env = new_problem.environment
         em = env.expression_manager
         new_arguments = []
 
         for arg in args:
             if arg.is_fluent_exp():
-                new_arguments.append(self._remove_keys(problem, arg.fluent(), int_parameters, c))
+                new_arguments.append(self._remove_keys(new_problem, arg.fluent(), int_parameters, c))
             elif arg.is_parameter_exp():
                 print("parameter: ", arg.parameter)
                 new_arguments.append(self._get_new_value(arg, int_parameters, c))
             elif arg.is_constant():
                 new_arguments.append(arg)
             else:
-                new_arguments.append(self._manage_node(problem, int_parameters, c, arg.node_type, arg.args))
+                new_arguments.append(self._manage_node(new_problem, int_parameters, c, arg.node_type, arg.args))
         if not new_arguments:
             return em.create_node(node_type, ())
         else:
@@ -254,11 +254,11 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                     for precondition in action.preconditions:
                         print("PRECONDITION: ", precondition)
                         print(precondition.type)
-                        new_precondition = self._manage_node(int_parameters, c, precondition.node_type, precondition.args)
+                        new_precondition = self._manage_node(new_problem, int_parameters, c, precondition.node_type, precondition.args)
                         new_action.add_precondition(new_precondition)
 
                     for effect in action.effects:
-                        new_fnode = self._remove_keys(problem, effect.fluent.fluent(), int_parameters, c)
+                        new_fnode = self._remove_keys(new_problem, effect.fluent.fluent(), int_parameters, c)
                         new_value = self._get_new_value(effect.value, int_parameters, c)
                         if effect.is_increase():
                             new_action.add_increase_effect(new_fnode, new_value, effect.condition, effect.forall)
