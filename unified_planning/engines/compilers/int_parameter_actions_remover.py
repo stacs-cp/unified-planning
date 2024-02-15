@@ -164,7 +164,6 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
 
     def _remove_keys(
             self,
-            new_problem: "up.model.AbstractProblem",
             fluent: Fluent,
             int_parameters: dict[str, int],
             c: Any
@@ -175,9 +174,13 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
         new_name = fluent.name
         for key in int_parameters.keys():
             print("new_name: ", new_name)
+            print('['+key+']')
+            print('['+key+']' in str(new_name))
             while '['+key+']' in str(new_name):
                 fluent_0 = new_name.split('['+key+']')[0]
                 fluent_1 = new_name.split('['+key+']')[1]
+                print(fluent_0)
+                print(fluent_1)
                 print(str(c[int_parameters.get(key)]))
                 new_name = fluent_0 + '[' + str(c[int_parameters.get(key)]) + ']' + fluent_1
         return Fluent(new_name, fluent.type, fluent.signature, fluent.environment)(*fluent.signature)
@@ -198,7 +201,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
 
         for arg in args:
             if arg.is_fluent_exp():
-                new_arguments.append(self._remove_keys(new_problem, arg.fluent(), int_parameters, c))
+                new_arguments.append(self._remove_keys(arg.fluent(), int_parameters, c))
             elif arg.is_parameter_exp():
                 print("parameter: ", arg.parameter)
                 new_arguments.append(self._get_new_value(arg, int_parameters, c))
@@ -261,7 +264,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                         new_action.add_precondition(new_precondition)
 
                     for effect in action.effects:
-                        new_fnode = self._remove_keys(new_problem, effect.fluent.fluent(), int_parameters, c)
+                        new_fnode = self._remove_keys(effect.fluent.fluent(), int_parameters, c)
                         new_value = self._get_new_value(effect.value, int_parameters, c)
                         if effect.is_increase():
                             new_action.add_increase_effect(new_fnode, new_value, effect.condition, effect.forall)
