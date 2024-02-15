@@ -194,8 +194,10 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             print(new_node)
         elif node.is_parameter_exp():
             print("parameter: ", node.parameter)
+            new_node = node.parameter()
         elif node.is_constant():
             print(node.constant_value())
+            new_node = node.constant_value()
         else:
             new_args = []
             for arg in node.args:
@@ -203,8 +205,6 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                 new_args.append(self._manage_node(em, arg, int_parameters, c))
             new_node = em.create_node(node.node_type, tuple(new_args))
 
-        ####
-        # return em.create_node(node_type, tuple(new_arguments))
         return new_node
 
     def _compile(
