@@ -162,7 +162,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
         else:
             return value
 
-    def _get_new_fnode(
+    def _remove_keys(
             self,
             problem: "up.model.AbstractProblem",
             fluent: Fluent,
@@ -171,6 +171,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
     ) -> "up.model.fnode.FNode":
         new_name = fluent.name
         for key in int_parameters.keys():
+            print("new_name: ", new_name)
             while '['+key+']' in str(new_name):
                 fluent_0 = new_name.split('['+key+']')[0]
                 fluent_1 = new_name.split('['+key+']')[1]
@@ -192,8 +193,9 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
 
         for arg in args:
             if arg.is_fluent_exp():
-                new_arguments.append(self._get_new_fnode(problem, arg.fluent(), int_parameters, c))
+                new_arguments.append(self._remove_keys(problem, arg.fluent(), int_parameters, c))
             elif arg.is_parameter_exp():
+                # ?
                 new_arguments.append(self._get_new_value(arg, int_parameters, c))
             elif arg.is_constant():
                 new_arguments.append(arg)
