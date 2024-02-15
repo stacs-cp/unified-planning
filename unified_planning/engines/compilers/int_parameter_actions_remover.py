@@ -191,7 +191,6 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
 
         if node.is_fluent_exp():
             new_node = self._remove_keys(node.fluent(), int_parameters, c)
-            print(new_node)
         elif node.is_parameter_exp():
             print("parameter: ", node.parameter)
             new_node = node.parameter()
@@ -204,7 +203,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                 print("arg: ", arg)
                 new_args.append(self._manage_node(em, arg, int_parameters, c))
             new_node = em.create_node(node.node_type, tuple(new_args))
-
+        print(new_node)
         return new_node
 
     def _compile(
