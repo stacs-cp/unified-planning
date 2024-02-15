@@ -162,7 +162,6 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             return Fluent(new_name, fluent.type, fluent.signature, fluent.environment)(*fluent.signature)
         elif node.is_parameter_exp():
             for key in int_parameters.keys():
-                print(key, node.parameter().name)
                 if key == node.parameter().name:
                     return Int(c[int_parameters.get(key)])
             return node
@@ -184,6 +183,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             new_args = []
             for arg in node.args:
                 new_args.append(self._manage_node(em, arg, int_parameters, c))
+            print(node.node_type, tuple(new_args))
             new_node = em.create_node(node.node_type, tuple(new_args))
         return new_node
 
