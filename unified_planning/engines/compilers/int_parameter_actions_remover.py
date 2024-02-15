@@ -161,17 +161,10 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                     new_name = new_name.replace('['+key+']', '['+str(c[int_parameters.get(key)])+']')
             return Fluent(new_name, fluent.type, fluent.signature, fluent.environment)(*fluent.signature)
         elif node.is_parameter_exp():
-            print("is_parameter", node, node.parameter())
-            has_variable = False
-            new_value = node.parameter()
             for key in int_parameters.keys():
-                if key in str(new_value):
-                    has_variable = True
-                    new_value = c[int_parameters.get(key)]
-            if has_variable:
-                return Int(new_value)
-            else:
-                return node
+                if key == node.parameter():
+                    return Int(c[int_parameters.get(key)])
+            return node
 
     def _manage_node(
             self,
@@ -180,27 +173,17 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             int_parameters: dict[str, int],
             c: Any
     ) -> "up.model.fnode.FNode":
-        print("Manage node:")
-        print(node)
-        print(node.node_type)
-        print(node.type)
-        print(node.args)
-
         if node.is_fluent_exp():
             new_node = self._remove_keys(node, int_parameters, c)
         elif node.is_parameter_exp():
-            print("parameter: ", node.parameter())
             new_node = self._remove_keys(node, int_parameters, c)
         elif node.is_constant():
-            print(node.constant_value())
             new_node = node.constant_value()
         else:
             new_args = []
             for arg in node.args:
-                print("arg: ", arg)
                 new_args.append(self._manage_node(em, arg, int_parameters, c))
             new_node = em.create_node(node.node_type, tuple(new_args))
-        print(new_node)
         return new_node
 
     def _compile(
@@ -248,8 +231,6 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
 
                     # precondicions
                     for precondition in action.preconditions:
-                        print("PRECONDITION: ", precondition)
-                        print(precondition.type)
                         new_precondition = self._manage_node(em, precondition, int_parameters, c)
                         new_action.add_precondition(new_precondition)
 
