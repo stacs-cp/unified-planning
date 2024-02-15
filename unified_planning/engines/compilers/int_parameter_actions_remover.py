@@ -178,6 +178,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
 
     def _manage_node(
             self,
+            em: "up.model.expression.ExpressionManager",
             node: "up.model.fnode.FNode",
             int_parameters: dict[str, int],
             c: Any
@@ -196,11 +197,15 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
         elif node.is_constant():
             print(node.constant_value())
         else:
-            print("node no identificat")
+            new_args = []
+            for arg in node.args:
+                print("arg: ", arg)
+                new_args.append(self._manage_node(em, arg, int_parameters, c))
+            new_node = em.create_node(node.node_type, tuple(new_args))
 
         ####
         # return em.create_node(node_type, tuple(new_arguments))
-        return node
+        return new_node
 
     def _compile(
         self,
@@ -213,6 +218,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
 
         new_to_old: Dict[Action, Action] = {}
         env = problem.environment
+        em = env.expression_manager
         new_problem = problem.clone()
         new_problem.name = f"{self.name}_{problem.name}"
         new_problem.clear_actions()
@@ -248,7 +254,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                     for precondition in action.preconditions:
                         print("PRECONDITION: ", precondition)
                         print(precondition.type)
-                        new_precondition = self._manage_node(precondition, int_parameters, c)
+                        new_precondition = self._manage_node(em, precondition, int_parameters, c)
                         new_action.add_precondition(new_precondition)
 
                     for effect in action.effects:
