@@ -145,37 +145,33 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             new_kind.set_conditions("DISJUNCTIVE_CONDITIONS")
         return new_kind
 
-    def _get_new_value(
-            self,
-            value: "up.model.fnode.FNode",
-            int_parameters: dict[str, int],
-            c: Any
-    ) -> "up.model.fnode.FNode":
-        # millorar ...
-        # ajuntar amb remove keys?
-        print("get_new_value: ", value)
-        has_variable = False
-        new_value = value
-        for key in int_parameters.keys():
-            if key in str(new_value):
-                has_variable = True
-                new_value = c[int_parameters.get(key)]
-        if has_variable:
-            return Int(new_value)
-        else:
-            return value
 
     def _remove_keys(
             self,
-            fluent: Fluent,
+            node: "up.model.fnode.FNode",
             int_parameters: dict[str, int],
             c: Any
     ) -> "up.model.fnode.FNode":
-        new_name = fluent.name
-        for key in int_parameters.keys():
-            while '['+key+']' in str(new_name):
-                new_name = new_name.replace('['+key+']', '['+str(c[int_parameters.get(key)])+']')
-        return Fluent(new_name, fluent.type, fluent.signature, fluent.environment)(*fluent.signature)
+
+        if node.is_fluent_exp():
+            fluent = node.fluent()
+            new_name = fluent.name
+            for key in int_parameters.keys():
+                while '['+key+']' in str(new_name):
+                    new_name = new_name.replace('['+key+']', '['+str(c[int_parameters.get(key)])+']')
+            return Fluent(new_name, fluent.type, fluent.signature, fluent.environment)(*fluent.signature)
+        elif node.is_parameter_exp():
+            print("is_parameter", node, node.parameter())
+            has_variable = False
+            new_value = node.parameter()
+            for key in int_parameters.keys():
+                if key in str(new_value):
+                    has_variable = True
+                    new_value = c[int_parameters.get(key)]
+            if has_variable:
+                return Int(new_value)
+            else:
+                return node
 
     def _manage_node(
             self,
@@ -191,10 +187,10 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
         print(node.args)
 
         if node.is_fluent_exp():
-            new_node = self._remove_keys(node.fluent(), int_parameters, c)
+            new_node = self._remove_keys(node, int_parameters, c)
         elif node.is_parameter_exp():
             print("parameter: ", node.parameter())
-            new_node = self._get_new_value(node, int_parameters, c)
+            new_node = self._remove_keys(node, int_parameters, c)
         elif node.is_constant():
             print(node.constant_value())
             new_node = node.constant_value()
@@ -258,8 +254,8 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                         new_action.add_precondition(new_precondition)
 
                     for effect in action.effects:
-                        new_fnode = self._remove_keys(effect.fluent.fluent(), int_parameters, c)
-                        new_value = self._get_new_value(effect.value, int_parameters, c)
+                        new_fnode = self._remove_keys(effect.fluent, int_parameters, c)
+                        new_value = self._remove_keys(effect.value, int_parameters, c)
                         if effect.is_increase():
                             new_action.add_increase_effect(new_fnode, new_value, effect.condition, effect.forall)
                         elif effect.is_decrease():
