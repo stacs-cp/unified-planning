@@ -145,7 +145,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             new_kind.set_conditions("DISJUNCTIVE_CONDITIONS")
         return new_kind
 
-    def _get_new_value(
+    def _get_new_constant_value(
             self,
             value: "up.model.fnode.FNode",
             int_parameters: dict[str, int],
@@ -197,7 +197,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             new_node = node.parameter()
         elif node.is_constant():
             print(node.constant_value())
-            new_node = node.constant_value()
+            new_node = self._get_new_constant_value(node, int_parameters, c)
         else:
             new_args = []
             for arg in node.args:
