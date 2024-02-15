@@ -141,16 +141,20 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
             this_fnode: "up.model.fnode.FNode",
             position: Optional[int] = None,
     ) -> "up.model.fnode.FNode":
+        print("treat_node")
+        print(this_fnode)
+        print(this_fnode.type)
         if this_fnode.is_fluent_exp():
             if this_fnode.fluent().type.is_array_type():
                 assert position is not None
                 new_fluent_name = this_fnode.fluent().name + '_' + str(position)
                 return new_problem.fluent(new_fluent_name)(*this_fnode.args)
             elif this_fnode.fluent().name.find('[') != -1:
+                # no existeix aquest fluent en el old_problem
                 if position is None:
                     position = this_fnode.fluent().name.split('[')[1].split(']')[0]
                 new_name_fluent = this_fnode.fluent().name.split('[')[0] + '_' + str(position)
-                assert new_problem.fluent(new_name_fluent), "Fluent doesn't exist in the problem"
+                assert new_problem.fluent(new_name_fluent), "Fluent doesn't exist in the new problem"
                 return new_problem.fluent(new_name_fluent)(*this_fnode.args)
             else:
                 return this_fnode
@@ -185,8 +189,8 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
         # FLUENTS AND DEFAULT_VALUES
         for fluent in problem.fluents:
             default_value = problem.fluents_defaults.get(fluent).constant_value()
-            if fluent.type.is_array_type():
-                this_fluent = fluent.type
+            this_fluent = fluent.type
+            if this_fluent.is_array_type():
                 new_type = this_fluent.elements_type
                 domain = []
                 while this_fluent.is_array_type():
@@ -212,9 +216,10 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
         for action in problem.actions:
             new_parameters = OrderedDict()
             if isinstance(action, InstantaneousAction):
-                for p in action.parameters:
-                    new_parameters.update({p.name: p.type})
-                new_action = InstantaneousAction(action.name, new_parameters, action.environment)
+                new_action = action.clone()
+                new_action.clear_preconditions()
+                new_action.clear_effects()
+
                 for precondition in action.preconditions:
                     pass
                 for effect in action.effects:
@@ -222,8 +227,9 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                         # effect.fluent and effect.value
                         new_fnode = self.treat_fnode(new_problem, effect.fluent)
                         new_value = self.treat_fnode(new_problem, effect.value)
-
                         new_action.add_increase_effect(new_fnode, new_value, effect.condition, effect.forall)
+                    elif effect.is_assignment():
+                        new_fnode = self.treat_fnode(new_problem, effect.fluent)
                 new_problem.add_action(new_action)
 
         # GOALS
