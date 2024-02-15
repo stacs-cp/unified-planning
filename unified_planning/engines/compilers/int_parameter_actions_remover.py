@@ -162,7 +162,8 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             return Fluent(new_name, fluent.type, fluent.signature, fluent.environment)(*fluent.signature)
         elif node.is_parameter_exp():
             for key in int_parameters.keys():
-                if key == node.parameter():
+                print(key, node.parameter().name)
+                if key == node.parameter().name:
                     return Int(c[int_parameters.get(key)])
             return node
 
