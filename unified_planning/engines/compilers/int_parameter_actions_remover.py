@@ -176,7 +176,10 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             print("new_name: ", new_name)
             print('['+key+']')
             print('['+key+']' in str(new_name))
-            while '['+key+']' in str(new_name):
+            fluent_key = '['+key+']'
+            while fluent_key in str(new_name):
+                print(new_name.split('['+key+']'))
+                print(new_name.split(fluent_key))
                 fluent_0 = new_name.split('['+key+']')[0]
                 fluent_1 = new_name.split('['+key+']')[1]
                 print(fluent_0)
