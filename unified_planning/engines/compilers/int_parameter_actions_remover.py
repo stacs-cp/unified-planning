@@ -181,9 +181,13 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             if node.type.is_array_type():
                 print("array_type")
                 print(node.constant_value())
+                new_elements = []
                 for element in node.constant_value():
-                    print("element: ", element)
-            return node
+                    print("element: ", element, type(element))
+                    new_elements.append(self._manage_node(em, element, int_parameters, c))
+                return em.create_node(node.node_type, tuple(new_elements))
+            else:
+                return node
         else:
             new_args = []
             for arg in node.args:
