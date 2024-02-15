@@ -151,6 +151,8 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             int_parameters: dict[str, int],
             c: Any
     ) -> "up.model.fnode.FNode":
+        # millorar ...
+        # ajuntar amb remove keys?
         has_variable = False
         new_value = value
         for key in int_parameters.keys():
@@ -168,44 +170,37 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             int_parameters: dict[str, int],
             c: Any
     ) -> "up.model.fnode.FNode":
-        print(fluent.name)
-        print(int_parameters)
-        print(c)
         new_name = fluent.name
         for key in int_parameters.keys():
-            print("new_name: ", new_name)
             while '['+key+']' in str(new_name):
                 new_name = new_name.replace('['+key+']', '['+str(c[int_parameters.get(key)])+']')
         return Fluent(new_name, fluent.type, fluent.signature, fluent.environment)(*fluent.signature)
 
     def _manage_node(
             self,
-            new_problem: "up.model.AbstractProblem",
+            node: "up.model.fnode.FNode",
             int_parameters: dict[str, int],
-            c: Any,
-            node_type: "up.model.OperatorKind",
-            args: List["up.model.fnode.FNode"],
+            c: Any
     ) -> "up.model.fnode.FNode":
         print("Manage node:")
-        print(node_type, args)
-        env = new_problem.environment
-        em = env.expression_manager
-        new_arguments = []
+        print(node)
+        print(node.node_type)
+        print(node.type)
+        print(node.args)
 
-        for arg in args:
-            if arg.is_fluent_exp():
-                new_arguments.append(self._remove_keys(arg.fluent(), int_parameters, c))
-            elif arg.is_parameter_exp():
-                print("parameter: ", arg.parameter)
-                new_arguments.append(self._get_new_value(arg, int_parameters, c))
-            elif arg.is_constant():
-                new_arguments.append(arg)
-            else:
-                new_arguments.append(self._manage_node(new_problem, int_parameters, c, arg.node_type, arg.args))
-        if not new_arguments:
-            return em.create_node(node_type, ())
+        if node.is_fluent_exp():
+            new_node = self._remove_keys(node.fluent(), int_parameters, c)
+            print(new_node)
+        elif node.is_parameter_exp():
+            print("parameter: ", node.parameter)
+        elif node.is_constant():
+            print(node.constant_value())
         else:
-            return em.create_node(node_type, tuple(new_arguments))
+            print("node no identificat")
+
+        ####
+        # return em.create_node(node_type, tuple(new_arguments))
+        return node
 
     def _compile(
         self,
@@ -253,7 +248,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                     for precondition in action.preconditions:
                         print("PRECONDITION: ", precondition)
                         print(precondition.type)
-                        new_precondition = self._manage_node(new_problem, int_parameters, c, precondition.node_type, precondition.args)
+                        new_precondition = self._manage_node(precondition, int_parameters, c)
                         new_action.add_precondition(new_precondition)
 
                     for effect in action.effects:
