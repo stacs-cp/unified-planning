@@ -173,7 +173,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             int_parameters: dict[str, int],
             c: Any
     ) -> "up.model.fnode.FNode":
-        print(node, node.type)
+        print(node, node.type, type(node))
         if node.is_fluent_exp():
             return self._remove_keys(node, int_parameters, c)
         elif node.is_parameter_exp():
