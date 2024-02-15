@@ -145,7 +145,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             new_kind.set_conditions("DISJUNCTIVE_CONDITIONS")
         return new_kind
 
-    def _get_new_constant_value(
+    def _get_new_value(
             self,
             value: "up.model.fnode.FNode",
             int_parameters: dict[str, int],
@@ -153,6 +153,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
     ) -> "up.model.fnode.FNode":
         # millorar ...
         # ajuntar amb remove keys?
+        print("get_new_value: ", value)
         has_variable = False
         new_value = value
         for key in int_parameters.keys():
@@ -192,11 +193,11 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
         if node.is_fluent_exp():
             new_node = self._remove_keys(node.fluent(), int_parameters, c)
         elif node.is_parameter_exp():
-            print("parameter: ", node.parameter)
-            new_node = node.parameter()
+            print("parameter: ", node.parameter())
+            new_node = self._get_new_value(node, int_parameters, c)
         elif node.is_constant():
             print(node.constant_value())
-            new_node = self._get_new_constant_value(node, int_parameters, c)
+            new_node = node.constant_value()
         else:
             new_args = []
             for arg in node.args:
@@ -258,7 +259,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
 
                     for effect in action.effects:
                         new_fnode = self._remove_keys(effect.fluent.fluent(), int_parameters, c)
-                        new_value = self._get_new_constant_value(effect.value, int_parameters, c)
+                        new_value = self._get_new_value(effect.value, int_parameters, c)
                         if effect.is_increase():
                             new_action.add_increase_effect(new_fnode, new_value, effect.condition, effect.forall)
                         elif effect.is_decrease():
