@@ -178,12 +178,16 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
         elif node.is_parameter_exp():
             return self._remove_keys(node, int_parameters, c)
         elif node.is_constant():
+            if node.type.is_array_type():
+                print("array_type")
+                print(node.constant_value())
+                for element in node.constant_value():
+                    print("element: ", element)
             return node
         else:
             new_args = []
             for arg in node.args:
                 new_args.append(self._manage_node(em, arg, int_parameters, c))
-            print(node.node_type, tuple(new_args))
             return em.create_node(node.node_type, tuple(new_args))
 
     def _compile(
