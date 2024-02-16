@@ -136,38 +136,6 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
     ) -> ProblemKind:
         return problem_kind.clone()
 
-    def _manage_node(
-            self,
-            new_problem: "up.model.AbstractProblem",
-            node: "up.model.fnode.FNode"
-    ) -> "up.model.fnode.FNode":
-        env = new_problem.environment
-        em = env.expression_manager
-        if node.is_fluent_exp():
-            fluent = node.fluent()
-            new_name = fluent.name
-            while '[' in str(new_name):
-                new_name = re.sub(r'\[(\d+)\]', r'_\1', new_name)
-            new_fluent = new_problem.fluent(new_name)(*fluent.signature)
-            # arregla
-            if new_fluent.type.is_array_type():
-                print("array: ", new_fluent, new_fluent.type)
-                for i in range(new_fluent.type.size-1):
-                    print(i)
-                    print(new_fluent[i])
-            else:
-                return new_fluent
-        elif node.is_parameter_exp():
-            print("param: ", node.parameter())
-            return node
-        elif node.is_constant():
-                return node
-        else:
-            new_args = []
-            for arg in node.args:
-                new_args.append(self._manage_node(new_problem, arg))
-            return em.create_node(node.node_type, tuple(new_args))
-
     def _get_new_fluent(
         self,
         fluent: "up.model.fluent.Fluent"
@@ -185,7 +153,6 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
     ) -> List["up.model.fnode.FNode"]:
         env = new_problem.environment
         em = env.expression_manager
-        print(node, node.node_type, node.args)
 
         if node.is_fluent_exp():
             new_fluent = self._get_new_fluent(node.fluent())
@@ -194,7 +161,6 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
         elif node.is_parameter_exp() or node.is_constant():
             return [node]
         else:
-            print(node)
             if node.arg(0).type.is_array_type():
                 new_type = node.arg(0).type
                 domain = []
@@ -204,29 +170,23 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                         domain_in.append(i)
                     domain.append(domain_in)
                     new_type = new_type.elements_type
-                print(domain)
-
                 combinations = list(product(*domain))
-                print("combinations: ", combinations)
                 new_fnodes = []
                 for c in combinations:
                     new_args = []
                     for arg in node.args:
-                        print("arg: ", arg)
                         if arg.is_fluent_exp():
                             # tractar_fluent
                             new_fluent = self._get_new_fluent(arg.fluent())
                             new_name = new_fluent.name + ''.join(f'_{str(i)}' for i in c)
                             new_arg = new_problem.fluent(new_name)(*arg.fluent().signature)
                         elif arg.constant_value():
-                            print(arg.constant_value())
                             new_arg = arg
                             for i in c:
                                 new_arg = new_arg.constant_value()[i]
                         else:
                             new_arg = arg
                         new_args.append(new_arg)
-                    print(new_args)
                     new_fnodes.append(em.create_node(node.node_type, tuple(new_args)))
                 return new_fnodes
             else:
@@ -289,12 +249,11 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
 
                 for precondition in action.preconditions:
                     new_fnodes = self._get_new_fnodes(new_problem, precondition)
-                    print("new_fnodes:", new_fnodes)
                     for fnode in new_fnodes:
                         new_action.add_precondition(fnode)
                 for effect in action.effects:
-                    new_fnode = self._manage_node(new_problem, effect.fluent)
-                    new_value = self._manage_node(new_problem, effect.value)
+                    new_fnode = self._get_new_fnodes(new_problem, effect.fluent)
+                    new_value = self._get_new_fnodes(new_problem, effect.value)
                     if effect.is_increase():
                         new_action.add_increase_effect(new_fnode, new_value, effect.condition, effect.forall)
                     elif effect.is_decrease():
@@ -305,17 +264,9 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
 
         # GOALS
         for g in problem.goals:
-
             new_goals = self._get_new_fnodes(new_problem, g)
-
-            # afegir els new goals al problema
-
-                #print("args:", tuple([self._manage_node(new_problem, left, i), self._manage_node(new_problem, right, i)]))
-               # new_problem.add_goal(em.create_node(g.node_type, tuple([self._manage_node(new_problem, left, i), self._manage_node(new_problem, right, i)])))
-        #else:
-        #    new_problem.add_goal(em.create_node(g.node_type, tuple(
-         #       [self._manage_node(new_problem, left), self._manage_node(new_problem, right)])))
-
+            for ng in new_goals:
+                new_problem.add_goal(ng)
         return CompilerResult(
             new_problem, partial(replace_action, map=new_to_old), self.name
         )
