@@ -220,9 +220,9 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                             new_arg = new_problem.fluent(new_name)(*arg.fluent().signature)
                         elif arg.constant_value():
                             print(arg.constant_value())
-                            new_arg = arg.constant_value()
+                            new_arg = arg
                             for i in c:
-                                new_arg = new_arg[i]
+                                new_arg = new_arg.constant_value()[i]
                         else:
                             new_arg = arg
                         new_args.append(new_arg)
