@@ -187,19 +187,18 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
         right = node.arg(1).type
 
         if left.is_array_type() and right.is_array_type():
-            print(type(left), type(right))
             new_type = left
             domain = []
             while new_type.is_array_type():
                 domain_in = []
-                for i in range(0, left.size):
+                for i in range(0, new_type.size):
                     domain_in.append(i)
                 domain.append(domain_in)
                 new_type = new_type.elements_type
             print(domain)
 
             combinations = list(product(*domain))
-            print(combinations)
+            print("combinations: ", combinations)
 
         else:
             return [node]
