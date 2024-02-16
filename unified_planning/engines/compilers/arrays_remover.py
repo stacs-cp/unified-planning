@@ -216,9 +216,9 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                     print(new_right)
                 elif right.constant_value():
                     print(right.constant_value())
-                    new_right = right.constant_value()
+                    new_right = right
                     for i in c:
-                        new_right = new_right[i]
+                        new_right = new_right.constant_value()[i]
                         print(new_right)
                 print("new_left: ", new_left)
                 print("new_right: ", new_right)
