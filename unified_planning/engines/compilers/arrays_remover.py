@@ -222,9 +222,9 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                             print(arg.constant_value())
                             new_arg = arg.constant_value()
                             for i in c:
-                                new_left = new_left[i]
+                                new_arg = new_arg[i]
                         else:
-                            pass
+                            new_arg = arg
                         new_args.append(new_arg)
                     print(new_args)
                     new_fnodes.append(em.create_node(node.node_type, tuple(new_args)))
