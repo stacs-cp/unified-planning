@@ -289,6 +289,8 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                 for precondition in action.preconditions:
                     new_fnodes = self._get_new_fnodes(new_problem, precondition)
                     print("new_fnodes:", new_fnodes)
+                    for fnode in new_fnodes:
+                        new_action.add_precondition(fnode)
                 for effect in action.effects:
                     new_fnode = self._manage_node(new_problem, effect.fluent)
                     new_value = self._manage_node(new_problem, effect.value)
