@@ -139,7 +139,8 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
     def _manage_node(
             self,
             new_problem: "up.model.AbstractProblem",
-            node: "up.model.fnode.FNode"
+            node: "up.model.fnode.FNode",
+            position: Optional[int] = None
     ) -> "up.model.fnode.FNode":
         env = new_problem.environment
         em = env.expression_manager
@@ -149,12 +150,17 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
             new_name = fluent.name
             while '[' in str(new_name):
                 new_name = re.sub(r'\[(\d+)\]', r'_\1', new_name)
+            if position is not None:
+                new_name = new_name + '_' + str(position)
             return up.model.Fluent(new_name, fluent.type, fluent.signature, fluent.environment)(*fluent.signature)
         elif node.is_parameter_exp():
             print("param: ", node.parameter())
             return node
         elif node.is_constant():
-            return node
+            if position is not None:
+                return node.constant_value()[position]
+            else:
+                return node
         else:
             new_args = []
             for arg in node.args:
