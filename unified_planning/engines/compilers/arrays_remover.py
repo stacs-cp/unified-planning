@@ -226,7 +226,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                 print("new_left: ", new_left)
                 print("new_right: ", new_right)
 
-                new_fnodes.append(em.create_node(node.node_type, new_left, new_right))
+                new_fnodes.append(em.create_node(node.node_type, tuple([new_left, new_right])))
             return new_fnodes
         else:
             return [node]
