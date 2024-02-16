@@ -233,6 +233,7 @@ class TypeChecker(walkers.dag.DagWalker):
 
     @walkers.handles(OperatorKind.LIST_CONSTANT)
     def walk_identity_list(self, expression, args):
+        print("WALK_IDENTITY_LIST")
         print(expression)
         print(args)
         assert expression is not None
