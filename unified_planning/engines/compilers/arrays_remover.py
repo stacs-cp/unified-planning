@@ -183,11 +183,11 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
         node: "up.model.fnode.FNode",
     ) -> List["up.model.fnode.FNode"]:
         print(node, node.node_type, node.args)
-        left = node.arg(0).type
-        right = node.arg(1).type
+        left = node.arg(0)
+        right = node.arg(1)
 
-        if left.is_array_type() and right.is_array_type():
-            new_type = left
+        if left.type.is_array_type() and right.type.is_array_type():
+            new_type = left.type
             domain = []
             while new_type.is_array_type():
                 domain_in = []
@@ -199,6 +199,29 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
 
             combinations = list(product(*domain))
             print("combinations: ", combinations)
+            for c in combinations:
+                if left.is_fluent_exp():
+                    new_name = left.fluent().name + ''.join(f'_{str(i)}' for i in c)
+                    new_left = new_problem.fluent(new_name)(*left.fluent().signature)
+                    print(new_left)
+                elif left.constant_value():
+                    print(left.constant_value())
+                    new_left = left.constant_value()
+                    for i in c:
+                        new_left = new_left[i]
+                        print(new_left)
+                if right.is_fluent_exp():
+                    new_name = right.fluent().name + ''.join(f'_{str(i)}' for i in c)
+                    new_right = new_problem.fluent(new_name)(*right.fluent().signature)
+                    print(new_right)
+                elif right.constant_value():
+                    print(right.constant_value())
+                    new_right = right.constant_value()
+                    for i in c:
+                        new_right = new_right[i]
+                        print(new_right)
+                print("new_left: ", new_left)
+                print("new_right: ", new_right)
 
         else:
             return [node]
