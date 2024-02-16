@@ -177,6 +177,33 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                 new_args.append(self._manage_node(new_problem, arg))
             return em.create_node(node.node_type, tuple(new_args))
 
+    def _get_new_fnodes(
+        self,
+        new_problem: "up.model.AbstractProblem",
+        node: "up.model.fnode.FNode",
+    ) -> List["up.model.fnode.FNode"]:
+        print(node, node.node_type, node.args)
+        left = node.arg(0).type
+        right = node.arg(1).type
+
+        if left.is_array_type() and right.is_array_type():
+            print(type(left), type(right))
+            new_type = left
+            domain = []
+            while new_type.is_array_type():
+                domain_in = []
+                for i in range(0, left.size):
+                    domain_in.append(i)
+                domain.append(domain_in)
+                new_type = left.elements_type
+            print(domain)
+
+            combinations = list(product(*domain))
+            print(combinations)
+
+        else:
+            return [node]
+
     def _compile(
         self,
         problem: "up.model.AbstractProblem",
@@ -233,8 +260,8 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                 new_action.clear_effects()
 
                 for precondition in action.preconditions:
-                    new_precondition = self._manage_node(new_problem, precondition)
-                    new_action.add_precondition(new_precondition)
+                    new_fnodes = self._get_new_fnodes(new_problem, precondition)
+                    print("new_fnodes:", new_fnodes)
                 for effect in action.effects:
                     new_fnode = self._manage_node(new_problem, effect.fluent)
                     new_value = self._manage_node(new_problem, effect.value)
@@ -248,22 +275,16 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
 
         # GOALS
         for g in problem.goals:
-            left = g.arg(0)
-            right = g.arg(1)
-            if left.type.is_array_type() and right.type.is_array_type():
-                depth = [left.type.size]
-                elements_type = left.type.elements_type
-                while elements_type.is_array_type():
-                    depth.append(elements_type.size)
-                    elements_type = elements_type.elements_type
-                print(depth)
-                print(list(product(*depth)))
-                for i in range(left.type.size-1):
-                    print("args:", tuple([self._manage_node(new_problem, left, i), self._manage_node(new_problem, right, i)]))
-                    new_problem.add_goal(em.create_node(g.node_type, tuple([self._manage_node(new_problem, left, i), self._manage_node(new_problem, right, i)])))
-            else:
-                new_problem.add_goal(em.create_node(g.node_type, tuple(
-                    [self._manage_node(new_problem, left), self._manage_node(new_problem, right)])))
+
+            new_goals = self.get_new_fnodes(new_problem, g)
+
+            # afegir els new goals al problema
+
+                #print("args:", tuple([self._manage_node(new_problem, left, i), self._manage_node(new_problem, right, i)]))
+               # new_problem.add_goal(em.create_node(g.node_type, tuple([self._manage_node(new_problem, left, i), self._manage_node(new_problem, right, i)])))
+        #else:
+        #    new_problem.add_goal(em.create_node(g.node_type, tuple(
+         #       [self._manage_node(new_problem, left), self._manage_node(new_problem, right)])))
 
         return CompilerResult(
             new_problem, partial(replace_action, map=new_to_old), self.name
