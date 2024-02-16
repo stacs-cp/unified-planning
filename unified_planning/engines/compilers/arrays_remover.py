@@ -152,6 +152,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
             if position is not None:
                 new_name = new_name + '_' + str(position)
             new_fluent = new_problem.fluent(new_name)(*fluent.signature)
+            # arregla
             if new_fluent.type.is_array_type():
                 print("array: ", new_fluent, new_fluent.type)
                 for i in range(new_fluent.type.size-1):
@@ -163,6 +164,9 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
             print("param: ", node.parameter())
             return node
         elif node.is_constant():
+            if node.is_list_constant():
+                for element in node.constant_value():
+                    self._manage_node(node)
             if position is not None:
                 return node.constant_value()[position]
             else:
@@ -247,6 +251,13 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
             left = g.arg(0)
             right = g.arg(1)
             if left.type.is_array_type() and right.type.is_array_type():
+                depth = [left.type.size]
+                elements_type = left.type.elements_type
+                while elements_type.is_array_type():
+                    depth.append(elements_type.size)
+                    elements_type = elements_type.elements_type
+                print(depth)
+                print(list(product(*depth)))
                 for i in range(left.type.size-1):
                     print("args:", tuple([self._manage_node(new_problem, left, i), self._manage_node(new_problem, right, i)]))
                     new_problem.add_goal(em.create_node(g.node_type, tuple([self._manage_node(new_problem, left, i), self._manage_node(new_problem, right, i)])))
