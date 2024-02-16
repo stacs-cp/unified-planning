@@ -43,7 +43,8 @@ from unified_planning.engines.compilers.utils import (
 )
 from typing import Dict, List, Optional, Tuple, OrderedDict, Any
 from functools import partial
-
+from unified_planning.shortcuts import Int
+import re
 
 class ArraysRemover(engines.engine.Engine, CompilerMixin):
     """
@@ -135,35 +136,30 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
     ) -> ProblemKind:
         return problem_kind.clone()
 
-    def treat_fnode(
+    def _manage_node(
             self,
             new_problem: "up.model.AbstractProblem",
-            this_fnode: "up.model.fnode.FNode",
-            position: Optional[int] = None,
+            node: "up.model.fnode.FNode"
     ) -> "up.model.fnode.FNode":
-        print("treat_node")
-        print(this_fnode)
-        print(this_fnode.type)
-        if this_fnode.is_fluent_exp():
-            if this_fnode.fluent().type.is_array_type():
-                assert position is not None
-                new_fluent_name = this_fnode.fluent().name + '_' + str(position)
-                return new_problem.fluent(new_fluent_name)(*this_fnode.args)
-            elif this_fnode.fluent().name.find('[') != -1:
-                # no existeix aquest fluent en el old_problem
-                if position is None:
-                    position = this_fnode.fluent().name.split('[')[1].split(']')[0]
-                new_name_fluent = this_fnode.fluent().name.split('[')[0] + '_' + str(position)
-                assert new_problem.fluent(new_name_fluent), "Fluent doesn't exist in the new problem"
-                return new_problem.fluent(new_name_fluent)(*this_fnode.args)
-            else:
-                return this_fnode
+        env = new_problem.environment
+        em = env.expression_manager
 
-        elif this_fnode.is_constant():
-            if position is None:
-                return this_fnode
-            else:
-                return this_fnode.constant_value()[position]
+        if node.is_fluent_exp():
+            fluent = node.fluent()
+            new_name = fluent.name
+            while '[' in str(new_name):
+                new_name = re.sub(r'\[(\d+)\]', r'_\1', new_name)
+            return up.model.Fluent(new_name, fluent.type, fluent.signature, fluent.environment)(*fluent.signature)
+        elif node.is_parameter_exp():
+            print("param: ", node.parameter())
+            return node
+        elif node.is_constant():
+            return node
+        else:
+            new_args = []
+            for arg in node.args:
+                new_args.append(self._manage_node(new_problem, arg))
+            return em.create_node(node.node_type, tuple(new_args))
 
     def _compile(
         self,
@@ -221,15 +217,17 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                 new_action.clear_effects()
 
                 for precondition in action.preconditions:
-                    pass
+                    new_precondition = self._manage_node(new_problem, precondition)
+                    new_action.add_precondition(new_precondition)
                 for effect in action.effects:
+                    new_fnode = self._manage_node(new_problem, effect.fluent)
+                    new_value = self._manage_node(new_problem, effect.value)
                     if effect.is_increase():
-                        # effect.fluent and effect.value
-                        new_fnode = self.treat_fnode(new_problem, effect.fluent)
-                        new_value = self.treat_fnode(new_problem, effect.value)
                         new_action.add_increase_effect(new_fnode, new_value, effect.condition, effect.forall)
-                    elif effect.is_assignment():
-                        new_fnode = self.treat_fnode(new_problem, effect.fluent)
+                    elif effect.is_decrease():
+                        new_action.add_decrease_effect(new_fnode, new_value, effect.condition, effect.forall)
+                    else:
+                        new_action.add_effect(new_fnode,new_value, effect.condition, effect.forall)
                 new_problem.add_action(new_action)
 
         # GOALS
@@ -238,10 +236,10 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
             right = g.arg(1)
             if left.type.is_array_type() and right.type.is_array_type():
                 for i in range(left.type.size):
-                    new_problem.add_goal(em.create_node(g.node_type, tuple([self.treat_fnode(new_problem, left, i), self.treat_fnode(new_problem, right, i)])))
+                    new_problem.add_goal(em.create_node(g.node_type, tuple([self._manage_node(new_problem, left, i), self.treat_fnode(new_problem, right, i)])))
             else:
                 new_problem.add_goal(em.create_node(g.node_type, tuple(
-                    [self.treat_fnode(new_problem, left), self.treat_fnode(new_problem, right)])))
+                    [self._manage_node(new_problem, left), self._manage_node(new_problem, right)])))
 
         return CompilerResult(
             new_problem, partial(replace_action, map=new_to_old), self.name
