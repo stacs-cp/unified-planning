@@ -182,6 +182,8 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
         new_problem: "up.model.AbstractProblem",
         node: "up.model.fnode.FNode",
     ) -> List["up.model.fnode.FNode"]:
+        env = new_problem.environment
+        em = env.expression_manager
         print(node, node.node_type, node.args)
         left = node.arg(0)
         right = node.arg(1)
@@ -199,6 +201,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
 
             combinations = list(product(*domain))
             print("combinations: ", combinations)
+            new_fnodes = []
             for c in combinations:
                 if left.is_fluent_exp():
                     new_name = left.fluent().name + ''.join(f'_{str(i)}' for i in c)
@@ -223,6 +226,8 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                 print("new_left: ", new_left)
                 print("new_right: ", new_right)
 
+                new_fnodes.append(em.create_node(node.node_type, new_left, new_right))
+            return new_fnodes
         else:
             return [node]
 
