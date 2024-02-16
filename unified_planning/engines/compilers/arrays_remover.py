@@ -144,7 +144,9 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
     ) -> "up.model.fnode.FNode":
         env = new_problem.environment
         em = env.expression_manager
-
+        print("node:", node.type)
+        print(node.is_fluent_exp())
+        print(node.type.is_array_type())
         if node.is_fluent_exp():
             fluent = node.fluent()
             new_name = fluent.name
@@ -206,10 +208,8 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                 combinations = list(product(*domain))
                 for combination in combinations:
                     new_name = fluent.name + ''.join(f'_{str(c)}' for c in combination)
-                    print(new_name)
                     new_default_value = default_value
                     for i in combination:
-                        print(new_default_value, i)
                         new_default_value = new_default_value[i].constant_value()
                     new_problem.add_fluent(model.Fluent(new_name, new_type, fluent.signature, fluent.environment),
                                            default_initial_value=new_default_value)
@@ -243,9 +243,9 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
             left = g.arg(0)
             right = g.arg(1)
             if left.type.is_array_type() and right.type.is_array_type():
-                for i in range(left.type.size):
+                #for i in range(left.type.size):
                     print("args:", tuple([self._manage_node(new_problem, left, i), self._manage_node(new_problem, right, i)]))
-                    new_problem.add_goal(em.create_node(g.node_type, tuple([self._manage_node(new_problem, left, i), self._manage_node(new_problem, right, i)])))
+                new_problem.add_goal(em.create_node(g.node_type, tuple([self._manage_node(new_problem, left, i), self._manage_node(new_problem, right, i)])))
             else:
                 new_problem.add_goal(em.create_node(g.node_type, tuple(
                     [self._manage_node(new_problem, left), self._manage_node(new_problem, right)])))
