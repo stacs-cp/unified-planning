@@ -154,7 +154,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
             new_fluent = new_problem.fluent(new_name)(*fluent.signature)
             if new_fluent.type.is_array_type():
                 print("array: ", new_fluent, new_fluent.type)
-                for i in range(new_fluent.type.size):
+                for i in range(new_fluent.type.size-1):
                     print(i)
                     print(new_fluent[i])
             else:
@@ -247,7 +247,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
             left = g.arg(0)
             right = g.arg(1)
             if left.type.is_array_type() and right.type.is_array_type():
-                for i in range(left.type.size):
+                for i in range(left.type.size-1):
                     print("args:", tuple([self._manage_node(new_problem, left, i), self._manage_node(new_problem, right, i)]))
                     new_problem.add_goal(em.create_node(g.node_type, tuple([self._manage_node(new_problem, left, i), self._manage_node(new_problem, right, i)])))
             else:
