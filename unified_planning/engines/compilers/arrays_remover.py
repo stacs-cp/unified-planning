@@ -243,9 +243,9 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
             left = g.arg(0)
             right = g.arg(1)
             if left.type.is_array_type() and right.type.is_array_type():
-                #for i in range(left.type.size):
-                print("args:", tuple([self._manage_node(new_problem, left, i), self._manage_node(new_problem, right, i)]))
-                new_problem.add_goal(em.create_node(g.node_type, tuple([self._manage_node(new_problem, left, i), self._manage_node(new_problem, right, i)])))
+                for i in range(left.type.size):
+                    print("args:", tuple([self._manage_node(new_problem, left, i), self._manage_node(new_problem, right, i)]))
+                    new_problem.add_goal(em.create_node(g.node_type, tuple([self._manage_node(new_problem, left, i), self._manage_node(new_problem, right, i)])))
             else:
                 new_problem.add_goal(em.create_node(g.node_type, tuple(
                     [self._manage_node(new_problem, left), self._manage_node(new_problem, right)])))
