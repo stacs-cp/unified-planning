@@ -144,9 +144,6 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
     ) -> "up.model.fnode.FNode":
         env = new_problem.environment
         em = env.expression_manager
-        print("node:", node.type)
-        print(node.is_fluent_exp())
-        print(node.type.is_array_type())
         if node.is_fluent_exp():
             fluent = node.fluent()
             new_name = fluent.name
@@ -154,7 +151,14 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                 new_name = re.sub(r'\[(\d+)\]', r'_\1', new_name)
             if position is not None:
                 new_name = new_name + '_' + str(position)
-            return up.model.Fluent(new_name, fluent.type, fluent.signature, fluent.environment)(*fluent.signature)
+            new_fluent = new_problem.fluent(new_name)(*fluent.signature)
+            if new_fluent.type.is_array_type():
+                print("array: ", new_fluent, new_fluent.type)
+                for i in range(new_fluent.type.size):
+                    print(i)
+                    print(new_fluent[i])
+            else:
+                return new_fluent
         elif node.is_parameter_exp():
             print("param: ", node.parameter())
             return node
