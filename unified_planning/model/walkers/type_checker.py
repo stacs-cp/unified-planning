@@ -84,7 +84,6 @@ class TypeChecker(walkers.dag.DagWalker):
         :param expression: The expression of which the `Type` must be retrieved.
         :return: The expression `Type`.
         """
-        print(expression)
         res = self.walk(expression)
         if res is None:
             raise UPTypeError(
@@ -234,9 +233,6 @@ class TypeChecker(walkers.dag.DagWalker):
 
     @walkers.handles(OperatorKind.LIST_CONSTANT)
     def walk_identity_list(self, expression, args):
-        print("WALK_IDENTITY_LIST")
-        print("args: ", args)
-        print("exp: ", expression)
         assert expression is not None
         assert len(args) == 0
         size = len(expression.constant_value())

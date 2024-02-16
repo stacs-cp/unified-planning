@@ -173,22 +173,16 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             int_parameters: dict[str, int],
             c: Any
     ) -> "up.model.fnode.FNode":
-        print(node, node.type, type(node))
         if node.is_fluent_exp():
-            print("fluent")
             return self._remove_keys(node, int_parameters, c)
         elif node.is_parameter_exp():
-            print("param")
             return self._remove_keys(node, int_parameters, c)
         elif node.is_constant():
-            print("constant")
             return node
         else:
-            print("else")
             new_args = []
             for arg in node.args:
                 new_args.append(self._manage_node(em, arg, int_parameters, c))
-            print("create_node: ", node.node_type, tuple(new_args))
             return em.create_node(node.node_type, tuple(new_args))
 
     def _compile(
