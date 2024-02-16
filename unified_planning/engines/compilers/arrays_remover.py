@@ -195,7 +195,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                 for i in range(0, left.size):
                     domain_in.append(i)
                 domain.append(domain_in)
-                new_type = left.elements_type
+                new_type = new_type.elements_type
             print(domain)
 
             combinations = list(product(*domain))
@@ -276,7 +276,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
         # GOALS
         for g in problem.goals:
 
-            new_goals = self.get_new_fnodes(new_problem, g)
+            new_goals = self._get_new_fnodes(new_problem, g)
 
             # afegir els new goals al problema
 
