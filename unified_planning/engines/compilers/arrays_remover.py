@@ -139,8 +139,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
     def _manage_node(
             self,
             new_problem: "up.model.AbstractProblem",
-            node: "up.model.fnode.FNode",
-            position: Optional[int] = None
+            node: "up.model.fnode.FNode"
     ) -> "up.model.fnode.FNode":
         env = new_problem.environment
         em = env.expression_manager
@@ -149,8 +148,6 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
             new_name = fluent.name
             while '[' in str(new_name):
                 new_name = re.sub(r'\[(\d+)\]', r'_\1', new_name)
-            if position is not None:
-                new_name = new_name + '_' + str(position)
             new_fluent = new_problem.fluent(new_name)(*fluent.signature)
             # arregla
             if new_fluent.type.is_array_type():
@@ -164,18 +161,22 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
             print("param: ", node.parameter())
             return node
         elif node.is_constant():
-            if node.is_list_constant():
-                for element in node.constant_value():
-                    self._manage_node(node)
-            if position is not None:
-                return node.constant_value()[position]
-            else:
                 return node
         else:
             new_args = []
             for arg in node.args:
                 new_args.append(self._manage_node(new_problem, arg))
             return em.create_node(node.node_type, tuple(new_args))
+
+    def _get_new_fluent(
+        self,
+        fluent: "up.model.fluent.Fluent"
+    ) -> "up.model.fluent.Fluent":
+        new_name = fluent.name
+        while '[' in str(new_name):
+            new_name = re.sub(r'\[(\d+)\]', r'_\1', new_name)
+        new_fluent = up.model.fluent.Fluent(new_name, fluent.type, fluent.signature, fluent.environment)
+        return new_fluent
 
     def _get_new_fnodes(
         self,
@@ -185,51 +186,51 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
         env = new_problem.environment
         em = env.expression_manager
         print(node, node.node_type, node.args)
-        left = node.arg(0)
-        right = node.arg(1)
 
-        if left.type.is_array_type() and right.type.is_array_type():
-            new_type = left.type
-            domain = []
-            while new_type.is_array_type():
-                domain_in = []
-                for i in range(0, new_type.size):
-                    domain_in.append(i)
-                domain.append(domain_in)
-                new_type = new_type.elements_type
-            print(domain)
-
-            combinations = list(product(*domain))
-            print("combinations: ", combinations)
-            new_fnodes = []
-            for c in combinations:
-                if left.is_fluent_exp():
-                    new_name = left.fluent().name + ''.join(f'_{str(i)}' for i in c)
-                    new_left = new_problem.fluent(new_name)(*left.fluent().signature)
-                    print(new_left)
-                elif left.constant_value():
-                    print(left.constant_value())
-                    new_left = left.constant_value()
-                    for i in c:
-                        new_left = new_left[i]
-                        print(new_left)
-                if right.is_fluent_exp():
-                    new_name = right.fluent().name + ''.join(f'_{str(i)}' for i in c)
-                    new_right = new_problem.fluent(new_name)(*right.fluent().signature)
-                    print(new_right)
-                elif right.constant_value():
-                    print(right.constant_value())
-                    new_right = right
-                    for i in c:
-                        new_right = new_right.constant_value()[i]
-                        print(new_right)
-                print("new_left: ", new_left)
-                print("new_right: ", new_right)
-
-                new_fnodes.append(em.create_node(node.node_type, tuple([new_left, new_right])))
-            return new_fnodes
-        else:
+        if node.is_fluent_exp():
+            new_fluent = self._get_new_fluent(node.fluent())
+            assert new_problem.fluent(new_fluent.name)(*node.fluent().signature)
+            return [new_fluent(*node.fluent().signature)]
+        elif node.is_parameter_exp() or node.is_constant():
             return [node]
+        else:
+            print(node)
+            if node.arg(0).type.is_array_type():
+                new_type = node.arg(0).type
+                domain = []
+                while new_type.is_array_type():
+                    domain_in = []
+                    for i in range(0, new_type.size):
+                        domain_in.append(i)
+                    domain.append(domain_in)
+                    new_type = new_type.elements_type
+                print(domain)
+
+                combinations = list(product(*domain))
+                print("combinations: ", combinations)
+                new_fnodes = []
+                for c in combinations:
+                    new_args = []
+                    for arg in node.args:
+                        print("arg: ", arg)
+                        if arg.is_fluent_exp():
+                            # tractar_fluent
+                            new_fluent = self._get_new_fluent(node.fluent())
+                            new_name = new_fluent.name + ''.join(f'_{str(i)}' for i in c)
+                            new_arg = new_problem.fluent(new_name)(*arg.fluent().signature)
+                        elif arg.constant_value():
+                            print(arg.constant_value())
+                            new_arg = arg.constant_value()
+                            for i in c:
+                                new_left = new_left[i]
+                        else:
+                            pass
+                        new_args.append(new_arg)
+                    print(new_args)
+                    new_fnodes.append(em.create_node(node.node_type, tuple(new_args)))
+                return new_fnodes
+            else:
+                return [node]
 
     def _compile(
         self,
