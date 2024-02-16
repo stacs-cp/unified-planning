@@ -215,7 +215,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                         print("arg: ", arg)
                         if arg.is_fluent_exp():
                             # tractar_fluent
-                            new_fluent = self._get_new_fluent(node.fluent())
+                            new_fluent = self._get_new_fluent(arg.fluent())
                             new_name = new_fluent.name + ''.join(f'_{str(i)}' for i in c)
                             new_arg = new_problem.fluent(new_name)(*arg.fluent().signature)
                         elif arg.constant_value():
