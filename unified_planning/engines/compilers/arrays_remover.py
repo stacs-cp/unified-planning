@@ -190,7 +190,16 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                     new_fnodes.append(em.create_node(node.node_type, tuple(new_args)))
                 return new_fnodes
             else:
-                return [node]
+                new_args = []
+                for arg in node.args:
+                    if arg.is_fluent_exp():
+                        # tractar_fluent
+                        new_fluent = self._get_new_fluent(arg.fluent())
+                        new_arg = new_problem.fluent(new_fluent.name)(*arg.fluent().signature)
+                    else:
+                        new_arg = arg
+                    new_args.append(new_arg)
+                return [(em.create_node(node.node_type, tuple(new_args)))]
 
     def _compile(
         self,
