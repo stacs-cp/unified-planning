@@ -143,12 +143,10 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
         new_name = fluent.name
         pattern = r'\[(.*?)\]'
         things_to_substitute = re.findall(pattern, new_name)
-        print(things_to_substitute)
         if things_to_substitute:
             new_name = new_name.split('[')[0]
             for t in things_to_substitute:
                 new_name = new_name + '_' + str(eval(t))
-        print(new_name)
         new_fluent = up.model.fluent.Fluent(new_name, fluent.type, fluent.signature, fluent.environment)
         return new_fluent
 
@@ -159,8 +157,6 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
     ) -> List["up.model.fnode.FNode"]:
         env = new_problem.environment
         em = env.expression_manager
-
-        print(node, node.type)
 
         if node.is_fluent_exp():
             new_fluent = self._get_new_fluent(node.fluent())
@@ -179,13 +175,11 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                     domain.append(domain_in)
                     new_type = new_type.elements_type
                 combinations = list(product(*domain))
-                print("combinations: ", combinations)
                 new_fnodes = []
                 for c in combinations:
                     new_args = []
                     for arg in node.args:
                         if arg.is_fluent_exp():
-                            # tractar_fluent
                             new_fluent = self._get_new_fluent(arg.fluent())
                             new_name = new_fluent.name + ''.join(f'_{str(i)}' for i in c)
                             new_arg = new_problem.fluent(new_name)(*arg.fluent().signature)
@@ -202,7 +196,6 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                 new_args = []
                 for arg in node.args:
                     if arg.is_fluent_exp():
-                        # tractar_fluent
                         new_fluent = self._get_new_fluent(arg.fluent())
                         new_arg = new_problem.fluent(new_fluent.name)(*arg.fluent().signature)
                     else:
