@@ -152,28 +152,23 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             c: Any
     ) -> "up.model.fnode.FNode":
 
-        if node.is_fluent_exp():
-            print("fluent: ", node.fluent())
-            fluent = node.fluent()
-            new_name = fluent.name
-            print(new_name)
-            pattern = r'\[(.*?)\]'
+        assert node.is_fluent_exp()
+        print("fluent: ", node.fluent())
+        fluent = node.fluent()
+        new_name = fluent.name
+        print(new_name)
+        pattern = r'\[(.*?)\]'
 
-            print(re.findall(pattern, new_name))
-            for content in re.findall(pattern, new_name):
-                print(content)
-                print(type(content))
-                for key in int_parameters.keys():
-                    if key in content:
-                        new_access = content.replace(key, str(c[int_parameters.get(key)]))
-                        new_name = new_name.replace(content, new_access)
-                        print("new_name: ", new_name)
-            return Fluent(new_name, fluent.type, fluent.signature, fluent.environment)(*fluent.signature)
-        elif node.is_parameter_exp():
+        print(re.findall(pattern, new_name))
+        for content in re.findall(pattern, new_name):
+            print(content)
+            print(type(content))
             for key in int_parameters.keys():
-                if key == node.parameter().name:
-                    return Int(c[int_parameters.get(key)])
-            return node
+                if key in content:
+                    new_access = content.replace(key, str(c[int_parameters.get(key)]))
+                    new_name = new_name.replace(content, new_access)
+                    print("new_name: ", new_name)
+        return Fluent(new_name, fluent.type, fluent.signature, fluent.environment)(*fluent.signature)
 
     def _manage_node(
             self,
@@ -184,15 +179,13 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
     ) -> "up.model.fnode.FNode":
         print(node, type(node))
         if node.is_fluent_exp():
+            print("is fluent: ", node.fluent())
             return self._remove_keys(node, int_parameters, c)
-        elif node.is_parameter_exp():
-            return self._remove_keys(node, int_parameters, c)
-        elif node.is_constant():
+        elif node.is_parameter_exp() or node.is_constant():
             return node
         else:
             new_args = []
             for arg in node.args:
-                print(arg)
                 new_args.append(self._manage_node(em, arg, int_parameters, c))
             return em.create_node(node.node_type, tuple(new_args))
 

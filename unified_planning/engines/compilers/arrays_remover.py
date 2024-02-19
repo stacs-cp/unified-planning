@@ -141,6 +141,9 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
         fluent: "up.model.fluent.Fluent"
     ) -> "up.model.fluent.Fluent":
         new_name = fluent.name
+        pattern = r'\[(.*?)\]'
+        things_to_substitute = re.findall(pattern, new_name)
+        print(things_to_substitute)
 
         new_fluent = up.model.fluent.Fluent(new_name, fluent.type, fluent.signature, fluent.environment)
         return new_fluent
