@@ -144,7 +144,11 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
         pattern = r'\[(.*?)\]'
         things_to_substitute = re.findall(pattern, new_name)
         print(things_to_substitute)
-
+        if things_to_substitute:
+            new_name = new_name.split('[')[0]
+            for t in things_to_substitute:
+                new_name = new_name + '_' + t
+        print(new_name)
         new_fluent = up.model.fluent.Fluent(new_name, fluent.type, fluent.signature, fluent.environment)
         return new_fluent
 
@@ -175,6 +179,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                     domain.append(domain_in)
                     new_type = new_type.elements_type
                 combinations = list(product(*domain))
+                print("combinations: ", combinations)
                 new_fnodes = []
                 for c in combinations:
                     new_args = []
