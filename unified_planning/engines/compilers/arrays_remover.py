@@ -147,7 +147,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
         if things_to_substitute:
             new_name = new_name.split('[')[0]
             for t in things_to_substitute:
-                new_name = new_name + '_' + eval(t)
+                new_name = new_name + '_' + str(eval(t))
         print(new_name)
         new_fluent = up.model.fluent.Fluent(new_name, fluent.type, fluent.signature, fluent.environment)
         return new_fluent
