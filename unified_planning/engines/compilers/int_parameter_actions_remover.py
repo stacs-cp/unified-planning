@@ -151,15 +151,23 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             int_parameters: dict[str, int],
             c: Any
     ) -> "up.model.fnode.FNode":
+
         assert node.is_fluent_exp()
+        print("fluent: ", node.fluent())
         fluent = node.fluent()
         new_name = fluent.name
+        print(new_name)
         pattern = r'\[(.*?)\]'
+
+        print(re.findall(pattern, new_name))
         for content in re.findall(pattern, new_name):
+            print(content)
+            print(type(content))
             for key in int_parameters.keys():
                 if key in content:
                     new_access = content.replace(key, str(c[int_parameters.get(key)]))
                     new_name = new_name.replace(content, new_access)
+                    print("new_name: ", new_name)
         return Fluent(new_name, fluent.type, fluent.signature, fluent.environment)(*fluent.signature)
 
     def _manage_node(
@@ -169,6 +177,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             int_parameters: dict[str, int],
             c: Any
     ) -> "up.model.fnode.FNode":
+        print(node, type(node))
         if node.is_fluent_exp():
             return self._remove_keys(node, int_parameters, c)
         elif node.is_parameter_exp() or node.is_constant():
@@ -176,6 +185,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
         else:
             new_args = []
             for arg in node.args:
+                print(arg)
                 new_args.append(self._manage_node(em, arg, int_parameters, c))
             return em.create_node(node.node_type, tuple(new_args))
 
@@ -195,12 +205,11 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
         new_problem.name = f"{self.name}_{problem.name}"
         new_problem.clear_actions()
 
-        new_parameters = OrderedDict()
-        int_parameters = {}
-        int_domains = []
-
         # per cada accio mirar els parametres i treure el que es enter
         for action in problem.actions:
+            new_parameters = OrderedDict()
+            int_parameters = {}
+            int_domains = []
             if isinstance(action, InstantaneousAction):
                 n_i = 0
                 # separar els parametres UserType i IntType
