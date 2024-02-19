@@ -156,6 +156,8 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
         env = new_problem.environment
         em = env.expression_manager
 
+        print(node, node.type)
+
         if node.is_fluent_exp():
             new_fluent = self._get_new_fluent(node.fluent())
             assert new_problem.fluent(new_fluent.name)(*node.fluent().signature)
