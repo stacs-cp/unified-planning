@@ -107,8 +107,10 @@ class Fluent:
             res += hash(p)
         return res ^ hash(self._name)
 
-    def __getitem__(self, index: Union["up.model.parameter.Parameter", int]):
+    def __getitem__(self, index: Union["up.model.parameter.Parameter", "up.model.fnode.FNode", int]):
         assert self.type.is_array_type(), "The Fluent has not array type"
+        if isinstance(index, up.model.fnode.FNode):
+            return Fluent(self.name+'['+str(index)+']', self.type.elements_type, self.signature, self.environment)
         if type(index) is int:
             index = up.model.parameter.Parameter(str(index), self._env.type_manager.IntType(index,index), self.environment)
         assert index.type.is_int_type(), "The parameter has not an integer type"
