@@ -164,8 +164,9 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                 print(content)
                 print(type(content))
                 for key in int_parameters.keys():
-                    while key in new_name:
-                        new_name = new_name.replace(key, str(c[int_parameters.get(key)]))
+                    if key in content:
+                        new_access = content.replace(key, str(c[int_parameters.get(key)]))
+                        new_name = new_name.replace(content, new_access)
                         print("new_name: ", new_name)
             return Fluent(new_name, fluent.type, fluent.signature, fluent.environment)(*fluent.signature)
         elif node.is_parameter_exp():
