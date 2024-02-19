@@ -162,6 +162,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             print(re.findall(pattern, new_name))
             for content in re.findall(pattern, new_name):
                 print(content)
+                print(type(content))
                 for key in int_parameters.keys():
                     while key in new_name:
                         new_name = new_name.replace(key, str(c[int_parameters.get(key)]))
