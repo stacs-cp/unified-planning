@@ -13,8 +13,7 @@
 # limitations under the License.
 #
 """This module defines the quantifiers remover class."""
-
-
+import re
 from itertools import product
 import unified_planning as up
 import unified_planning.engines as engines
@@ -154,11 +153,19 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
     ) -> "up.model.fnode.FNode":
 
         if node.is_fluent_exp():
+            print("fluent: ", node.fluent())
             fluent = node.fluent()
             new_name = fluent.name
-            for key in int_parameters.keys():
-                while '['+key+']' in str(new_name):
-                    new_name = new_name.replace('['+key+']', '['+str(c[int_parameters.get(key)])+']')
+            print(new_name)
+            pattern = r'\[(.*?)\]'
+
+            print(re.findall(pattern, new_name))
+            for content in re.findall(pattern, new_name):
+                print(content)
+                for key in int_parameters.keys():
+                    print(key in new_name)
+                    while '['+key+']' in str(new_name):
+                        new_name = new_name.replace('['+key+']', '['+str(c[int_parameters.get(key)])+']')
             return Fluent(new_name, fluent.type, fluent.signature, fluent.environment)(*fluent.signature)
         elif node.is_parameter_exp():
             for key in int_parameters.keys():
@@ -183,6 +190,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
         else:
             new_args = []
             for arg in node.args:
+                print(arg)
                 new_args.append(self._manage_node(em, arg, int_parameters, c))
             return em.create_node(node.node_type, tuple(new_args))
 
