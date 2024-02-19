@@ -141,8 +141,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
         fluent: "up.model.fluent.Fluent"
     ) -> "up.model.fluent.Fluent":
         new_name = fluent.name
-        while '[' in str(new_name):
-            new_name = re.sub(r'\[(\d+)\]', r'_\1', new_name)
+
         new_fluent = up.model.fluent.Fluent(new_name, fluent.type, fluent.signature, fluent.environment)
         return new_fluent
 
