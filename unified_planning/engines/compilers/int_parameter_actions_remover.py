@@ -144,32 +144,6 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             new_kind.set_conditions("DISJUNCTIVE_CONDITIONS")
         return new_kind
 
-
-    def _remove_keys(
-            self,
-            node: "up.model.fnode.FNode",
-            int_parameters: dict[str, int],
-            c: Any
-    ) -> "up.model.fnode.FNode":
-
-        assert node.is_fluent_exp()
-        print("fluent: ", node.fluent())
-        fluent = node.fluent()
-        new_name = fluent.name
-        print(new_name)
-        pattern = r'\[(.*?)\]'
-
-        print(re.findall(pattern, new_name))
-        for content in re.findall(pattern, new_name):
-            print(content)
-            print(type(content))
-            for key in int_parameters.keys():
-                if key in content:
-                    new_access = content.replace(key, str(c[int_parameters.get(key)]))
-                    new_name = new_name.replace(content, new_access)
-                    print("new_name: ", new_name)
-        return Fluent(new_name, fluent.type, fluent.signature, fluent.environment)(*fluent.signature)
-
     def _manage_node(
             self,
             em: "up.model.expression.ExpressionManager",
@@ -177,15 +151,24 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             int_parameters: dict[str, int],
             c: Any
     ) -> "up.model.fnode.FNode":
-        print(node, type(node))
         if node.is_fluent_exp():
-            return self._remove_keys(node, int_parameters, c)
-        elif node.is_parameter_exp() or node.is_constant():
+            fluent = node.fluent()
+            new_name = fluent.name
+            pattern = r'\[(.*?)\]'
+            for content in re.findall(pattern, new_name):
+                for key in int_parameters.keys():
+                    if key in content:
+                        new_access = content.replace(key, str(c[int_parameters.get(key)]))
+                        new_name = new_name.replace(content, new_access)
+            return Fluent(new_name, fluent.type, fluent.signature, fluent.environment)(*fluent.signature)
+        elif node.is_parameter_exp():
+            new_int = int_parameters.get(node.parameter().name)
+            return Int(new_int)
+        elif node.is_constant():
             return node
         else:
             new_args = []
             for arg in node.args:
-                print(arg)
                 new_args.append(self._manage_node(em, arg, int_parameters, c))
             return em.create_node(node.node_type, tuple(new_args))
 
@@ -230,8 +213,6 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                 for c in combinations:
                     cadena = '_'.join(map(str, c))
                     new_action = InstantaneousAction(action.name + '_' + cadena, new_parameters, action.environment)
-
-                    # precondicions
                     for precondition in action.preconditions:
                         new_precondition = self._manage_node(em, precondition, int_parameters, c)
                         new_action.add_precondition(new_precondition)
@@ -239,14 +220,18 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                     for effect in action.effects:
                         new_fnode = self._manage_node(em, effect.fluent, int_parameters, c)
                         new_value = self._manage_node(em, effect.value, int_parameters, c)
+                        new_condition = self._manage_node(em, effect.condition, int_parameters, c)
                         if effect.is_increase():
-                            new_action.add_increase_effect(new_fnode, new_value, effect.condition, effect.forall)
+                            new_action.add_increase_effect(new_fnode, new_value, new_condition, effect.forall)
                         elif effect.is_decrease():
-                            new_action.add_decrease_effect(new_fnode, new_value, effect.condition, effect.forall)
+                            new_action.add_decrease_effect(new_fnode, new_value, new_condition, effect.forall)
                         else:
-                            new_action.add_effect(new_fnode, new_value, effect.condition, effect.forall)
+                            new_action.add_effect(new_fnode, new_value, new_condition, effect.forall)
 
                     new_problem.add_action(new_action)
+            elif isinstance(action, DurativeAction):
+                # implement durative action
+                pass
 
         return CompilerResult(
             new_problem, partial(replace_action, map=new_to_old), self.name
