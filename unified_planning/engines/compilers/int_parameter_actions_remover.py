@@ -206,11 +206,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                     int_domains.append(domain)
             combinations = list(product(*int_domains))
             for c in combinations:
-                cadena = '_'.join(map(str, c))
-                new_action = action.clone()
-                new_action.name = action.name + '_' + cadena
-                new_action.clear_preconditions()
-                new_action.clear_effects()
+                new_action = InstantaneousAction(action.name + '_' + '_'.join(map(str, c)), new_parameters, action.environment)
                 for precondition in action.preconditions:
                     new_precondition = self._manage_node(em, precondition, int_parameters, c)
                     new_action.add_precondition(new_precondition)
