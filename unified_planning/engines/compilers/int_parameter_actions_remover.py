@@ -208,7 +208,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             for c in combinations:
                 cadena = '_'.join(map(str, c))
                 new_action = action.clone()
-                new_action = new_action.name(action.name + '_' + cadena)
+                new_action.name = action.name + '_' + cadena
                 new_action.clear_preconditions()
                 new_action.clear_effects()
                 for precondition in action.preconditions:
