@@ -188,50 +188,46 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
         new_problem.name = f"{self.name}_{problem.name}"
         new_problem.clear_actions()
 
-        # per cada accio mirar els parametres i treure el que es enter
         for action in problem.actions:
             new_parameters = OrderedDict()
             int_parameters = {}
             int_domains = []
-            if isinstance(action, InstantaneousAction):
-                n_i = 0
-                # separar els parametres UserType i IntType
-                for old_parameter in action.parameters:
-                    if old_parameter.type.is_user_type():
-                        new_parameters.update({old_parameter.name: old_parameter.type})
+            n_i = 0
+            # separar els parametres UserType i IntType
+            for old_parameter in action.parameters:
+                if old_parameter.type.is_user_type():
+                    new_parameters.update({old_parameter.name: old_parameter.type})
+                else:
+                    # de moment nomes s'accepten UserType i IntType
+                    assert old_parameter.type.is_int_type()
+                    int_parameters[old_parameter.name] = n_i
+                    n_i = n_i + 1
+                    domain = []
+                    for i in range(old_parameter.type.lower_bound, old_parameter.type.upper_bound + 1):
+                        domain.append(i)
+                    int_domains.append(domain)
+            combinations = list(product(*int_domains))
+            # per cada combinacio possible dels enters -> creem una accio
+            for c in combinations:
+                cadena = '_'.join(map(str, c))
+                new_action = action.clone()
+                new_action = new_action.clear_preconditions().clear_effects().name(action.name+cadena)
+                for precondition in action.preconditions:
+                    new_precondition = self._manage_node(em, precondition, int_parameters, c)
+                    new_action.add_precondition(new_precondition)
+
+                for effect in action.effects:
+                    new_fnode = self._manage_node(em, effect.fluent, int_parameters, c)
+                    new_value = self._manage_node(em, effect.value, int_parameters, c)
+                    new_condition = self._manage_node(em, effect.condition, int_parameters, c)
+                    if effect.is_increase():
+                        new_action.add_increase_effect(new_fnode, new_value, new_condition, effect.forall)
+                    elif effect.is_decrease():
+                        new_action.add_decrease_effect(new_fnode, new_value, new_condition, effect.forall)
                     else:
-                        # de moment nomes s'accepten UserType i IntType
-                        assert old_parameter.type.is_int_type()
-                        int_parameters[old_parameter.name] = n_i
-                        n_i = n_i + 1
-                        domain = []
-                        for i in range(old_parameter.type.lower_bound, old_parameter.type.upper_bound + 1):
-                            domain.append(i)
-                        int_domains.append(domain)
-                combinations = list(product(*int_domains))
-                # per cada combinacio possible dels enters -> creem una accio
-                for c in combinations:
-                    cadena = '_'.join(map(str, c))
-                    new_action = InstantaneousAction(action.name + '_' + cadena, new_parameters, action.environment)
-                    for precondition in action.preconditions:
-                        new_precondition = self._manage_node(em, precondition, int_parameters, c)
-                        new_action.add_precondition(new_precondition)
+                        new_action.add_effect(new_fnode, new_value, new_condition, effect.forall)
 
-                    for effect in action.effects:
-                        new_fnode = self._manage_node(em, effect.fluent, int_parameters, c)
-                        new_value = self._manage_node(em, effect.value, int_parameters, c)
-                        new_condition = self._manage_node(em, effect.condition, int_parameters, c)
-                        if effect.is_increase():
-                            new_action.add_increase_effect(new_fnode, new_value, new_condition, effect.forall)
-                        elif effect.is_decrease():
-                            new_action.add_decrease_effect(new_fnode, new_value, new_condition, effect.forall)
-                        else:
-                            new_action.add_effect(new_fnode, new_value, new_condition, effect.forall)
-
-                    new_problem.add_action(new_action)
-            elif isinstance(action, DurativeAction):
-                # implement durative action
-                pass
+                new_problem.add_action(new_action)
 
         return CompilerResult(
             new_problem, partial(replace_action, map=new_to_old), self.name

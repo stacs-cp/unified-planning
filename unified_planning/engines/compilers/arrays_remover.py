@@ -144,8 +144,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
         pattern = r'\[(.*?)\]'
         this_ints = re.findall(pattern, new_name)
         if this_ints:
-            new_name = new_name.split('[')[0]
-            new_name = new_name + '_' + '_'.join(map(str, this_ints))
+            new_name = new_name.split('[')[0] + '_' + '_'.join(map(str, this_ints))
         new_fluent = up.model.fluent.Fluent(new_name, fluent.type, fluent.signature, fluent.environment)
         return new_fluent
 
@@ -213,8 +212,6 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
 
         new_to_old: Dict[Action, Action] = {}
 
-        env = problem.environment
-        em = env.expression_manager
         new_problem = problem.clone()
         new_problem.name = f"{self.name}_{problem.name}"
         # new_problem.clear_timed_goals()
@@ -223,7 +220,6 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
         new_problem.clear_actions()
         new_problem.clear_goals()
 
-        # FLUENTS AND DEFAULT_VALUES
         for fluent in problem.fluents:
             default_value = problem.fluents_defaults.get(fluent).constant_value()
             this_fluent = fluent.type
@@ -249,30 +245,25 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
             else:
                 new_problem.add_fluent(fluent, default_initial_value=default_value)
 
-        # ACTIONS
         for action in problem.actions:
-            new_parameters = OrderedDict()
-            if isinstance(action, InstantaneousAction):
-                new_action = action.clone()
-                new_action.clear_preconditions()
-                new_action.clear_effects()
+            new_action = action.clone()
+            new_action = new_action.clear_preconditions().clear_effects()
 
-                for precondition in action.preconditions:
-                    new_fnodes = self._get_new_fnodes(new_problem, precondition)
-                    for fnode in new_fnodes:
-                        new_action.add_precondition(fnode)
-                for effect in action.effects:
-                    new_fnode = self._get_new_fnodes(new_problem, effect.fluent)
-                    new_value = self._get_new_fnodes(new_problem, effect.value)
-                    if effect.is_increase():
-                        new_action.add_increase_effect(new_fnode, new_value, effect.condition, effect.forall)
-                    elif effect.is_decrease():
-                        new_action.add_decrease_effect(new_fnode, new_value, effect.condition, effect.forall)
-                    else:
-                        new_action.add_effect(new_fnode,new_value, effect.condition, effect.forall)
-                new_problem.add_action(new_action)
+            for precondition in action.preconditions:
+                new_fnodes = self._get_new_fnodes(new_problem, precondition)
+                for fnode in new_fnodes:
+                    new_action.add_precondition(fnode)
+            for effect in action.effects:
+                new_fnode = self._get_new_fnodes(new_problem, effect.fluent)
+                new_value = self._get_new_fnodes(new_problem, effect.value)
+                if effect.is_increase():
+                    new_action.add_increase_effect(new_fnode, new_value, effect.condition, effect.forall)
+                elif effect.is_decrease():
+                    new_action.add_decrease_effect(new_fnode, new_value, effect.condition, effect.forall)
+                else:
+                    new_action.add_effect(new_fnode,new_value, effect.condition, effect.forall)
+            new_problem.add_action(new_action)
 
-        # GOALS
         for g in problem.goals:
             new_goals = self._get_new_fnodes(new_problem, g)
             for ng in new_goals:
