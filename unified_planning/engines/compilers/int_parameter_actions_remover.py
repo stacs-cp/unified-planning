@@ -193,12 +193,10 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             int_parameters = {}
             int_domains = []
             n_i = 0
-            # separar els parametres UserType i IntType
             for old_parameter in action.parameters:
                 if old_parameter.type.is_user_type():
                     new_parameters.update({old_parameter.name: old_parameter.type})
                 else:
-                    # de moment nomes s'accepten UserType i IntType
                     assert old_parameter.type.is_int_type()
                     int_parameters[old_parameter.name] = n_i
                     n_i = n_i + 1
@@ -207,11 +205,12 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                         domain.append(i)
                     int_domains.append(domain)
             combinations = list(product(*int_domains))
-            # per cada combinacio possible dels enters -> creem una accio
             for c in combinations:
                 cadena = '_'.join(map(str, c))
                 new_action = action.clone()
-                new_action = new_action.clear_preconditions().clear_effects().name(action.name+cadena)
+                new_action = new_action.name(action.name + '_' + cadena)
+                new_action.clear_preconditions()
+                new_action.clear_effects()
                 for precondition in action.preconditions:
                     new_precondition = self._manage_node(em, precondition, int_parameters, c)
                     new_action.add_precondition(new_precondition)
