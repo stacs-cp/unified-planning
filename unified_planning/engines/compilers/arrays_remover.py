@@ -145,7 +145,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
         this_ints = re.findall(pattern, new_name)
         if this_ints:
             new_name = new_name.split('[')[0]
-            new_name = '_'.join(map(str, this_ints))
+            new_name = new_name + '_'.join(map(str, this_ints))
         new_fluent = up.model.fluent.Fluent(new_name, fluent.type, fluent.signature, fluent.environment)
         return new_fluent
 
