@@ -151,7 +151,9 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             int_parameters: dict[str, int],
             c: Any
     ) -> "up.model.fnode.FNode":
+        print("NODE: ", node)
         if node.is_fluent_exp():
+            print(" - fluent")
             fluent = node.fluent()
             new_name = fluent.name
             pattern = r'\[(.*?)\]'
@@ -162,11 +164,14 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                         new_name = new_name.replace(content, new_access)
             return Fluent(new_name, fluent.type, fluent.signature, fluent.environment)(*fluent.signature)
         elif node.is_parameter_exp():
+            print(" - param")
             new_int = int_parameters.get(node.parameter().name)
             return Int(new_int)
         elif node.is_constant():
+            print(" - constant")
             return node
         else:
+            print(" - else")
             new_args = []
             for arg in node.args:
                 new_args.append(self._manage_node(em, arg, int_parameters, c))
