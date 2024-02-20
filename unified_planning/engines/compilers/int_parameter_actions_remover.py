@@ -165,7 +165,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             return Fluent(new_name, fluent.type, fluent.signature, fluent.environment)(*fluent.signature)
         elif node.is_parameter_exp():
             print(" - param")
-            new_int = int_parameters.get(node.parameter().name)
+            new_int = c[int_parameters.get(node.parameter().name)]
             return Int(new_int)
         elif node.is_constant():
             print(" - constant")
