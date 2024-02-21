@@ -207,19 +207,14 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             combinations = list(product(*int_domains))
             for c in combinations:
                 if isinstance(action, InstantaneousAction):
-                    print("instantaneous action")
                     new_action = InstantaneousAction(action.name + '_' + '_'.join(map(str, c)), new_parameters,
                                                      action.environment)
-
                 elif isinstance(action, DurativeAction):
-                    print("durative action")
                     new_action = DurativeAction(action.name + '_' + '_'.join(map(str, c)), new_parameters,
                                                 action.environment)
                 else:
-                    print("action")
                     new_action = Action(action.name + '_' + '_'.join(map(str, c)), new_parameters,
                                         action.environment)
-
                 for precondition in action.preconditions:
                     new_precondition = self._manage_node(em, precondition, int_parameters, c)
                     new_action.add_precondition(new_precondition)
@@ -234,7 +229,6 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                         new_action.add_decrease_effect(new_fnode, new_value, new_condition, effect.forall)
                     else:
                         new_action.add_effect(new_fnode, new_value, new_condition, effect.forall)
-
                 new_problem.add_action(new_action)
 
         return CompilerResult(
