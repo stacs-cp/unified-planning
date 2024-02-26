@@ -157,12 +157,15 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
         em = env.expression_manager
 
         if node.is_fluent_exp():
+            print("fluent: ", node)
             new_fluent = self._get_new_fluent(node.fluent())
             assert new_problem.fluent(new_fluent.name)(*node.fluent().signature)
             return [new_fluent(*node.fluent().signature)]
         elif node.is_parameter_exp() or node.is_constant():
+            print("param or const: ", node)
             return [node]
         else:
+            print("else: ", node)
             if node.arg(0).type.is_array_type():
                 new_type = node.arg(0).type
                 domain = []
@@ -193,12 +196,8 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
             else:
                 new_args = []
                 for arg in node.args:
-                    if arg.is_fluent_exp():
-                        new_fluent = self._get_new_fluent(arg.fluent())
-                        new_arg = new_problem.fluent(new_fluent.name)(*arg.fluent().signature)
-                    else:
-                        new_arg = arg
-                    new_args.append(new_arg)
+                    print("arg: ", arg)
+                    new_args.append(self._get_new_fnodes(new_problem, arg))
                 return [(em.create_node(node.node_type, tuple(new_args)))]
 
     def _compile(
