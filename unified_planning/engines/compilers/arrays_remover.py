@@ -257,12 +257,13 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
             for effect in action.effects:
                 new_fnode = self._get_new_fnodes(new_problem, effect.fluent)
                 new_value = self._get_new_fnodes(new_problem, effect.value)
+                new_condition = self._get_new_fnodes(new_problem, effect.condition)
                 if effect.is_increase():
-                    new_action.add_increase_effect(new_fnode, new_value, effect.condition, effect.forall)
+                    new_action.add_increase_effect(new_fnode, new_value, new_condition, effect.forall)
                 elif effect.is_decrease():
-                    new_action.add_decrease_effect(new_fnode, new_value, effect.condition, effect.forall)
+                    new_action.add_decrease_effect(new_fnode, new_value, new_condition, effect.forall)
                 else:
-                    new_action.add_effect(new_fnode,new_value, effect.condition, effect.forall)
+                    new_action.add_effect(new_fnode, new_value, new_condition, effect.forall)
             new_problem.add_action(new_action)
 
         for g in problem.goals:
