@@ -162,8 +162,11 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                         new_name = new_name.replace(content, str(eval(new_access)))
             return Fluent(new_name, fluent.type, fluent.signature, fluent.environment)(*fluent.signature)
         elif node.is_parameter_exp():
-            new_int = c[int_parameters.get(node.parameter().name)]
-            return Int(new_int)
+            if int_parameters.get(node.parameter().name):
+                new_int = c[int_parameters.get(node.parameter().name)]
+                return Int(new_int)
+            else:
+                return node
         elif node.is_constant():
             return node
         else:
