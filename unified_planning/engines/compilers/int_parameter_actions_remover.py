@@ -149,14 +149,18 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             em: "up.model.expression.ExpressionManager",
             node: "up.model.fnode.FNode",
             int_parameters: dict[str, int],
-            c: Any
+            c: Any,
+            n_i: int
     ) -> "up.model.fnode.FNode":
-        print("node: ", node, node.node_type)
-        print("int_parameters: ", int_parameters)
         if node.node_type == up.model.operators.OperatorKind.EXISTS:
             print("exists")
             print(node.args)
-            print(node.variable())
+            print(node.variable)
+            print(node.variable().name)
+            print(node.variable().type)
+            int_parameters[node.variable().name] = n_i
+            n_i = n_i + 1
+
         if node.is_fluent_exp():
             fluent = node.fluent()
             new_name = fluent.name
@@ -178,7 +182,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
         else:
             new_args = []
             for arg in node.args:
-                new_args.append(self._manage_node(em, arg, int_parameters, c))
+                new_args.append(self._manage_node(em, arg, int_parameters, c, n_i))
             return em.create_node(node.node_type, tuple(new_args))
 
     def _compile(
@@ -225,13 +229,13 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                     new_action = Action(action.name + '_' + '_'.join(map(str, c)), new_parameters,
                                         action.environment)
                 for precondition in action.preconditions:
-                    new_precondition = self._manage_node(em, precondition, int_parameters, c)
+                    new_precondition = self._manage_node(em, precondition, int_parameters, c, n_i)
                     new_action.add_precondition(new_precondition)
 
                 for effect in action.effects:
-                    new_fnode = self._manage_node(em, effect.fluent, int_parameters, c)
-                    new_value = self._manage_node(em, effect.value, int_parameters, c)
-                    new_condition = self._manage_node(em, effect.condition, int_parameters, c)
+                    new_fnode = self._manage_node(em, effect.fluent, int_parameters, c, n_i)
+                    new_value = self._manage_node(em, effect.value, int_parameters, c, n_i)
+                    new_condition = self._manage_node(em, effect.condition, int_parameters, c, n_i)
                     if effect.is_increase():
                         new_action.add_increase_effect(new_fnode, new_value, new_condition, effect.forall)
                     elif effect.is_decrease():
