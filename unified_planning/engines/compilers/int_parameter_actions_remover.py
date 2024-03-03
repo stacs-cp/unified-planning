@@ -153,7 +153,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             n_i: int
     ) -> Union[List["up.model.fnode.FNode"], "up.model.fnode.FNode"]:
         # mirar si es forall
-        if node.is_exists():
+        if node.is_exists() or node.is_forall():
             vars_domains = []
             new_n_i = n_i
             new_variables = []
@@ -259,11 +259,8 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                                         action.environment)
                 for precondition in action.preconditions:
                     new_precondition = self._manage_node(em, precondition, int_parameters, c, n_i)
-                    print(new_precondition)
-                    print(isinstance(new_precondition, List))
                     if isinstance(new_precondition, List):
                         for p in new_precondition:
-                            print(p)
                             new_action.add_precondition(p)
                     else:
                         new_action.add_precondition(new_precondition)
