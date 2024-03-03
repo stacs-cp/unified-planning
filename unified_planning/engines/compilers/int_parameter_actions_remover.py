@@ -19,7 +19,7 @@ import unified_planning as up
 import unified_planning.engines as engines
 from unified_planning import model
 from collections import OrderedDict
-from typing import OrderedDict as OrderedDictType
+from typing import OrderedDict as OrderedDictType, Union, Iterable
 from unified_planning.engines.mixins.compiler import CompilationKind, CompilerMixin
 from unified_planning.engines.results import CompilerResult
 from unified_planning.model import (
@@ -151,7 +151,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             int_parameters: dict[str, int],
             c: Any,
             n_i: int
-    ) -> List["up.model.fnode.FNode"]:
+    ) -> Union[Iterable["up.model.fnode.FNode"], "up.model.fnode.FNode"]:
         if node.is_exists():
             print(node)
             print(node.variables())
@@ -202,22 +202,22 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                             print(c[int_parameters.get(key)])
                             # fer for ?
 
-            return [(Fluent(new_name, fluent.type, fluent.signature, fluent.environment)(*fluent.signature))]
+            return Fluent(new_name, fluent.type, fluent.signature, fluent.environment)(*fluent.signature)
         elif node.is_variable_exp():
             print("es variable ", node)
         elif node.is_parameter_exp():
             if int_parameters.get(node.parameter().name):
                 new_int = c[int_parameters.get(node.parameter().name)]
-                return [Int(new_int)]
+                return Int(new_int)
             else:
-                return [node]
+                return node
         elif node.is_constant():
-            return [node]
+            return node
         else:
             new_args = []
             for arg in node.args:
                 new_args.append(self._manage_node(em, arg, int_parameters, c, n_i))
-            return [(em.create_node(node.node_type, tuple(new_args)))]
+            return em.create_node(node.node_type, tuple(new_args))
 
     def _compile(
         self,
@@ -263,8 +263,10 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                     new_action = Action(action.name + '_' + '_'.join(map(str, c)), new_parameters,
                                         action.environment)
                 for precondition in action.preconditions:
-                    new_preconditions = self._manage_node(em, precondition, int_parameters, c, n_i)
-                    for new_precondition in new_preconditions:
+                    new_precondition = self._manage_node(em, precondition, int_parameters, c, n_i)
+                    if isinstance(new_precondition, Iterable):
+                        new_action.add_preconditions(new_precondition)
+                    else:
                         new_action.add_precondition(new_precondition)
                 for effect in action.effects:
                     new_fnode = self._manage_node(em, effect.fluent, int_parameters, c, n_i)
