@@ -162,6 +162,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             vars_domains = []
             new_n_i = n_i
             for v in node.variables():
+                # si el tipus es enter!!!!!!
                 print(v)
                 int_parameters[v.name] = new_n_i
                 new_n_i = new_n_i + 1
@@ -182,6 +183,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                     print(arg)
                     # cridar manage node amb el nou c i int_domains
                     new_args.append(self._manage_node(em, arg, int_parameters, new_c, new_n_i))
+                    print("new_args: ", new_args)
                 new_node = em.create_node(node.node_type, tuple(new_args))
                 print("new_node: ", new_node)
                 new_fnodes.append(new_node)
