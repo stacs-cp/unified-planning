@@ -152,7 +152,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             c: Any,
             n_i: int
     ) -> Union[List["up.model.fnode.FNode"], "up.model.fnode.FNode"]:
-        # mirar si es forall
+        # borrar?
         if node.is_exists() or node.is_forall():
             vars_domains = []
             new_n_i = n_i
