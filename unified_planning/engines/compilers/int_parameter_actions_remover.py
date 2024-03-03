@@ -161,33 +161,33 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             print(c)
             vars_domains = []
             new_n_i = n_i
+            new_variables = []
             for v in node.variables():
                 # si el tipus es enter!!!!!!
-                print(v)
-                int_parameters[v.name] = new_n_i
-                new_n_i = new_n_i + 1
-                domain = []
-                for i in range(v.type.lower_bound, v.type.upper_bound + 1):
-                    domain.append(i)
-                vars_domains.append(domain)
-            print(vars_domains)
+                if v.type.is_int_type():
+                    print(v)
+                    int_parameters[v.name] = new_n_i
+                    new_n_i = new_n_i + 1
+                    domain = []
+                    for i in range(v.type.lower_bound, v.type.upper_bound + 1):
+                        domain.append(i)
+                    vars_domains.append(domain)
+                else:
+                    new_variables.append(v)
             new_domains = list(product(*vars_domains))
-            print("new_domains: ", new_domains)
             new_fnodes = []
             for i in new_domains:
-                # i es la tupla de x ex (0,0) si tenim 2 variables
                 new_c = c + i
-                print("new_c", new_c)
                 new_args = []
                 for arg in node.args:
-                    print(arg)
                     # cridar manage node amb el nou c i int_domains
                     new_args.append(self._manage_node(em, arg, int_parameters, new_c, new_n_i))
-                print("new_args: ", new_args)
-                print("node_type: ", node.node_type)
                 # o no crear l'exists un altre cop si es que no hi ha variables normals?
-                new_node = em.create_node(node.node_type, tuple(new_args), tuple(node.variables()))
-                print("new_node: ", new_node)
+                print(new_variables)
+                if new_variables:
+                    new_node = em.create_node(node.node_type, tuple(new_args), tuple(new_variables))
+                else:
+                    new_node = new_args
                 new_fnodes.append(new_node)
             print("new_fnodes: ", new_fnodes)
             return new_fnodes
