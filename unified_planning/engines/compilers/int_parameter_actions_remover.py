@@ -151,7 +151,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             int_parameters: dict[str, int],
             c: Any,
             n_i: int
-    ) -> "up.model.fnode.FNode":
+    ) -> List["up.model.fnode.FNode"]:
         if node.is_exists():
             print(node)
             print(node.variables())
@@ -159,10 +159,11 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             print(int_parameters)
             print(c)
             vars_domains = []
+            new_n_i = n_i
             for v in node.variables():
                 print(v)
-                int_parameters[v.name] = n_i
-                n_i = n_i + 1
+                int_parameters[v.name] = new_n_i
+                new_n_i = new_n_i + 1
                 domain = []
                 for i in range(v.type.lower_bound, v.type.upper_bound + 1):
                     domain.append(i)
@@ -170,16 +171,18 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             print(vars_domains)
             new_domains = list(product(*vars_domains))
             print("new_domains: ", new_domains)
+            new_fnodes = []
             for i in new_domains:
-                new_c = ()
-                #c = c + (*nd,)
+                # i es la tupla de x ex (0,0) si tenim 2 variables
+                new_c = c + i
+                print("new_c", new_c)
+                new_args = []
                 for arg in node.args:
                     print(arg)
                     # cridar manage node amb el nou c i int_domains
-            print(int_parameters, c)
-
-            for a in node.args:
-                print("arg:", a)
+                    new_args.append(self._manage_node(em, arg, int_parameters, new_c, new_n_i))
+                new_fnodes.append(em.create_node(node.node_type, tuple(new_args)))
+            return new_fnodes
         if node.is_fluent_exp():
             print("es fluent!!!", node)
             fluent = node.fluent()
@@ -199,22 +202,22 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                             print(c[int_parameters.get(key)])
                             # fer for ?
 
-            return Fluent(new_name, fluent.type, fluent.signature, fluent.environment)(*fluent.signature)
+            return [Fluent(new_name, fluent.type, fluent.signature, fluent.environment)(*fluent.signature)]
         elif node.is_variable_exp():
             print("es variable ", node)
         elif node.is_parameter_exp():
             if int_parameters.get(node.parameter().name):
                 new_int = c[int_parameters.get(node.parameter().name)]
-                return Int(new_int)
+                return [Int(new_int)]
             else:
-                return node
+                return [node]
         elif node.is_constant():
-            return node
+            return [node]
         else:
             new_args = []
             for arg in node.args:
                 new_args.append(self._manage_node(em, arg, int_parameters, c, n_i))
-            return em.create_node(node.node_type, tuple(new_args))
+            return [em.create_node(node.node_type, tuple(new_args))]
 
     def _compile(
         self,
