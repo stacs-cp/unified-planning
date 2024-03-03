@@ -182,7 +182,10 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                     print(arg)
                     # cridar manage node amb el nou c i int_domains
                     new_args.append(self._manage_node(em, arg, int_parameters, new_c, new_n_i))
-                new_fnodes.append(em.create_node(node.node_type, tuple(new_args)))
+                new_node = em.create_node(node.node_type, tuple(new_args))
+                print("new_node: ", new_node)
+                new_fnodes.append(new_node)
+            print("new_fnodes: ", new_fnodes)
             return new_fnodes
         elif node.is_fluent_exp():
             print("es fluent!!!", node)
