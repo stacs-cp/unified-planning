@@ -197,11 +197,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             print("new_name fluent: ", new_name)
             return Fluent(new_name, fluent.type, fluent.signature, fluent.environment)(*fluent.signature)
         elif node.is_variable_exp():
-            print("es variable ", node)
-            print(int_parameters, c)
-            new_int = c[int_parameters.get(node.variable().name)]
-            print(new_int)
-            return Int(new_int)
+            return node
         elif node.is_parameter_exp():
             if int_parameters.get(node.parameter().name):
                 new_int = c[int_parameters.get(node.parameter().name)]
