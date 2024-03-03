@@ -263,8 +263,8 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                     new_action = Action(action.name + '_' + '_'.join(map(str, c)), new_parameters,
                                         action.environment)
                 for precondition in action.preconditions:
-                    new_precondition = self._manage_node(em, precondition, int_parameters, c, n_i)
-                    new_action.add_precondition(new_precondition)
+                    new_preconditions = self._manage_node(em, precondition, int_parameters, c, n_i)
+                    new_action.add_preconditions(new_preconditions)
 
                 for effect in action.effects:
                     new_fnode = self._manage_node(em, effect.fluent, int_parameters, c, n_i)
