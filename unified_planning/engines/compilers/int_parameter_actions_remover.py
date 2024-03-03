@@ -183,7 +183,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                     new_args.append(self._manage_node(em, arg, int_parameters, new_c, new_n_i))
                 new_fnodes.append(em.create_node(node.node_type, tuple(new_args)))
             return new_fnodes
-        if node.is_fluent_exp():
+        elif node.is_fluent_exp():
             print("es fluent!!!", node)
             fluent = node.fluent()
             new_name = fluent.name
@@ -205,6 +205,10 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             return Fluent(new_name, fluent.type, fluent.signature, fluent.environment)(*fluent.signature)
         elif node.is_variable_exp():
             print("es variable ", node)
+            print(int_parameters, c)
+            new_int = c[int_parameters.get(node.variable().name)]
+            print(new_int)
+            return Int(new_int)
         elif node.is_parameter_exp():
             if int_parameters.get(node.parameter().name):
                 new_int = c[int_parameters.get(node.parameter().name)]
