@@ -154,13 +154,22 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
     ) -> "up.model.fnode.FNode":
         if node.is_exists():
             print(node)
-            print(node.variable())
             print(node.variables())
-            print(node.fluent())
-            print(node.args)
-            print(node.type)
-            print(node.get_contained_names())
-            print(node.constant_value())
+
+            print(int_parameters)
+            print(c)
+            print("variable!!!!!", node.variable())
+            int_parameters[node.variable().name] = n_i
+            n_i = n_i + 1
+            print(int_parameters)
+            domain = []
+            for i in range(node.variable().type.lower_bound, node.variable().type.upper_bound + 1):
+                domain.append(i)
+            c = c + (tuple(domain),)
+
+            print(int_parameters, c)
+            for a in node.args:
+                print("arg:", a)
         if node.is_fluent_exp():
             print("es fluent!!!", node)
             fluent = node.fluent()
@@ -181,19 +190,8 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                             # fer for ?
 
             return Fluent(new_name, fluent.type, fluent.signature, fluent.environment)(*fluent.signature)
-        if node.is_variable_exp():
+        elif node.is_variable_exp():
             print("es variable ", node)
-            print(int_parameters)
-            print(c)
-            print("variable!!!!!", node.variable())
-            int_parameters[node.variable().name] = n_i
-            n_i = n_i + 1
-            print(int_parameters)
-            domain = []
-            for i in range(node.variable().type.lower_bound, node.variable().type.upper_bound + 1):
-                domain.append(i)
-            c = c+(tuple(domain),)
-            return node
         elif node.is_parameter_exp():
             if int_parameters.get(node.parameter().name):
                 new_int = c[int_parameters.get(node.parameter().name)]
