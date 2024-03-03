@@ -185,7 +185,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                     new_args.append(self._manage_node(em, arg, int_parameters, new_c, new_n_i))
                 print("new_args: ", new_args)
                 print("node_type: ", node.node_type)
-                new_node = em.create_node(node.node_type, tuple(new_args), node.variables())
+                new_node = em.create_node(node.node_type, tuple(new_args), tuple(node.variables()))
                 print("new_node: ", new_node)
                 new_fnodes.append(new_node)
             print("new_fnodes: ", new_fnodes)
