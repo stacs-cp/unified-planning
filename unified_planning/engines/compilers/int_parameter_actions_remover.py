@@ -159,12 +159,14 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             int_parameters[node.variable().name] = n_i
             n_i = n_i + 1
             print(int_parameters)
-            domain = []
+            domain = ()
             for i in range(node.variable().type.lower_bound, node.variable().type.upper_bound + 1):
-                domain.append(i)
+                domain = domain + i
             print(domain)
+            print(c+(domain))
 
         if node.is_fluent_exp():
+            print("es fluent!!!", node)
             fluent = node.fluent()
             new_name = fluent.name
             pattern = r'\[(.*?)\]'
