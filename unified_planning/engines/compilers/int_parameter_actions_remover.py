@@ -153,6 +153,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             n_i: int
     ) -> Union[List["up.model.fnode.FNode"], "up.model.fnode.FNode"]:
         # mirar si es forall
+        print("node: ", node)
         if node.is_exists() or node.is_forall():
             vars_domains = []
             new_n_i = n_i
@@ -218,6 +219,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             new_args = []
             for arg in node.args:
                 new_args.append(self._manage_node(em, arg, int_parameters, c, n_i))
+            print(new_args)
             return em.create_node(node.node_type, tuple(new_args))
 
     def _compile(
