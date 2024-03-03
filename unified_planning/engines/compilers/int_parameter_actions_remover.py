@@ -183,10 +183,12 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                     # cridar manage node amb el nou c i int_domains
                     new_args.append(self._manage_node(em, arg, int_parameters, new_c, new_n_i))
                 # o no crear l'exists un altre cop si es que no hi ha variables normals?
-                print(new_variables)
+                print("new_variables", new_variables)
                 if new_variables:
+                    print("ex")
                     new_node = em.create_node(node.node_type, tuple(new_args), tuple(new_variables))
                 else:
+                    print("or")
                     new_node = em.create_node(up.model.operators.OperatorKind.OR, tuple(new_args))
                 new_fnodes.append(new_node)
             print("new_fnodes: ", new_fnodes)
