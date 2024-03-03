@@ -194,6 +194,12 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                         new_name = new_name.replace('[' + ti + ']', str(eval(new_ti)))
             return Fluent(new_name, fluent.type, fluent.signature, fluent.environment)(*fluent.signature)
         elif node.is_variable_exp():
+            print(node)
+            print(node.variable())
+            print(node.variable().type)
+            print(node.variable().name)
+            print(c)
+            print(int_parameters)
             # si es int substituir?
             if node.variable().type.is_int_type():
                 new_int = c[int_parameters.get(node.variable().name)]
