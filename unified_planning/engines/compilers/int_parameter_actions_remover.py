@@ -169,9 +169,10 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                 vars_domains.append(domain)
             print(vars_domains)
             new_domains = list(product(*vars_domains))
-
-            for nd in new_domains:
-                c = c + (*nd,)
+            print("new_domains: ", new_domains)
+            for i in new_domains:
+                new_c = ()
+                #c = c + (*nd,)
                 for arg in node.args:
                     print(arg)
                     # cridar manage node amb el nou c i int_domains
