@@ -156,11 +156,9 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             print(node)
             print(node.args)
             print(node.type)
-            print(node.node_type)
-            print(node.node_type.name)
-            print(node.node_type.value)
             print(node.environment)
             print(node.agent())
+            print(node.get_contained_names())
             print(node.constant_value())
         if node.is_fluent_exp():
             print("es fluent!!!", node)
