@@ -155,6 +155,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
         if node.is_exists():
             print(node)
             print(node.args)
+            print(node.type)
         if node.is_fluent_exp():
             print("es fluent!!!", node)
             fluent = node.fluent()
