@@ -156,6 +156,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
         if node.node_type == up.model.operators.OperatorKind.EXISTS:
             print("exists")
             print(node.args)
+            print(node.variable())
         if node.is_fluent_exp():
             fluent = node.fluent()
             new_name = fluent.name
