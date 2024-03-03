@@ -154,18 +154,12 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
     ) -> Union[List["up.model.fnode.FNode"], "up.model.fnode.FNode"]:
         # mirar si es forall
         if node.is_exists():
-            print(node)
-            print(node.variables())
-
-            print(int_parameters)
-            print(c)
             vars_domains = []
             new_n_i = n_i
             new_variables = []
             for v in node.variables():
                 # si el tipus es enter!!!!!!
                 if v.type.is_int_type():
-                    print(v)
                     int_parameters[v.name] = new_n_i
                     new_n_i = new_n_i + 1
                     domain = []
@@ -183,18 +177,13 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                     # cridar manage node amb el nou c i int_domains
                     new_args.append(self._manage_node(em, arg, int_parameters, new_c, new_n_i))
                 # o no crear l'exists un altre cop si es que no hi ha variables normals?
-                print("new_variables", new_variables)
                 if new_variables:
-                    print("ex")
                     new_node = em.create_node(node.node_type, tuple(new_args), tuple(new_variables))
                 else:
-                    print("or")
                     new_node = em.create_node(up.model.operators.OperatorKind.OR, tuple(new_args))
                 new_fnodes.append(new_node)
-            print("new_fnodes: ", new_fnodes)
             return new_fnodes
         elif node.is_fluent_exp():
-            print("es fluent!!!", node)
             fluent = node.fluent()
             new_name = fluent.name
             pattern = r'\[(.*?)\]'
@@ -203,11 +192,9 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                     if key in ti:
                         new_ti = '[' + ti.replace(key, str(c[int_parameters.get(key)])) + ']'
                         new_name = new_name.replace('[' + ti + ']', str(eval(new_ti)))
-            print("new_name fluent: ", new_name)
             return Fluent(new_name, fluent.type, fluent.signature, fluent.environment)(*fluent.signature)
         elif node.is_variable_exp():
             # si es int substituir?
-            print(node.variable())
             if node.variable().type.is_int_type():
                 new_int = c[int_parameters.get(node.variable().name)]
                 return Int(new_int)
@@ -276,6 +263,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                     print(isinstance(new_precondition, List))
                     if isinstance(new_precondition, List):
                         for p in new_precondition:
+                            print(p)
                             new_action.add_precondition(p)
                     else:
                         new_action.add_precondition(new_precondition)
