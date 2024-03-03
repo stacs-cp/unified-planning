@@ -156,6 +156,11 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             print(node)
             print(node.args)
             print(node.type)
+            print(node.node_type)
+            print(node.parameter())
+            print(node.environment)
+            print(node.agent())
+            print(node.constant_value())
         if node.is_fluent_exp():
             print("es fluent!!!", node)
             fluent = node.fluent()
@@ -166,7 +171,6 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                     if key in ti:
                         print("c: ", c)
                         print(c[int_parameters.get(key)])
-                        print(type(c[int_parameters.get(key)]))
                         if isinstance(c[int_parameters.get(key)], int):
                             print("1: ")
                             new_ti = '[' + ti.replace(key, str(c[int_parameters.get(key)])) + ']'
