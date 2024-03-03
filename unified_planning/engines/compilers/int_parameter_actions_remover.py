@@ -152,14 +152,13 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             c: Any,
             n_i: int
     ) -> "up.model.fnode.FNode":
-        if node.node_type == up.model.operators.OperatorKind.EXISTS:
+        if node.is_variable_exp():
+            print("variable!!!!!", node.variable())
+        if node.is_exists():
             print("exists")
-            print(node.is_variable_exp())
-            print(node.variable.name)
-            print(node.variable().name)
-            print(node.variable().type)
-            int_parameters[node.variable().name] = n_i
-            n_i = n_i + 1
+            print(node)
+            #int_parameters[node.variable().name] = n_i
+            #n_i = n_i + 1
 
         if node.is_fluent_exp():
             fluent = node.fluent()
