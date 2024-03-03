@@ -187,7 +187,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                 if new_variables:
                     new_node = em.create_node(node.node_type, tuple(new_args), tuple(new_variables))
                 else:
-                    new_node = new_args
+                    new_node = em.create_node(up.model.operators.OperatorKind.OR, tuple(new_args))
                 new_fnodes.append(new_node)
             print("new_fnodes: ", new_fnodes)
             return new_fnodes
