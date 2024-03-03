@@ -202,7 +202,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                             print(c[int_parameters.get(key)])
                             # fer for ?
 
-            return [Fluent(new_name, fluent.type, fluent.signature, fluent.environment)(*fluent.signature)]
+            return [(Fluent(new_name, fluent.type, fluent.signature, fluent.environment)(*fluent.signature))]
         elif node.is_variable_exp():
             print("es variable ", node)
         elif node.is_parameter_exp():
@@ -217,7 +217,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             new_args = []
             for arg in node.args:
                 new_args.append(self._manage_node(em, arg, int_parameters, c, n_i))
-            return [em.create_node(node.node_type, tuple(new_args))]
+            return [(em.create_node(node.node_type, tuple(new_args)))]
 
     def _compile(
         self,
