@@ -194,6 +194,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                     if key in ti:
                         new_ti = '[' + ti.replace(key, str(c[int_parameters.get(key)])) + ']'
                         new_name = new_name.replace('[' + ti + ']', str(eval(new_ti)))
+            print("new_name fluent: ", new_name)
             return Fluent(new_name, fluent.type, fluent.signature, fluent.environment)(*fluent.signature)
         elif node.is_variable_exp():
             print("es variable ", node)
