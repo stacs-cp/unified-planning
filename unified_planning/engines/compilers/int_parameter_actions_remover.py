@@ -159,15 +159,17 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             print(int_parameters)
             print(c)
             print("variable!!!!!", node.variable())
-            int_parameters[node.variable().name] = n_i
-            n_i = n_i + 1
-            print(int_parameters)
-            domain = []
-            for i in range(node.variable().type.lower_bound, node.variable().type.upper_bound + 1):
-                domain.append(i)
-            c = c + (tuple(domain),)
+            for v in node.variables():
+                print(v)
+                int_parameters[v.name] = n_i
+                n_i = n_i + 1
+                domain = []
+                for i in range(v.type.lower_bound, v.type.upper_bound + 1):
+                    domain.append(i)
+                c = c + (tuple(domain),)
 
             print(int_parameters, c)
+
             for a in node.args:
                 print("arg:", a)
         if node.is_fluent_exp():
