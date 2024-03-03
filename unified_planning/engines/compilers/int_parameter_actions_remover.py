@@ -158,7 +158,6 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
 
             print(int_parameters)
             print(c)
-            print("variable!!!!!", node.variable())
             for v in node.variables():
                 print(v)
                 int_parameters[v.name] = n_i
