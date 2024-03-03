@@ -152,18 +152,6 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             c: Any,
             n_i: int
     ) -> "up.model.fnode.FNode":
-        if node.is_variable_exp():
-            print("es variable ",node)
-            print(int_parameters)
-            print(c)
-            print("variable!!!!!", node.variable())
-            int_parameters[node.variable().name] = n_i
-            n_i = n_i + 1
-            print(int_parameters)
-            domain = []
-            for i in range(node.variable().type.lower_bound, node.variable().type.upper_bound + 1):
-                domain.append(i)
-            c = c+(tuple(domain),)
 
         if node.is_fluent_exp():
             print("es fluent!!!", node)
@@ -183,8 +171,22 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                         else:
                             print("+1: ")
                             print(c[int_parameters.get(key)])
+                            # fer for ?
 
             return Fluent(new_name, fluent.type, fluent.signature, fluent.environment)(*fluent.signature)
+        if node.is_variable_exp():
+            print("es variable ", node)
+            print(int_parameters)
+            print(c)
+            print("variable!!!!!", node.variable())
+            int_parameters[node.variable().name] = n_i
+            n_i = n_i + 1
+            print(int_parameters)
+            domain = []
+            for i in range(node.variable().type.lower_bound, node.variable().type.upper_bound + 1):
+                domain.append(i)
+            c = c+(tuple(domain),)
+            return node
         elif node.is_parameter_exp():
             if int_parameters.get(node.parameter().name):
                 new_int = c[int_parameters.get(node.parameter().name)]
