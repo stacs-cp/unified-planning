@@ -191,10 +191,6 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             pattern = r'\[(.*?)\]'
             for ti in re.findall(pattern, new_name):
                 for key in int_parameters.keys():
-                    if key == ti:
-                        new_ti = '[' + ti.replace(key, str(c[int_parameters.get(key)])) + ']'
-                        new_name = new_name.replace('[' + ti + ']', str(eval(new_ti)))
-                for key in int_parameters.keys():
                     if key in ti:
                         new_ti = '[' + ti.replace(key, str(c[int_parameters.get(key)])) + ']'
                         new_name = new_name.replace('[' + ti + ']', str(eval(new_ti)))
@@ -265,7 +261,8 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                 for precondition in action.preconditions:
                     new_precondition = self._manage_node(em, precondition, int_parameters, c, n_i)
                     if isinstance(new_precondition, Iterable):
-                        new_action.add_preconditions(new_precondition)
+                        for p in new_precondition:
+                            new_action.add_precondition(p)
                     else:
                         new_action.add_precondition(new_precondition)
                 for effect in action.effects:
