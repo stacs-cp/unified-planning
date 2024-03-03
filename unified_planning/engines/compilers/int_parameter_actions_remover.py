@@ -163,7 +163,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             for i in range(node.variable().type.lower_bound, node.variable().type.upper_bound + 1):
                 domain.append(i)
             print(domain)
-            print(c+(tuple(domain),))
+            c = c+(tuple(domain),)
 
         if node.is_fluent_exp():
             print("es fluent!!!", node)
@@ -173,8 +173,13 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             for ti in re.findall(pattern, new_name):
                 for key in int_parameters.keys():
                     if key in ti:
-                        new_ti = '[' + ti.replace(key, str(c[int_parameters.get(key)])) + ']'
-                        new_name = new_name.replace('[' + ti + ']', str(eval(new_ti)))
+                        print(c[int_parameters.get(key)])
+                        if len(c[int_parameters.get(key)]) > 1:
+                            print("+1: ")
+                        else:
+                            print("1: ")
+                            new_ti = '[' + ti.replace(key, str(c[int_parameters.get(key)])) + ']'
+                            new_name = new_name.replace('[' + ti + ']', str(eval(new_ti)))
             return Fluent(new_name, fluent.type, fluent.signature, fluent.environment)(*fluent.signature)
         elif node.is_parameter_exp():
             if int_parameters.get(node.parameter().name):
