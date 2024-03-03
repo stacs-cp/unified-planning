@@ -153,7 +153,6 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             n_i: int
     ) -> Union[List["up.model.fnode.FNode"], "up.model.fnode.FNode"]:
         # mirar si es forall
-        print("node: ", node)
         if node.is_exists() or node.is_forall():
             vars_domains = []
             new_n_i = n_i
@@ -176,7 +175,6 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                 new_args = []
                 for arg in node.args:
                     new_node = self._manage_node(em, arg, int_parameters, new_c, new_n_i)
-                    print("es llista?????", isinstance(new_node, List))
                     if isinstance(new_node, List):
                         for n in new_node:
                             new_args.append(n)
@@ -199,13 +197,6 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                         new_name = new_name.replace('[' + ti + ']', str(eval(new_ti)))
             return Fluent(new_name, fluent.type, fluent.signature, fluent.environment)(*fluent.signature)
         elif node.is_variable_exp():
-            print(node)
-            print(node.variable())
-            print(node.variable().type)
-            print(node.variable().name)
-            print(c)
-            print(int_parameters)
-            # si es int substituir?
             if node.variable().type.is_int_type():
                 new_int = c[int_parameters.get(node.variable().name)]
                 return Int(new_int)
@@ -223,7 +214,6 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             new_args = []
             for arg in node.args:
                 new_node = self._manage_node(em, arg, int_parameters, c, n_i)
-                print("es llista?????", isinstance(new_node, List))
                 if isinstance(new_node, List):
                     for n in new_node:
                         new_args.append(n)
