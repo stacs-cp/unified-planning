@@ -260,6 +260,8 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                                         action.environment)
                 for precondition in action.preconditions:
                     new_precondition = self._manage_node(em, precondition, int_parameters, c, n_i)
+                    print(new_precondition)
+                    print(isinstance(new_precondition, Iterable))
                     if isinstance(new_precondition, Iterable):
                         for p in new_precondition:
                             new_action.add_precondition(p)
