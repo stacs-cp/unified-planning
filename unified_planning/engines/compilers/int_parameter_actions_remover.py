@@ -151,6 +151,8 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             int_parameters: dict[str, int],
             c: Any
     ) -> "up.model.fnode.FNode":
+        print("node: ", node)
+        print("int_parameters: ", int_parameters)
         if node.is_fluent_exp():
             fluent = node.fluent()
             new_name = fluent.name
