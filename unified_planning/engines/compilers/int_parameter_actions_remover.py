@@ -152,7 +152,9 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             c: Any,
             n_i: int
     ) -> "up.model.fnode.FNode":
-
+        if node.is_exists():
+            print(node)
+            print(node.args)
         if node.is_fluent_exp():
             print("es fluent!!!", node)
             fluent = node.fluent()
