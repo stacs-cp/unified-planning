@@ -153,6 +153,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             n_i: int
     ) -> "up.model.fnode.FNode":
         if node.is_variable_exp():
+            print("es variable ",node)
             print(int_parameters)
             print(c)
             print("variable!!!!!", node.variable())
