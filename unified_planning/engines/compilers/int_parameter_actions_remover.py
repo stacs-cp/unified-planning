@@ -185,6 +185,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                     new_args.append(self._manage_node(em, arg, int_parameters, new_c, new_n_i))
                 print("new_args: ", new_args)
                 print("node_type: ", node.node_type)
+                # o no crear l'exists un altre cop si es que no hi ha variables normals?
                 new_node = em.create_node(node.node_type, tuple(new_args), tuple(node.variables()))
                 print("new_node: ", new_node)
                 new_fnodes.append(new_node)
@@ -203,7 +204,13 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             print("new_name fluent: ", new_name)
             return Fluent(new_name, fluent.type, fluent.signature, fluent.environment)(*fluent.signature)
         elif node.is_variable_exp():
-            return node
+            # si es int substituir?
+            print(node.variable())
+            if node.variable().type.is_int_type():
+                new_int = c[int_parameters.get(node.variable().name)]
+                return Int(new_int)
+            else:
+                return node
         elif node.is_parameter_exp():
             if int_parameters.get(node.parameter().name):
                 new_int = c[int_parameters.get(node.parameter().name)]
