@@ -162,7 +162,6 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             domain = []
             for i in range(node.variable().type.lower_bound, node.variable().type.upper_bound + 1):
                 domain.append(i)
-            print(domain)
             c = c+(tuple(domain),)
 
         if node.is_fluent_exp():
@@ -173,8 +172,10 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             for ti in re.findall(pattern, new_name):
                 for key in int_parameters.keys():
                     if key in ti:
+                        print("c: ", c)
                         print(c[int_parameters.get(key)])
-                        if c[int_parameters.get(key)] is int:
+                        print(type(c[int_parameters.get(key)]))
+                        if c[int_parameters.get(key)] == int:
                             print("1: ")
                             new_ti = '[' + ti.replace(key, str(c[int_parameters.get(key)])) + ']'
                             new_name = new_name.replace('[' + ti + ']', str(eval(new_ti)))
