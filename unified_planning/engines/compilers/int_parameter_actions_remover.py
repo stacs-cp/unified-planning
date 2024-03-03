@@ -168,6 +168,11 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                 c = c + (tuple(domain),)
 
             print(int_parameters, c)
+            combinations = list(product(*c))
+
+            print(combinations)
+            for combination in combinations:
+                pass
 
             for a in node.args:
                 print("arg:", a)
