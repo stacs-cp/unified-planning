@@ -163,7 +163,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             for i in range(node.variable().type.lower_bound, node.variable().type.upper_bound + 1):
                 domain.append(i)
             print(domain)
-            print(c+(tuple(domain)))
+            print(c+(tuple(domain),))
 
         if node.is_fluent_exp():
             print("es fluent!!!", node)
