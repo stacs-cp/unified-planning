@@ -176,6 +176,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                 new_args = []
                 for arg in node.args:
                     new_node = self._manage_node(em, arg, int_parameters, new_c, new_n_i)
+                    print("es llista?????", isinstance(new_node, List))
                     if isinstance(new_node, List):
                         for n in new_node:
                             new_args.append(n)
@@ -221,8 +222,13 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
         else:
             new_args = []
             for arg in node.args:
-                new_args.append(self._manage_node(em, arg, int_parameters, c, n_i))
-            print(new_args)
+                new_node = self._manage_node(em, arg, int_parameters, c, n_i)
+                print("es llista?????", isinstance(new_node, List))
+                if isinstance(new_node, List):
+                    for n in new_node:
+                        new_args.append(n)
+                else:
+                    new_args.append(new_node)
             return em.create_node(node.node_type, tuple(new_args))
 
     def _compile(
