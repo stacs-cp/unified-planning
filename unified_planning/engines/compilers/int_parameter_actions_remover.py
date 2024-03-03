@@ -152,6 +152,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             c: Any,
             n_i: int
     ) -> Union[Iterable["up.model.fnode.FNode"], "up.model.fnode.FNode"]:
+        # mirar si es forall
         if node.is_exists():
             print(node)
             print(node.variables())
@@ -190,12 +191,13 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             pattern = r'\[(.*?)\]'
             for ti in re.findall(pattern, new_name):
                 for key in int_parameters.keys():
-                    if key in ti:
-                        print("c: ", c)
-                        print(c[int_parameters.get(key)])
+                    if key == ti:
                         new_ti = '[' + ti.replace(key, str(c[int_parameters.get(key)])) + ']'
                         new_name = new_name.replace('[' + ti + ']', str(eval(new_ti)))
-
+                for key in int_parameters.keys():
+                    if key in ti:
+                        new_ti = '[' + ti.replace(key, str(c[int_parameters.get(key)])) + ']'
+                        new_name = new_name.replace('[' + ti + ']', str(eval(new_ti)))
             return Fluent(new_name, fluent.type, fluent.signature, fluent.environment)(*fluent.signature)
         elif node.is_variable_exp():
             print("es variable ", node)
