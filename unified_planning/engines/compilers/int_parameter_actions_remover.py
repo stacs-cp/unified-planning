@@ -175,7 +175,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                         print("c: ", c)
                         print(c[int_parameters.get(key)])
                         print(type(c[int_parameters.get(key)]))
-                        if c[int_parameters.get(key)] == int:
+                        if isinstance(c[int_parameters.get(key)], int):
                             print("1: ")
                             new_ti = '[' + ti.replace(key, str(c[int_parameters.get(key)])) + ']'
                             new_name = new_name.replace('[' + ti + ']', str(eval(new_ti)))
