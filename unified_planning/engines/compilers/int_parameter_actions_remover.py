@@ -158,6 +158,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
 
             print(int_parameters)
             print(c)
+            vars_domains = []
             for v in node.variables():
                 print(v)
                 int_parameters[v.name] = n_i
@@ -165,14 +166,11 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                 domain = []
                 for i in range(v.type.lower_bound, v.type.upper_bound + 1):
                     domain.append(i)
-                c = c + (tuple(domain),)
+                vars_domains.append(domain)
+            print(vars_domains)
+            print(list(product(*vars_domains)))
 
             print(int_parameters, c)
-            combinations = list(product(*c))
-
-            print(combinations)
-            for combination in combinations:
-                pass
 
             for a in node.args:
                 print("arg:", a)
