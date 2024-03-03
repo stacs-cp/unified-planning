@@ -193,14 +193,8 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                     if key in ti:
                         print("c: ", c)
                         print(c[int_parameters.get(key)])
-                        if isinstance(c[int_parameters.get(key)], int):
-                            print("1: ")
-                            new_ti = '[' + ti.replace(key, str(c[int_parameters.get(key)])) + ']'
-                            new_name = new_name.replace('[' + ti + ']', str(eval(new_ti)))
-                        else:
-                            print("+1: ")
-                            print(c[int_parameters.get(key)])
-                            # fer for ?
+                        new_ti = '[' + ti.replace(key, str(c[int_parameters.get(key)])) + ']'
+                        new_name = new_name.replace('[' + ti + ']', str(eval(new_ti)))
 
             return Fluent(new_name, fluent.type, fluent.signature, fluent.environment)(*fluent.signature)
         elif node.is_variable_exp():
