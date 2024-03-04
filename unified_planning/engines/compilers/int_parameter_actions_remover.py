@@ -205,8 +205,11 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
         elif node.is_parameter_exp():
             print("parameter: ", node)
             print("int_parameters: ", int_parameters)
+            print(node.parameter().name)
+            print(int_parameters.get(node.parameter().name))
             if int_parameters.get(node.parameter().name):
                 new_int = c[int_parameters.get(node.parameter().name)]
+                print(new_int)
                 return Int(new_int)
             else:
                 return node
