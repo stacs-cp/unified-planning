@@ -152,7 +152,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             c: Any,
             n_i: int
     ) -> Union[List["up.model.fnode.FNode"], "up.model.fnode.FNode"]:
-        # borrar?
+        print("NODE: ", node, node.node_type)
         if node.is_exists() or node.is_forall():
             vars_domains = []
             new_n_i = n_i
@@ -281,6 +281,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                 for effect in action.effects:
                     new_fnode = self._manage_node(em, effect.fluent, int_parameters, c, n_i)
                     new_value = self._manage_node(em, effect.value, int_parameters, c, n_i)
+                    print("condition: ", effect.condition)
                     new_condition = self._manage_node(em, effect.condition, int_parameters, c, n_i)
                     if effect.is_increase():
                         new_action.add_increase_effect(new_fnode, new_value, new_condition, effect.forall)
