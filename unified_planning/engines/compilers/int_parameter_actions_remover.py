@@ -209,7 +209,12 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             else:
                 return node
         elif node.is_constant():
-            return node
+            print("constant: ", node)
+            if int_parameters.get(str(node.constant_value())):
+                new_int = c[int_parameters.get(str(node.constant_value()))]
+                return Int(new_int)
+            else:
+                return node
         else:
             new_args = []
             for arg in node.args:
