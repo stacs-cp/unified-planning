@@ -152,7 +152,6 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             c: Any,
             n_i: int
     ) -> Union[List["up.model.fnode.FNode"], "up.model.fnode.FNode"]:
-        print("NODE: ", node, node.node_type)
         if node.is_exists() or node.is_forall():
             vars_domains = []
             new_n_i = n_i
@@ -203,29 +202,17 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             else:
                 return node
         elif node.is_parameter_exp():
-            print("parameter: ", node)
-            print("int_parameters: ", int_parameters)
-            print(node.parameter().name)
-            print(int_parameters.get(node.parameter().name))
-            if int_parameters.get(node.parameter().name):
+            if int_parameters.get(node.parameter().name) is None:
                 new_int = c[int_parameters.get(node.parameter().name)]
-                print(new_int)
                 return Int(new_int)
             else:
                 return node
         elif node.is_constant():
-            if int_parameters.get(str(node.constant_value())):
-                new_int = c[int_parameters.get(str(node.constant_value()))]
-                return Int(new_int)
-            else:
-                return node
+            return node
         else:
-            print("ELSE")
             new_args = []
             for arg in node.args:
-                print("arg: ", arg)
                 new_node = self._manage_node(em, arg, int_parameters, c, n_i)
-                print("new_node: ", new_node)
                 isinstance(new_node, List)
                 if isinstance(new_node, List):
                     for n in new_node:
@@ -287,9 +274,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                 for effect in action.effects:
                     new_fnode = self._manage_node(em, effect.fluent, int_parameters, c, n_i)
                     new_value = self._manage_node(em, effect.value, int_parameters, c, n_i)
-                    print("condition: ", effect.condition)
                     new_condition = self._manage_node(em, effect.condition, int_parameters, c, n_i)
-                    print("new_condition: ", new_condition)
                     if effect.is_increase():
                         new_action.add_increase_effect(new_fnode, new_value, new_condition, effect.forall)
                     elif effect.is_decrease():
