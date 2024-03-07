@@ -149,43 +149,9 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             em: "up.model.expression.ExpressionManager",
             node: "up.model.fnode.FNode",
             int_parameters: dict[str, int],
-            c: Any,
-            n_i: int
+            c: Any
     ) -> Union[List["up.model.fnode.FNode"], "up.model.fnode.FNode"]:
-        if node.is_exists() or node.is_forall():
-            vars_domains = []
-            new_n_i = n_i
-            new_variables = []
-            for v in node.variables():
-                # si el tipus es enter!!!!!!
-                if v.type.is_int_type():
-                    int_parameters[v.name] = new_n_i
-                    new_n_i = new_n_i + 1
-                    domain = []
-                    for i in range(v.type.lower_bound, v.type.upper_bound + 1):
-                        domain.append(i)
-                    vars_domains.append(domain)
-                else:
-                    new_variables.append(v)
-            new_domains = list(product(*vars_domains))
-            new_fnodes = []
-            for i in new_domains:
-                new_c = c + i
-                new_args = []
-                for arg in node.args:
-                    new_node = self._manage_node(em, arg, int_parameters, new_c, new_n_i)
-                    if isinstance(new_node, List):
-                        for n in new_node:
-                            new_args.append(n)
-                    else:
-                        new_args.append(new_node)
-                # o no crear l'exists un altre cop si es que no hi ha variables normals?
-                if new_variables:
-                    new_fnodes.append(em.create_node(node.node_type, tuple(new_args), tuple(new_variables)))
-                else:
-                    new_fnodes.append(em.create_node(up.model.operators.OperatorKind.OR, tuple(new_args)))
-            return new_fnodes
-        elif node.is_fluent_exp():
+        if node.is_fluent_exp():
             fluent = node.fluent()
             new_name = fluent.name
             pattern = r'\[(.*?)\]'
@@ -213,7 +179,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
         else:
             new_args = []
             for arg in node.args:
-                new_node = self._manage_node(em, arg, int_parameters, c, n_i)
+                new_node = self._manage_node(em, arg, int_parameters, c)
                 isinstance(new_node, List)
                 if isinstance(new_node, List):
                     for n in new_node:
@@ -266,16 +232,16 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                     new_action = Action(action.name + '_' + '_'.join(map(str, c)), new_parameters,
                                         action.environment)
                 for precondition in action.preconditions:
-                    new_precondition = self._manage_node(em, precondition, int_parameters, c, n_i)
+                    new_precondition = self._manage_node(em, precondition, int_parameters, c)
                     if isinstance(new_precondition, List):
                         for p in new_precondition:
                             new_action.add_precondition(p)
                     else:
                         new_action.add_precondition(new_precondition)
                 for effect in action.effects:
-                    new_fnode = self._manage_node(em, effect.fluent, int_parameters, c, n_i)
-                    new_value = self._manage_node(em, effect.value, int_parameters, c, n_i)
-                    new_condition = self._manage_node(em, effect.condition, int_parameters, c, n_i)
+                    new_fnode = self._manage_node(em, effect.fluent, int_parameters, c)
+                    new_value = self._manage_node(em, effect.value, int_parameters, c)
+                    new_condition = self._manage_node(em, effect.condition, int_parameters, c)
                     if effect.is_increase():
                         new_action.add_increase_effect(new_fnode, new_value, new_condition, effect.forall)
                     elif effect.is_decrease():
