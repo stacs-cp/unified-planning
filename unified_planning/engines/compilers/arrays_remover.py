@@ -243,6 +243,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
 
         for action in problem.actions:
             new_action = action.clone()
+            new_action.name = get_fresh_name(new_problem, action.name) # ?
             new_action.clear_preconditions()
             new_action.clear_effects()
 
