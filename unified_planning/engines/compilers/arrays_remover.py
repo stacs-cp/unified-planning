@@ -261,6 +261,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                 else:
                     new_action.add_effect(new_fnode, new_value, new_condition, effect.forall)
             new_problem.add_action(new_action)
+            new_to_old[new_action] = action
 
         for g in problem.goals:
             new_goals = self._get_new_fnodes(new_problem, g)
