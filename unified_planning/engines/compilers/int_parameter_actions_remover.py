@@ -216,11 +216,11 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             int_parameters = {}
             int_domains = []
             n_i = 0
-            save_parameters = []
+            usertype_parameters = []
             for old_parameter in action.parameters:
                 if old_parameter.type.is_user_type():
                     new_parameters.update({old_parameter.name: old_parameter.type})
-                    save_parameters.append(old_parameter)
+                    usertype_parameters.append(old_parameter)
                 else:
                     assert old_parameter.type.is_int_type()
                     int_parameters[old_parameter.name] = n_i
@@ -259,6 +259,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                     else:
                         new_action.add_effect(new_fnode, new_value, new_condition, effect.forall)
                 new_problem.add_action(new_action)
+                save_parameters = [usertype_parameters]
                 for i in range(0, len(c)):
                     name_parameter = list(int_parameters.keys())[i]
                     type_parameter = tm.IntType(c[i], c[i])
