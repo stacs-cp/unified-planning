@@ -245,6 +245,7 @@ class Grounder(engines.engine.Engine, CompilerMixin):
     ):
         engines.engine.Engine.__init__(self)
         CompilerMixin.__init__(self, CompilationKind.GROUNDING)
+        print("grounder")
         self._grounding_actions_map = grounding_actions_map
         self._prune_actions = prune_actions
 
