@@ -287,9 +287,7 @@ def replace_action(
     action_instance: ActionInstance,
     map: Dict["up.model.Action", Optional["up.model.Action"]],
 ) -> Optional[ActionInstance]:
-    print("map: ", map)
     try:
-        print("replace action", map[action_instance.action])
         replaced_action = map[action_instance.action]
     except KeyError:
         raise UPUsageError(
