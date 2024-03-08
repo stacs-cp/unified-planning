@@ -201,9 +201,6 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
         """
         """
         assert isinstance(problem, Problem)
-        grounder_helper = GrounderHelper(
-            problem, self._grounding_actions_map, self._prune_actions
-        )
 
         trace_back_map: Dict[Action, Tuple[Action, List["up.model.fnode.FNode"]]] = {}
 
