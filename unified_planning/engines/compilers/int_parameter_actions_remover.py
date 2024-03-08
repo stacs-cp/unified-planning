@@ -206,6 +206,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
 
         env = problem.environment
         em = env.expression_manager
+        tm = env.type_manager
         new_problem = problem.clone()
         new_problem.name = f"{self.name}_{problem.name}"
         new_problem.clear_actions()
@@ -258,12 +259,17 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                 new_problem.add_action(new_action)
                 print("combinacio: ", c)
                 print(int_parameters)
-                for i in c:
+                save_parameters = []
+                for i in range(0, len(c)):
                     print(i)
-                    #up.model.Parameter("robot", Robot, problem.environment),
-                print("old_action: ", action.name, action.parameters)
+                    name_parameter = list(int_parameters.keys())[0]
+                    type_parameter = tm.IntType(c[i], c[i])
+                    new_parameter = up.model.Parameter(name_parameter, type_parameter, problem.environment)
+                    save_parameters.append(new_parameter)
+                    print(new_parameter)
+                print("old_action: ", action.name, save_parameters)
                 print("new_action: ", new_action.name, list(new_action.parameters))
-                trace_back_map[new_action] = (action, list(new_action.parameters))
+                trace_back_map[new_action] = (action, save_parameters)
 
         return CompilerResult(
             new_problem,
