@@ -259,7 +259,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                     else:
                         new_action.add_effect(new_fnode, new_value, new_condition, effect.forall)
                 new_problem.add_action(new_action)
-                save_parameters = [usertype_parameters]
+                save_parameters = usertype_parameters
                 for i in range(0, len(c)):
                     name_parameter = list(int_parameters.keys())[i]
                     type_parameter = tm.IntType(c[i], c[i])
