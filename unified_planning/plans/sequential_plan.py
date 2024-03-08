@@ -103,6 +103,7 @@ class SequentialPlan(plans.plan.Plan):
         :return: The `SequentialPlan` where every `ActionInstance` is replaced using the given `replace_function`.
         """
         new_ai = []
+        print("ACTIONS: ", self._actions)
         for ai in self._actions:
             replaced_ai = replace_function(ai)
             if replaced_ai is not None:
