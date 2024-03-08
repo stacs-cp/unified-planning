@@ -260,7 +260,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                         new_action.add_effect(new_fnode, new_value, new_condition, effect.forall)
                 new_problem.add_action(new_action)
                 print("inici!!")
-                save_parameters = usertype_parameters
+                save_parameters = []
                 print(save_parameters)
                 for i in range(0, len(c)):
                     name_parameter = list(int_parameters.keys())[i]
@@ -270,7 +270,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                 print("old_action: ", action.name, action.parameters)
                 print("new_action: ", new_action.name, list(new_action.parameters))
                 print("save parameters: ", save_parameters)
-                trace_back_map[new_action] = (action, save_parameters)
+                trace_back_map[new_action] = (action, save_parameters+usertype_parameters)
 
         return CompilerResult(
             new_problem,
