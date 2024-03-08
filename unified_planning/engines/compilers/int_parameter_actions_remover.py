@@ -257,18 +257,15 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                     else:
                         new_action.add_effect(new_fnode, new_value, new_condition, effect.forall)
                 new_problem.add_action(new_action)
-                print("combinacio: ", c)
-                print(int_parameters)
                 save_parameters = []
                 for i in range(0, len(c)):
-                    print(i)
                     name_parameter = list(int_parameters.keys())[0]
                     type_parameter = tm.IntType(c[i], c[i])
                     new_parameter = up.model.Parameter(name_parameter, type_parameter, problem.environment)
                     save_parameters.append(new_parameter)
-                    print(new_parameter)
-                print("old_action: ", action.name, save_parameters)
+                print("old_action: ", action.name, action.parameters)
                 print("new_action: ", new_action.name, list(new_action.parameters))
+                print("save parameters: ", save_parameters)
                 trace_back_map[new_action] = (action, save_parameters)
 
         return CompilerResult(
