@@ -249,6 +249,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                     else:
                         new_action.add_effect(new_fnode, new_value, new_condition, effect.forall)
                 new_problem.add_action(new_action)
+                print("new action and old: ", new_action.name, action.name)
                 new_to_old[new_action] = action
 
         return CompilerResult(
