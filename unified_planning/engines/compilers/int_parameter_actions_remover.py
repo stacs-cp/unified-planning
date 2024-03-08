@@ -249,8 +249,26 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                     else:
                         new_action.add_effect(new_fnode, new_value, new_condition, effect.forall)
                 new_problem.add_action(new_action)
-                print("new action and old: ", new_action.name, action.name)
-                new_to_old[new_action] = action
+                print("new action: ", new_action.name, new_action.parameters)
+                print("old action: ", action.name, action.parameters)
+                old_new_parameters = OrderedDict()
+                i = 0
+                for p in action.parameters:
+                    if p.type.is_int_type():
+                        new_i = combinations[i]
+                        old_new_parameters.update({p.name: Int(new_i)})
+                        i = i+1
+                    else:
+                        old_parameters.update({p.name: p.type})
+                if isinstance(action, InstantaneousAction):
+                    old_new_action = InstantaneousAction(action.name, old_new_parameters, action.environment)
+                elif isinstance(action, DurativeAction):
+                    old_new_action = DurativeAction(action.name, old_new_parameters, action.environment)
+                else:
+                    old_new_action = Action(action.name, old_new_parameters, action.environment)
+                print("new: ", new_action.name, new_action.parameters)
+                print("old: ", old_new_action.name, old_new_action.parameters)
+                new_to_old[new_action] = old_new_action
 
         return CompilerResult(
             new_problem, partial(replace_action, map=new_to_old), self.name
