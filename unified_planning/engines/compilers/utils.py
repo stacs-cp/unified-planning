@@ -288,12 +288,15 @@ def replace_action(
     map: Dict["up.model.Action", Optional["up.model.Action"]],
 ) -> Optional[ActionInstance]:
     try:
+        print("busquem: ", action_instance.action)
+        print("trobem: ", map[action_instance.action])
         replaced_action = map[action_instance.action]
     except KeyError:
         raise UPUsageError(
             "The Action of the given ActionInstance does not have a valid replacement."
         )
     if replaced_action is not None:
+        print("parametres actioninstance: ", replaced_action, action_instance.actual_parameters, action_instance.agent, action_instance.motion_paths,)
         return ActionInstance(
             replaced_action,
             action_instance.actual_parameters,
