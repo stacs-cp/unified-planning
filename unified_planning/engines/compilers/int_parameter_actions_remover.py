@@ -16,6 +16,8 @@
 import re
 from itertools import product
 
+from unified_planning.model.fnode import FNode
+
 from unified_planning.engines.compilers.grounder import GrounderHelper
 
 import unified_planning as up
@@ -257,7 +259,8 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                     else:
                         new_action.add_effect(new_fnode, new_value, new_condition, effect.forall)
                 new_problem.add_action(new_action)
-                trace_back_map[new_action] = (action, list(parameters))
+                print(action, list(action.parameters))
+                trace_back_map[new_action] = (action, list(action.parameters))
 
         return CompilerResult(
             new_problem,
