@@ -53,6 +53,8 @@ class ActionInstance:
         # action es la original
         # params els de la compilada
         int_params = False
+        print(params)
+        print(self._params)
         for p in self._params:
             print("param:", p)
             if p.type.is_int_type():
