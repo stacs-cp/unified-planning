@@ -214,12 +214,10 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             new_parameters = OrderedDict()
             int_parameters = {}
             int_domains = []
-            save_parameters = []
             n_i = 0
             for old_parameter in action.parameters:
                 if old_parameter.type.is_user_type():
                     new_parameters.update({old_parameter.name: old_parameter.type})
-                    save_parameters.append(old_parameter)
                 else:
                     assert old_parameter.type.is_int_type()
                     int_parameters[old_parameter.name] = n_i
@@ -258,9 +256,14 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                     else:
                         new_action.add_effect(new_fnode, new_value, new_condition, effect.forall)
                 new_problem.add_action(new_action)
-                print("old_action: ", action.name, save_parameters)
+                print("combinacio: ", c)
+                print(int_domains)
+                for i in c:
+                    print(i)
+                    #up.model.Parameter("robot", Robot, problem.environment),
+                print("old_action: ", action.name, action.parameters))
                 print("new_action: ", new_action.name, list(new_action.parameters))
-                trace_back_map[new_action] = (action, save_parameters)
+                trace_back_map[new_action] = (action, list(new_action.parameters))
 
         return CompilerResult(
             new_problem,
