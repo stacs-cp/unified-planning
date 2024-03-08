@@ -277,7 +277,6 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                     else:
                         old_new_action.add_effect(ef.fluent, ef.value, ef.condition, ef.forall)
                 new_to_old[new_action] = old_new_action
-                print("changes: ", new_action.name, new_action.parameters, old_new_action.name, old_new_action.parameters)
 
         return CompilerResult(
             new_problem, partial(replace_action, map=new_to_old), self.name

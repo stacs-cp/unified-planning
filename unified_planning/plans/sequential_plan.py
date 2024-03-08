@@ -104,7 +104,6 @@ class SequentialPlan(plans.plan.Plan):
         """
         new_ai = []
         for ai in self._actions:
-            print("old que volem replace: ", ai)
             replaced_ai = replace_function(ai)
             if replaced_ai is not None:
                 new_ai.append(replaced_ai)
