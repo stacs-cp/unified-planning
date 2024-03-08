@@ -250,8 +250,6 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                     else:
                         new_action.add_effect(new_fnode, new_value, new_condition, effect.forall)
                 new_problem.add_action(new_action)
-                print("new action: ", new_action.name, new_action.parameters)
-                print("old action: ", action.name, action.parameters)
                 old_new_parameters = OrderedDict()
                 i = 0
                 for p in action.parameters:
@@ -268,6 +266,8 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                     old_new_action = DurativeAction(action.name, old_new_parameters, action.environment)
                 else:
                     old_new_action = Action(action.name, old_new_parameters, action.environment)
+                old_new_action.preconditions = action.preconditions.copy()
+                old_new_action.effects = action.effects.copy()
                 print("new: ", new_action.name, new_action.parameters)
                 print("old: ", old_new_action.name, old_new_action.parameters)
                 new_to_old[new_action] = old_new_action
