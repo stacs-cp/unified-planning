@@ -15,6 +15,9 @@
 """This module defines the quantifiers remover class."""
 import re
 from itertools import product
+
+from unified_planning.engines.compilers.grounder import GrounderHelper
+
 import unified_planning as up
 import unified_planning.engines as engines
 from unified_planning import model
@@ -40,7 +43,7 @@ from unified_planning.model.walkers import ExpressionQuantifiersRemover
 from unified_planning.engines.compilers.utils import (
     get_fresh_name,
     replace_action,
-    updated_minimize_action_costs,
+    updated_minimize_action_costs, lift_action_instance,
 )
 from typing import Dict, List, Optional, Tuple, Any, OrderedDict
 from functools import partial
@@ -196,11 +199,14 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
         """
         """
         assert isinstance(problem, Problem)
+        grounder_helper = GrounderHelper(
+            problem, self._grounding_actions_map, self._prune_actions
+        )
 
-        new_to_old: Dict[Action, Action] = {}
+        trace_back_map: Dict[Action, Tuple[Action, List["up.model.fnode.FNode"]]] = {}
+
         env = problem.environment
         em = env.expression_manager
-        tm = env.type_manager
         new_problem = problem.clone()
         new_problem.name = f"{self.name}_{problem.name}"
         new_problem.clear_actions()
@@ -210,7 +216,6 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             int_parameters = {}
             int_domains = []
             n_i = 0
-            temp_list_of_converted_parameters = []
             for old_parameter in action.parameters:
                 if old_parameter.type.is_user_type():
                     new_parameters.update({old_parameter.name: old_parameter.type})
@@ -252,32 +257,10 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                     else:
                         new_action.add_effect(new_fnode, new_value, new_condition, effect.forall)
                 new_problem.add_action(new_action)
-                old_new_parameters = OrderedDict()
-                i = 0
-                for p in action.parameters:
-                    if p.type.is_int_type():
-                        new_i = c[i]
-                        old_new_parameters.update({p.name: tm.IntType(new_i, new_i)})
-                        i = i+1
-                    else:
-                        old_new_parameters.update({p.name: p.type})
-                if isinstance(action, InstantaneousAction):
-                    old_new_action = InstantaneousAction(action.name, old_new_parameters, action.environment)
-                elif isinstance(action, DurativeAction):
-                    old_new_action = DurativeAction(action.name, old_new_parameters, action.environment)
-                else:
-                    old_new_action = Action(action.name, old_new_parameters, action.environment)
-                for pre in action.preconditions:
-                    old_new_action.add_precondition(pre)
-                for ef in action.effects:
-                    if ef.is_increase():
-                        old_new_action.add_increase_effect(ef.fluent, ef.value, ef.condition, ef.forall)
-                    elif ef.is_decrease():
-                        old_new_action.add_decrease_effect(ef.fluent, ef.value, ef.condition, ef.forall)
-                    else:
-                        old_new_action.add_effect(ef.fluent, ef.value, ef.condition, ef.forall)
-                new_to_old[new_action] = old_new_action
+                trace_back_map[new_action] = (action, list(parameters))
 
         return CompilerResult(
-            new_problem, partial(replace_action, map=new_to_old), self.name
+            new_problem,
+            partial(lift_action_instance, map=trace_back_map),
+            self.name,
         )
