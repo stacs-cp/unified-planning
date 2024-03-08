@@ -255,7 +255,6 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                 for p in action.parameters:
                     if p.type.is_int_type():
                         new_i = c[i]
-                        print(new_i)
                         old_new_parameters.update({p.name: tm.IntType(new_i, new_i)})
                         i = i+1
                     else:
@@ -268,8 +267,6 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                     old_new_action = Action(action.name, old_new_parameters, action.environment)
                 old_new_action.preconditions = action.preconditions.copy()
                 old_new_action.effects = action.effects.copy()
-                print("new: ", new_action.name, new_action.parameters)
-                print("old: ", old_new_action.name, old_new_action.parameters)
                 new_to_old[new_action] = old_new_action
 
         return CompilerResult(
