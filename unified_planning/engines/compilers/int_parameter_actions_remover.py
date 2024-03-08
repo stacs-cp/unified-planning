@@ -257,7 +257,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                         new_action.add_effect(new_fnode, new_value, new_condition, effect.forall)
                 new_problem.add_action(new_action)
                 print("combinacio: ", c)
-                print(int_domains)
+                print(int_parameters)
                 for i in c:
                     print(i)
                     #up.model.Parameter("robot", Robot, problem.environment),
