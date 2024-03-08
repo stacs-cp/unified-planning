@@ -259,7 +259,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                         old_new_parameters.update({p.name: Int(new_i)})
                         i = i+1
                     else:
-                        old_parameters.update({p.name: p.type})
+                        old_new_parameters.update({p.name: p.type})
                 if isinstance(action, InstantaneousAction):
                     old_new_action = InstantaneousAction(action.name, old_new_parameters, action.environment)
                 elif isinstance(action, DurativeAction):
