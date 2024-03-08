@@ -115,7 +115,6 @@ class TarskiGrounder(Engine, CompilerMixin):
         :return: The resulting `CompilerResult` data structure.
         """
         assert isinstance(problem, Problem)
-        print("bye")
 
         tarski_problem = up.interop.convert_problem_to_tarski(problem)
         actions = None
