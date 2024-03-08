@@ -214,11 +214,6 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             for old_parameter in action.parameters:
                 if old_parameter.type.is_user_type():
                     new_parameters.update({old_parameter.name: old_parameter.type})
-                    temp_list_of_converted_parameters.append(
-                        problem.environment.expression_manager.ObjectExp(
-                            problem.object(old_parameter)
-                        )
-                    )
                 else:
                     assert old_parameter.type.is_int_type()
                     int_parameters[old_parameter.name] = n_i
