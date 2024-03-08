@@ -256,7 +256,8 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                     else:
                         new_action.add_effect(new_fnode, new_value, new_condition, effect.forall)
                 new_problem.add_action(new_action)
-                print(action, list(action.parameters))
+                print("old_action: ", action.name, list(action.parameters))
+                print("new_action: ", new_action.name, list(new_action.parameters))
                 trace_back_map[new_action] = (action, list(action.parameters))
 
         return CompilerResult(
