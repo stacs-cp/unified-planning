@@ -35,6 +35,7 @@ from unified_planning.model import (
     Expression,
     Effect, Fluent,
 )
+from unified_planning.model.type_manager import TypeManager as tm
 from unified_planning.model.problem_kind_versioning import LATEST_PROBLEM_KIND_VERSION
 from unified_planning.model.walkers import ExpressionQuantifiersRemover
 from unified_planning.engines.compilers.utils import (
@@ -256,7 +257,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                 for p in action.parameters:
                     if p.type.is_int_type():
                         new_i = combinations[i]
-                        old_new_parameters.update({p.name: Int(new_i)})
+                        old_new_parameters.update({p.name: tm.IntType(new_i, new_i)})
                         i = i+1
                     else:
                         old_new_parameters.update({p.name: p.type})
