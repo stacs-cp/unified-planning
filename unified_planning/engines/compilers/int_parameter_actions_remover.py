@@ -22,6 +22,7 @@ from collections import OrderedDict
 from typing import OrderedDict as OrderedDictType, Union, Iterable
 from unified_planning.engines.mixins.compiler import CompilationKind, CompilerMixin
 from unified_planning.engines.results import CompilerResult
+from unified_planning.engines.compilers.grounder import Grounder
 from unified_planning.model import (
     Problem,
     InstantaneousAction,
@@ -205,14 +206,23 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
         new_problem.name = f"{self.name}_{problem.name}"
         new_problem.clear_actions()
 
+        grounded_actions_map: Dict[Action, List[Tuple[FNode, ...]]] = {}
+
         for action in problem.actions:
+            grounded_actions_map[action] = []
             new_parameters = OrderedDict()
             int_parameters = {}
             int_domains = []
             n_i = 0
+            temp_list_of_converted_parameters = []
             for old_parameter in action.parameters:
                 if old_parameter.type.is_user_type():
                     new_parameters.update({old_parameter.name: old_parameter.type})
+                    temp_list_of_converted_parameters.append(
+                        problem.environment.expression_manager.ObjectExp(
+                            problem.object(old_parameter)
+                        )
+                    )
                 else:
                     assert old_parameter.type.is_int_type()
                     int_parameters[old_parameter.name] = n_i
@@ -221,6 +231,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                     for i in range(old_parameter.type.lower_bound, old_parameter.type.upper_bound + 1):
                         domain.append(i)
                     int_domains.append(domain)
+
             combinations = list(product(*int_domains))
             for c in combinations:
                 if isinstance(action, InstantaneousAction):
@@ -250,25 +261,22 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                     else:
                         new_action.add_effect(new_fnode, new_value, new_condition, effect.forall)
                 new_problem.add_action(new_action)
-                old_new_parameters = OrderedDict()
                 i = 0
                 for p in action.parameters:
                     if p.type.is_int_type():
                         new_i = c[i]
-                        old_new_parameters.update({p.name: tm.IntType(new_i, new_i)})
+                        temp_list_of_converted_parameters.append(tm.IntType(new_i, new_i))
                         i = i+1
-                    else:
-                        old_new_parameters.update({p.name: p.type})
-                if isinstance(action, InstantaneousAction):
-                    old_new_action = InstantaneousAction(action.name, old_new_parameters, action.environment)
-                elif isinstance(action, DurativeAction):
-                    old_new_action = DurativeAction(action.name, old_new_parameters, action.environment)
-                else:
-                    old_new_action = Action(action.name, old_new_parameters, action.environment)
-                old_new_action.preconditions = action.preconditions.copy()
-                old_new_action.effects = action.effects.copy()
-                new_to_old[new_action] = old_new_action
 
+                new_to_old[new_action] = action
+                grounded_actions_map[action].append(
+                    tuple(temp_list_of_converted_parameters)
+                )
+                print("action: ", action.name)
+                print("grounded actions", grounded_actions_map[action])
+
+        up_grounder = Grounder(grounding_actions_map=grounded_actions_map)
+        up_res = up_grounder.compile(problem, compilation_kind)
         return CompilerResult(
             new_problem, partial(replace_action, map=new_to_old), self.name
         )
