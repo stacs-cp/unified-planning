@@ -35,7 +35,6 @@ from unified_planning.model import (
     Expression,
     Effect, Fluent,
 )
-from unified_planning.model.type_manager import TypeManager as tm
 from unified_planning.model.problem_kind_versioning import LATEST_PROBLEM_KIND_VERSION
 from unified_planning.model.walkers import ExpressionQuantifiersRemover
 from unified_planning.engines.compilers.utils import (
@@ -201,6 +200,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
         new_to_old: Dict[Action, Action] = {}
         env = problem.environment
         em = env.expression_manager
+        tm = env.type_manager
         new_problem = problem.clone()
         new_problem.name = f"{self.name}_{problem.name}"
         new_problem.clear_actions()
