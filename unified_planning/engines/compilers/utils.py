@@ -279,10 +279,9 @@ def lift_action_instance(
 
     Where the grounded action is obtained by grounding
     the "original_action" with the specific "parameters"."""
-    print("busquem: ", action_instance.action)
-    print("trobem: ", map[action_instance.action])
+    print("busquem: ", action_instance.action.name)
     lifted_action, parameters = map[action_instance.action]
-    print(lifted_action, parameters)
+    print("trobem: ",lifted_action.name, parameters)
     return ActionInstance(lifted_action, tuple(parameters))
 
 

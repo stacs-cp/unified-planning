@@ -259,7 +259,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                 new_problem.add_action(new_action)
                 save_parameters = []
                 for i in range(0, len(c)):
-                    name_parameter = list(int_parameters.keys())[0]
+                    name_parameter = list(int_parameters.keys())[i]
                     type_parameter = tm.IntType(c[i], c[i])
                     new_parameter = up.model.Parameter(name_parameter, type_parameter, problem.environment)
                     save_parameters.append(new_parameter)
