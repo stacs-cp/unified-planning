@@ -50,8 +50,8 @@ class ActionInstance:
         self._agent = agent
         self._action = action
         self._params: Tuple["up.model.FNode", ...] = tuple(auto_promote(params))
-        print(action.name, action.parameters)
-        print(self.action.name, self._params)
+        print("old?: ", action.name, action.parameters)
+        print("new?: ", self.action.name, self._params)
         assert len(action.parameters) == len(self._params)
         for param, assigned_value in zip(action.parameters, self._params):
             if not param.type.is_compatible(assigned_value.type):

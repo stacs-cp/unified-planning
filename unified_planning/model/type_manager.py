@@ -99,7 +99,6 @@ class TypeManager:
         :param upper_bound: The integer used as this type's upper bound.
         :return: The retrieved or created `Type`.
         """
-        print(self)
         k = (lower_bound, upper_bound)
         if k in self._ints:
             return self._ints[k]
