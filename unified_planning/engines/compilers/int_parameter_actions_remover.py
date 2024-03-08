@@ -270,7 +270,12 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                 for pre in action.preconditions:
                     old_new_action.add_precondition(pre)
                 for ef in action.effects:
-                    old_new_action.add_effect(ef.timepoint, ef.fluent, ef.value, ef.condition, ef.forall)
+                    if ef.is_increase():
+                        old_new_action.add_increase_effect(ef.fnode, ef.value, ef.condition, ef.forall)
+                    elif ef.is_decrease():
+                        old_new_action.add_decrease_effect(ef.fnode, ef.value, ef.condition, ef.forall)
+                    else:
+                        old_new_action.add_effect(ef.fnode, ef.value, ef.condition, ef.forall)
                 new_to_old[new_action] = old_new_action
 
         return CompilerResult(
