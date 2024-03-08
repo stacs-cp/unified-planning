@@ -256,7 +256,8 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                 i = 0
                 for p in action.parameters:
                     if p.type.is_int_type():
-                        new_i = combinations[i]
+                        new_i = c[i]
+                        print(new_i)
                         old_new_parameters.update({p.name: tm.IntType(new_i, new_i)})
                         i = i+1
                     else:
