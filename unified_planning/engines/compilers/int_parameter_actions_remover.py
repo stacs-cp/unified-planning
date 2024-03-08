@@ -261,7 +261,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                 for i in c:
                     print(i)
                     #up.model.Parameter("robot", Robot, problem.environment),
-                print("old_action: ", action.name, action.parameters))
+                print("old_action: ", action.name, action.parameters)
                 print("new_action: ", new_action.name, list(new_action.parameters))
                 trace_back_map[new_action] = (action, list(new_action.parameters))
 
