@@ -252,6 +252,8 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             res = product(*items_list)
 
             print("res: ", res)
+            for r in res:
+                print(r)
             #
 
             combinations = list(product(*int_domains))
