@@ -357,9 +357,6 @@ class Grounder(engines.engine.Engine, CompilerMixin):
         ) in grounder_helper.get_grounded_actions():
             if new_action is not None:
                 new_problem.add_action(new_action)
-                print("new_action: ", new_action.name, new_action.parameters)
-                print("old_action: ", old_action.name, old_action.parameters)
-                print("parameters: ", parameters, parameters[1])
                 trace_back_map[new_action] = (old_action, list(parameters))
 
         new_problem.clear_quality_metrics()

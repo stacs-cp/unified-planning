@@ -176,11 +176,8 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             else:
                 return node
         elif node.is_parameter_exp():
-            print(node, node.parameter())
             if int_parameters.get(node.parameter().name) is not None:
-                new_int = c[int_parameters.get(node.parameter().name)]
-                print(new_int)
-                return new_int
+                return c[int_parameters.get(node.parameter().name)]
             else:
                 return node
         elif node.is_constant():
@@ -248,7 +245,6 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             res = product(*items_list)
 
             for c in res:
-                print("c: ", c)
                 if isinstance(action, InstantaneousAction):
                     new_action = InstantaneousAction(action.name + '_' + '_'.join(map(str, c)), new_parameters,
                                                      action.environment)
@@ -276,10 +272,6 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                     else:
                         new_action.add_effect(new_fnode, new_value, new_condition, effect.forall)
                 new_problem.add_action(new_action)
-                print("inici!!")
-                print("old_action: ", action.name, action.parameters)
-                print("new_action: ", new_action.name, list(new_action.parameters))
-                print("thiiis: ", c)
                 trace_back_map[new_action] = (action, c)
 
         return CompilerResult(
