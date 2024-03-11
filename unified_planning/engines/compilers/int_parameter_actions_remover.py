@@ -280,7 +280,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                 print("old_action: ", action.name, action.parameters)
                 print("new_action: ", new_action.name, list(new_action.parameters))
                 print("thiiis: ", c)
-                trace_back_map[new_action] = (action, usertype_parameters+c)
+                trace_back_map[new_action] = (action, c)
 
         return CompilerResult(
             new_problem,
