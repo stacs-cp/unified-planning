@@ -33,6 +33,7 @@ from unified_planning.model import (
     DurativeAction,
     Action,
     ProblemKind,
+    Type,
     Oversubscription,
     TemporalOversubscription,
     Object,
@@ -217,12 +218,18 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             int_domains = []
             n_i = 0
             usertype_parameters = []
+            #
+            #type_list: List[Type]
+            #
             for old_parameter in action.parameters:
                 if old_parameter.type.is_user_type():
                     new_parameters.update({old_parameter.name: old_parameter.type})
                     usertype_parameters.append(old_parameter)
                 else:
                     assert old_parameter.type.is_int_type()
+                    #
+                    #type_list.append(old_parameter.type)
+                    #
                     int_parameters[old_parameter.name] = n_i
                     n_i = n_i + 1
                     domain = []
@@ -263,10 +270,8 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                 save_parameters = []
                 print(save_parameters)
                 for i in range(0, len(c)):
-                    name_parameter = list(int_parameters.keys())[i]
-                    type_parameter = tm.IntType(c[i], c[i])
-                    new_parameter = up.model.Parameter(name_parameter, type_parameter, problem.environment)
-                    save_parameters.append(new_parameter)
+                    value = tm.IntType(c[i], c[i])
+                    save_parameters.append(value)
                 print("old_action: ", action.name, action.parameters)
                 print("new_action: ", new_action.name, list(new_action.parameters))
                 print("save parameters: ", save_parameters)
