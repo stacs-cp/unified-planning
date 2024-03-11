@@ -27,6 +27,7 @@ from collections import OrderedDict
 from typing import OrderedDict as OrderedDictType, Union, Iterable
 from unified_planning.engines.mixins.compiler import CompilationKind, CompilerMixin
 from unified_planning.engines.results import CompilerResult
+from unified_planning.model.types import domain_size, domain_item
 from unified_planning.model import (
     Problem,
     InstantaneousAction,
@@ -219,7 +220,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             n_i = 0
             usertype_parameters = []
             #
-            #type_list: List[Type]
+            type_list: List[Type] = []
             #
             for old_parameter in action.parameters:
                 if old_parameter.type.is_user_type():
@@ -228,7 +229,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                 else:
                     assert old_parameter.type.is_int_type()
                     #
-                    #type_list.append(old_parameter.type)
+                    type_list.append(old_parameter.type)
                     #
                     int_parameters[old_parameter.name] = n_i
                     n_i = n_i + 1
@@ -236,6 +237,22 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                     for i in range(old_parameter.type.lower_bound, old_parameter.type.upper_bound + 1):
                         domain.append(i)
                     int_domains.append(domain)
+            #
+            ground_size = 1
+            domain_sizes = []
+            for t in type_list:
+                ds = domain_size(self._problem, t)
+                domain_sizes.append(ds)
+                ground_size *= ds
+            items_list: List[List[FNode]] = []
+            for size, type in zip(domain_sizes, type_list):
+                items_list.append(
+                    [domain_item(self._problem, type, j) for j in range(size)]
+                )
+            res = product(*items_list)
+
+            print("res: ", res)
+            #
 
             combinations = list(product(*int_domains))
             for c in combinations:
