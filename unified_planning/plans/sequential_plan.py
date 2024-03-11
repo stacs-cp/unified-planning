@@ -110,6 +110,7 @@ class SequentialPlan(plans.plan.Plan):
         new_env = self._environment
         if len(new_ai) > 0:
             new_env = new_ai[0].action.environment
+        print("new_ai", new_ai)
         return SequentialPlan(new_ai, new_env)
 
     def _to_partial_order_plan(
