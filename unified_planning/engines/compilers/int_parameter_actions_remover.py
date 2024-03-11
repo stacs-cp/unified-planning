@@ -179,7 +179,8 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             print(node, node.parameter())
             if int_parameters.get(node.parameter().name) is not None:
                 new_int = c[int_parameters.get(node.parameter().name)]
-                return Int(new_int)
+                print(new_int)
+                return new_int
             else:
                 return node
         elif node.is_constant():
