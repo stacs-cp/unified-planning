@@ -228,16 +228,10 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                     usertype_parameters.append(old_parameter)
                 else:
                     assert old_parameter.type.is_int_type()
-                    #
                     type_list.append(old_parameter.type)
-                    #
                     int_parameters[old_parameter.name] = n_i
                     n_i = n_i + 1
-                    domain = []
-                    for i in range(old_parameter.type.lower_bound, old_parameter.type.upper_bound + 1):
-                        domain.append(i)
-                    int_domains.append(domain)
-            #
+
             ground_size = 1
             domain_sizes = []
             for t in type_list:
@@ -251,11 +245,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                 )
             res = product(*items_list)
 
-            for r in res:
-                print("r: ", r)
-            #
-            combinations = list(product(*int_domains))
-            for c in combinations:
+            for c in res:
                 print("c: ", c)
                 if isinstance(action, InstantaneousAction):
                     new_action = InstantaneousAction(action.name + '_' + '_'.join(map(str, c)), new_parameters,
@@ -293,6 +283,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                 print("old_action: ", action.name, action.parameters)
                 print("new_action: ", new_action.name, list(new_action.parameters))
                 print("save parameters: ", save_parameters)
+                print("thiiis: ", c)
                 trace_back_map[new_action] = (action, usertype_parameters+save_parameters)
 
         return CompilerResult(
