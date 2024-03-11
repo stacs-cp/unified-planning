@@ -347,7 +347,6 @@ class Grounder(engines.engine.Engine, CompilerMixin):
             problem, self._grounding_actions_map, self._prune_actions
         )
         trace_back_map: Dict[Action, Tuple[Action, List[FNode]]] = {}
-        print("hola")
         new_problem = problem.clone()
         new_problem.name = f"{self.name}_{problem.name}"
         new_problem.clear_actions()
@@ -360,7 +359,7 @@ class Grounder(engines.engine.Engine, CompilerMixin):
                 new_problem.add_action(new_action)
                 print("new_action: ", new_action.name, new_action.parameters)
                 print("old_action: ", old_action.name, old_action.parameters)
-                print("parameters: ", parameters)
+                print("parameters: ", parameters, parameters[0].type)
                 trace_back_map[new_action] = (old_action, list(parameters))
 
         new_problem.clear_quality_metrics()
