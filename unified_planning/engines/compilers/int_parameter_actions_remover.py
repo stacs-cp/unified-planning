@@ -251,13 +251,12 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                 )
             res = product(*items_list)
 
-            print("res: ", res)
             for r in res:
-                print(r)
+                print("r: ", r)
             #
-
             combinations = list(product(*int_domains))
             for c in combinations:
+                print("c: ", c)
                 if isinstance(action, InstantaneousAction):
                     new_action = InstantaneousAction(action.name + '_' + '_'.join(map(str, c)), new_parameters,
                                                      action.environment)
