@@ -752,6 +752,8 @@ class ExpressionManager(object):
         :param right: The right side of the ``==``.
         :return: The created ``Equals`` expression.
         """
+        print(type(left) is list)
+        print(type(right) is list)
         if type(left) is list:
             left = [left]
         if type(right) is list:
