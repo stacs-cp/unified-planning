@@ -208,6 +208,7 @@ class ExpressionManager(object):
         """
         content = up.model.fnode.FNodeContent(node_type, args, payload)
         res = self.expressions.get(content, None)
+        print("res: ", res)
         if res is not None:
             return res
         else:
@@ -215,6 +216,7 @@ class ExpressionManager(object):
                 a.environment == self.environment for a in args
             ), "2 FNode in the same expression have different environments"
             n = up.model.fnode.FNode(content, self._next_free_id, self.environment)
+            print("n: ", n)
             self._next_free_id += 1
             self.expressions[content] = n
             self.environment.type_checker.get_type(n)
