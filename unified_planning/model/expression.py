@@ -208,6 +208,7 @@ class ExpressionManager(object):
         """
         content = up.model.fnode.FNodeContent(node_type, args, payload)
         res = self.expressions.get(content, None)
+        print("node_type: ", node_type)
         print("res: ", res)
         if res is not None:
             return res
