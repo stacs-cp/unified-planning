@@ -279,6 +279,7 @@ class FNode2Protobuf(walkers.DagWalker):
     def walk_operator(
         self, expression: model.FNode, args: List[proto.Expression]
     ) -> proto.Expression:
+        print("walk_operator")
         sub_list = []
         sub_list.append(
             proto.Expression(
