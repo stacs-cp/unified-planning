@@ -55,6 +55,8 @@ def map_operator(op: int) -> str:
         return "up:lt"
     elif op == OperatorKind.EQUALS:
         return "up:equals"
+    if op == OperatorKind.PLUS_BOOL:
+        return "up:plus_bool"
     elif op == OperatorKind.AND:
         return "up:and"
     elif op == OperatorKind.OR:
