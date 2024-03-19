@@ -64,7 +64,7 @@ class Simplifier(walkers.dag.DagWalker):
         return self.walk(expression)
 
     def walk_plus_bool(self, expression: FNode, args: List[FNode]) -> FNode:
-        new_args_plus_bool: OrderedDict[FNode, bool] = OrderedDict()
+        new_args_plus_bool: List[FNode] = list()
         accumulator: int = 0
         print("walk_plus_bool ", expression)
 
