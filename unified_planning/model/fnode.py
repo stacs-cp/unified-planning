@@ -400,6 +400,7 @@ class FNode(object):
     #
 
     def __add__(self, right):
+        print("ADD ", self, right)
         return self._env.expression_manager.Plus(self, right)
 
     def __radd__(self, left):
