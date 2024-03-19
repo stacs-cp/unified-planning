@@ -215,6 +215,7 @@ class ExpressionManager(object):
                 a.environment == self.environment for a in args
             ), "2 FNode in the same expression have different environments"
             n = up.model.fnode.FNode(content, self._next_free_id, self.environment)
+            print("n: ", n)
             self._next_free_id += 1
             self.expressions[content] = n
             self.environment.type_checker.get_type(n)
@@ -656,7 +657,7 @@ class ExpressionManager(object):
         :return: The ``PLUS`` expression created. (like ``a + b + 3``)
         """
         tuple_args = tuple(self.auto_promote(*args))
-
+        print("tuple_args: ", tuple_args)
         if len(tuple_args) == 0:
             return self.Int(0)
         elif len(tuple_args) == 1:
