@@ -69,6 +69,7 @@ class Simplifier(walkers.dag.DagWalker):
 
         # canviar a ints
         for a in args:
+            print(a.is_true(), a.is_false(), a.type)
             if a.is_true():
                 new_args_plus_bool.append(self.manager.Int(1))
             elif a.is_false():
