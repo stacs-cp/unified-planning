@@ -70,6 +70,7 @@ class Simplifier(walkers.dag.DagWalker):
 
         # canviar a ints
         for a in args:
+            print(a, a.is_true())
             if a.is_true():
                 accumulator += 1
             elif a.is_plus_bool():
