@@ -659,7 +659,7 @@ class ExpressionManager(object):
         """
         tuple_args = tuple(self.auto_promote(*args))
         print("tuple_args: ", tuple_args)
-        for a in args:
+        for a in tuple_args:
             print(a, a.type)
         if len(tuple_args) == 0:
             return self.Int(0)
