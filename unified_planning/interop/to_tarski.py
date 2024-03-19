@@ -47,19 +47,6 @@ class TarskiFormulaConverter(walkers.DagWalker):
     ) -> "tarski.syntax.formulas.Formula":
         return self.walk(expression)
 
-    def walk_plus_bool(
-        self,
-        expression: "unified_planning.model.FNode",
-        args: List["tarski.syntax.formulas.Formula"],
-    ) -> "tarski.syntax.formulas.Formula":
-        value = args[0]
-        print("walk_plus_bool in to_tarski")
-        print("expression: ", expression)
-        for a in args:
-            print(a)
-            value += a
-        return value
-
     def walk_and(
         self,
         expression: "unified_planning.model.FNode",
