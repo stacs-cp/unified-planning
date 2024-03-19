@@ -250,6 +250,10 @@ class ConverterToPDDLString(walkers.DagWalker):
         assert len(args) == 0
         return f"{self.get_mangled_name(expression.variable())}"
 
+    def walk_plus_bool(self, expression, args):
+        assert len(args) > 1
+        return f'(+ {" ".join(args)})'
+
     def walk_and(self, expression, args):
         assert len(args) > 1
         return f'(and {" ".join(args)})'

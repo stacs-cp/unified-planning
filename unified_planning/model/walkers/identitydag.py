@@ -69,6 +69,9 @@ class IdentityDagWalker(walkers.dag.DagWalker):
     def walk_plus(self, expression: FNode, args: List[FNode], **kwargs):
         return self.manager.Plus(args)
 
+    def walk_plus_bool(self, expression: FNode, args: List[FNode], **kwargs):
+        return self.manager.PlusBool(args)
+
     def walk_times(self, expression: FNode, args: List[FNode], **kwargs):
         return self.manager.Times(args)
 
