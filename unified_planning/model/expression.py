@@ -207,8 +207,10 @@ class ExpressionManager(object):
         :return: The created expression.
         """
         content = up.model.fnode.FNodeContent(node_type, args, payload)
+        print("content:", content)
         res = self.expressions.get(content, None)
         if res is not None:
+            print("res: ", res)
             return res
         else:
             assert all(
