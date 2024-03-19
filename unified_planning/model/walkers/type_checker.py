@@ -117,7 +117,11 @@ class TypeChecker(walkers.dag.DagWalker):
         self, expression: FNode, args: List["unified_planning.model.types.Type"]
     ) -> Optional["unified_planning.model.types.Type"]:
         assert expression is not None
+        print("walk_bool_to_int")
+        print(expression.args)
+        print(expression.arg(0).is_true(), expression.arg(0).is_false())
         for x in args:
+            print(x)
             if x is None or x != BOOL:
                 return None
         return self.environment.type_manager.IntType(0, len(expression.args))
