@@ -57,9 +57,13 @@ class DagWalker(Walker):
         Note: This function assumes that the results for the children
               are already available.
         """
+        print("compute node")
+        print(expression)
         key = self._get_key(expression, **kwargs)
+        print(key)
         if key not in self.memoization:
             try:
+                print("functions: ", self.functions)
                 f = self.functions[expression.node_type]
             except KeyError:
                 f = self.walk_error
