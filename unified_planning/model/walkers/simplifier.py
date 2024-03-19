@@ -64,12 +64,33 @@ class Simplifier(walkers.dag.DagWalker):
         return self.walk(expression)
 
     def walk_plus_bool(self, expression: FNode, args: List[FNode]) -> FNode:
+        new_args_plus_bool: OrderedDict[FNode, bool] = OrderedDict()
         accumulator: int = 0
+        print("walk_plus_bool ", expression)
+
+        # canviar a ints
         for a in args:
             if a.is_true():
                 accumulator += 1
+            elif a.is_plus_bool():
+                for s in a.args:
+                    if s.is_true():
+                        accumulator += 1
+                    else:
+                        new_args_plus_bool.append(s)
+            else:
+                new_args_plus_bool.append(a)
 
-        return self.manager.Int(accumulator)
+        print("accumulator ", accumulator)
+        if accumulator != 0:
+            return self.manager.Plus(
+                *new_args_plus_bool, self._number_to_fnode(accumulator)
+            )
+        else:
+            if len(new_args_plus_bool) == 0:
+                return self.manager.Int(0)
+            else:
+                return self.manager.Int(accumulator)
 
     def walk_and(self, expression: FNode, args: List[FNode]) -> FNode:
         if len(args) == 2 and args[0] == args[1]:
