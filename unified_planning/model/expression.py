@@ -218,6 +218,8 @@ class ExpressionManager(object):
             self._next_free_id += 1
             self.expressions[content] = n
             self.environment.type_checker.get_type(n)
+            if n.type.is_int_type():
+                print(n, n.type.lower_bound, n.type.upper_bound)
             return n
 
     def PlusBool(
@@ -657,8 +659,6 @@ class ExpressionManager(object):
         """
         tuple_args = tuple(self.auto_promote(*args))
         print("tuple_args: ", tuple_args)
-        for a in tuple_args:
-            print(a, a.type)
         if len(tuple_args) == 0:
             return self.Int(0)
         elif len(tuple_args) == 1:
