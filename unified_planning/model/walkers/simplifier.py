@@ -384,6 +384,8 @@ class Simplifier(walkers.dag.DagWalker):
                 new_args_plus.append(a)
         # if accumulator != 0 create it as a constant FNode and then add all the non-constant FNodes found
         # else return 0 or all the non-constant FNodes found
+        print("acumulat: ", accumulator)
+        print("new_args_plus: ", new_args_plus)
         if accumulator != 0:
             fnode_acc = self.manager.Plus(
                 *new_args_plus, self._number_to_fnode(accumulator)
