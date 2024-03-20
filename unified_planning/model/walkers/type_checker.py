@@ -267,6 +267,9 @@ class TypeChecker(walkers.dag.DagWalker):
         )
 
     def walk_plus(self, expression, args):
+        print("WALK PLUS TYPE MANAGER")
+        print(expression)
+        print(args)
         has_real = False
         lower = None
         upper = None
