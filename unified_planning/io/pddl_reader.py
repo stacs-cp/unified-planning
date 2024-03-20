@@ -396,6 +396,7 @@ class PDDLReader:
     ) -> up.model.FNode:
         stack = [(var, exp, False)]
         solved: List[up.model.FNode] = []
+        print("parse exp")
         while len(stack) > 0:
             var, exp, status = stack.pop()
             if status:

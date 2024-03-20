@@ -68,7 +68,6 @@ class Simplifier(walkers.dag.DagWalker):
         print(args)
         new_args_plus_bool: List[FNode] = list()
         accumulator: int = 0
-        # divide constant FNode and accumulate their value into accumulator
         for a in args:
             if a.is_true():
                 accumulator += 1
