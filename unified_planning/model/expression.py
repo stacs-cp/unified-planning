@@ -210,7 +210,7 @@ class ExpressionManager(object):
         res = self.expressions.get(content, None)
         if res is not None:
             if res.type.is_int_type():
-                print(res, res.type.lower_bound, res.type.upper_bound)
+                print("res int and bounds: ", res, res.type.lower_bound, res.type.upper_bound)
             return res
         else:
             assert all(
