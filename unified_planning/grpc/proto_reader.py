@@ -214,7 +214,6 @@ class ProtobufReader(Converter):
             if (
                 len(msg.list) == 3
             ):  # Expect something of the form (up:plus (QUALIFIER [CONTAINER]) DELAY)
-                print("proto_reader!")
                 assert (
                     msg.list[0].atom.symbol == "up:plus"
                 ), f"Unexpected expression {msg.list[0].atom.symbol}"
@@ -254,7 +253,6 @@ class ProtobufReader(Converter):
     def _convert_atom(
         self, msg: proto.Atom, problem: Problem
     ) -> Union[model.FNode, model.Fluent, model.Object]:
-        print("convert atom")
         field = msg.WhichOneof("content")
 
         value = getattr(msg, field)
@@ -282,7 +280,6 @@ class ProtobufReader(Converter):
     def _convert_type_declaration(
         self, msg: proto.TypeDeclaration, problem: Problem
     ) -> model.Type:
-        print("convert type declaration")
         if msg.type_name == "up:bool":
             return problem.environment.type_manager.BoolType()
         elif msg.type_name.startswith("up:integer["):
