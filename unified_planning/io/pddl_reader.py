@@ -366,6 +366,7 @@ class PDDLReader:
             "<": self._em.LT,
             "=": self._em.Equals,
             "+": self._em.Plus,
+            "+": self._em.PlusBool,
             "-": self._em.Minus,
             "/": self._em.Div,
             "*": self._em.Times,
