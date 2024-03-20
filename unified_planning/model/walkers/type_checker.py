@@ -117,6 +117,7 @@ class TypeChecker(walkers.dag.DagWalker):
         self, expression: FNode, args: List["unified_planning.model.types.Type"]
     ) -> Optional["unified_planning.model.types.Type"]:
         assert expression is not None
+        print("walk_bool_to_int ", expression)
         for x in args:
             print(x)
             if x is None or x != BOOL:
@@ -267,9 +268,6 @@ class TypeChecker(walkers.dag.DagWalker):
         )
 
     def walk_plus(self, expression, args):
-        print("WALK PLUS TYPE MANAGER")
-        print(expression)
-        print(args)
         has_real = False
         lower = None
         upper = None
