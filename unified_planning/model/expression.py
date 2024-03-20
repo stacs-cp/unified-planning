@@ -209,6 +209,8 @@ class ExpressionManager(object):
         content = up.model.fnode.FNodeContent(node_type, args, payload)
         res = self.expressions.get(content, None)
         if res is not None:
+            if res.type.is_int_type():
+                print(res, res.type.lower_bound, res.type.upper_bound)
             return res
         else:
             assert all(
@@ -218,8 +220,6 @@ class ExpressionManager(object):
             self._next_free_id += 1
             self.expressions[content] = n
             self.environment.type_checker.get_type(n)
-            if n.type.is_int_type():
-                print(n, n.type.lower_bound, n.type.upper_bound)
             return n
 
     def PlusBool(
