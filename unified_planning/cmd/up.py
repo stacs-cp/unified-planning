@@ -34,8 +34,6 @@ def main(args=None):
     parser = create_up_parser()
     parsed_args = parser.parse_args(args)
 
-    print("main up.py")
-
     if parsed_args.mode == "oneshot-planning":
         oneshot_planning(parser, parsed_args)
     elif parsed_args.mode == "anytime-planning":
@@ -57,7 +55,6 @@ def oneshot_planning(
     parser: argparse.ArgumentParser,
     args: argparse.Namespace,
 ):
-    print("oneshot planning up.py")
     original_problem = parse_problem(parser, args)
     problem: AbstractProblem = original_problem
     compilation_kind, compilation_kinds = args.compilation_kind, args.compilation_kinds
@@ -215,7 +212,6 @@ def compile(
     parser: argparse.ArgumentParser,
     args: argparse.Namespace,
 ):
-    print("compile up.py")
     problem = parse_problem(parser, args)
     compilation_kind, compilation_kinds = args.kind, args.kinds
     engine_name = args.engine_name
@@ -252,7 +248,6 @@ def parse_problem(
     parser: argparse.ArgumentParser,
     args: argparse.Namespace,
 ) -> Problem:
-    print("parse problem up.py")
     pddl, anml = args.pddl, args.anml
     if (pddl is None and anml is None) or (pddl is not None and anml is not None):
         parser.error(
