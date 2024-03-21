@@ -657,13 +657,14 @@ class ExpressionManager(object):
             of it, like ``a, b, 3``.
         :return: The ``PLUS`` expression created. (like ``a + b + 3``)
         """
+        print("plus: ", args)
         tuple_args = tuple(self.auto_promote(*args))
-        print("tuple_args: ", tuple_args)
         if len(tuple_args) == 0:
             return self.Int(0)
         elif len(tuple_args) == 1:
             return tuple_args[0]
         else:
+            print("tuple_args: ", tuple_args)
             return self.create_node(node_type=OperatorKind.PLUS, args=tuple_args)
 
     def Minus(self, left: Expression, right: Expression) -> "up.model.fnode.FNode":
