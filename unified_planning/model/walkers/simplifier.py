@@ -68,7 +68,6 @@ class Simplifier(walkers.dag.DagWalker):
         print(args)
         return self.manager.PlusBool(args)
 
-
     def walk_and(self, expression: FNode, args: List[FNode]) -> FNode:
         if len(args) == 2 and args[0] == args[1]:
             return args[0]
@@ -444,4 +443,5 @@ class Simplifier(walkers.dag.DagWalker):
         op.OperatorKind.TIMING_EXP,
     )
     def walk_identity(self, expression: FNode, args: List[FNode]) -> FNode:
+        print("walk_identity")
         return expression
