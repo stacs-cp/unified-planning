@@ -116,7 +116,8 @@ class FNode(object):
         elif self.is_plus():
             return self.get_nary_expression_string(" + ", self.args)
         elif self.is_count():
-            return f"Count ({str(self.arg(0))})"
+            a = ", ".join(str(a) for a in self.args)
+            return f"Count(" + a + ")"
         elif self.is_minus():
             return self.get_nary_expression_string(" - ", self.args)
         elif self.is_times():
