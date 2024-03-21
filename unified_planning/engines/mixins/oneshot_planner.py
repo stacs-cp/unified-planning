@@ -66,6 +66,7 @@ class OneshotPlannerMixin(ABC):
         The only required parameter is `problem` but the planner should warn the user if `heuristic`,
         `timeout` or `output_stream` are not `None` and the planner ignores them.
         """
+        print("SOLVEEEEEE")
         assert isinstance(self, up.engines.engine.Engine)
         problem_kind = problem.kind
         if not self.skip_checks and not self.supports(problem_kind):
