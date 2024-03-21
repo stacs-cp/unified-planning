@@ -227,6 +227,7 @@ class ExpressionManager(object):
     ) -> "up.model.fnode.FNode":
         """
         """
+        print("plus_bool: ", args)
         tuple_args = tuple(self.auto_promote(*args))
 
         if len(tuple_args) == 0:
@@ -234,6 +235,7 @@ class ExpressionManager(object):
         elif len(tuple_args) == 1:
             return tuple_args[0]
         else:
+            print("tuple_args bool: ", tuple_args)
             return self.create_node(node_type=OperatorKind.PLUS_BOOL, args=tuple_args)
 
     def And(
