@@ -25,6 +25,7 @@ from unified_planning.io.anml_grammar import (
     TK_DIV,
     TK_DURATION,
     TK_END,
+    TK_COUNT,
     TK_EQUALS,
     TK_FALSE,
     TK_FORALL,
@@ -130,6 +131,7 @@ class ANMLReader:
             TK_LT: self._em.LT,
             TK_EQUALS: self._em.Equals,
             TK_NOT_EQUALS: (lambda x, y: self._em.Not(self._em.Equals(x, y))),
+            TK_COUNT: self._em.Count,
             TK_PLUS: self._em.Plus,
             TK_MINUS: self._em.Minus,
             TK_DIV: self._em.Div,
@@ -868,6 +870,7 @@ class ANMLReader:
     ) -> "up.model.FNode":
         # A string here means it is a number or a boolean token. To avoid code duplication, just
         # wrap it in a temporary list and let the stack management handle it.
+        print("PARSE EXPRESSION anml_reader")
         if isinstance(expression, str):
             expression = [expression]
         vars = {} if variables is None else variables

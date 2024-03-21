@@ -181,11 +181,9 @@ class TarskiFormulaConverter(walkers.DagWalker):
         expression: "unified_planning.model.FNode",
         args: List["tarski.syntax.formulas.Formula"],
     ) -> "tarski.syntax.formulas.Formula":
-        print("walk_plus (to_tarski)", expression)
         value = args[0]
         for a in args[1:]:
             value = value + a
-        print(value)
         return value
 
     def walk_minus(
