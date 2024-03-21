@@ -394,6 +394,7 @@ class PDDLReader:
         exp: CustomParseResults,
         complete_str: str,
     ) -> up.model.FNode:
+        print("_parse_exp in pddl_reader")
         stack = [(var, exp, False)]
         solved: List[up.model.FNode] = []
         while len(stack) > 0:
