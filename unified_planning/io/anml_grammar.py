@@ -152,9 +152,9 @@ class ANMLGrammar:
         arithmetic_expression = infix_notation(
             boolean_const | float_const | fluent_ref,
             [
-                (one_of([TK_PLUS, TK_MINUS]), 1, OpAssoc.RIGHT),
+                (one_of([TK_PLUS, TK_MINUS, TK_COUNT]), 1, OpAssoc.RIGHT),
                 (one_of([TK_TIMES, TK_DIV]), 2, OpAssoc.LEFT, group_binary),
-                (one_of([TK_PLUS, TK_MINUS]), 2, OpAssoc.LEFT, group_binary),
+                (one_of([TK_PLUS, TK_MINUS, TK_COUNT]), 2, OpAssoc.LEFT, group_binary),
             ],
         )
         relations_expression = infix_notation(
