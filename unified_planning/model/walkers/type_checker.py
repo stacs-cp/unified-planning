@@ -117,10 +117,20 @@ class TypeChecker(walkers.dag.DagWalker):
         self, expression: FNode, args: List["unified_planning.model.types.Type"]
     ) -> Optional["unified_planning.model.types.Type"]:
         assert expression is not None
+        # si es true sumar 1 i si es false sumar 0, si no es res lower_bound += 1 and upper_bound +=1
+        lower = 0
+        upper = 0
         for x in args:
             if x is None or x != BOOL:
                 return None
-        return self.environment.type_manager.IntType(0, len(args))
+            if x is True:
+                upper += 1
+                lower += 1
+            elif x is False:
+                continue
+            else:
+                upper += 1
+        return self.environment.type_manager.IntType(lower, upper)
 
     def walk_fluent_exp(
         self, expression: FNode, args: List["unified_planning.model.types.Type"]
