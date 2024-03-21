@@ -80,6 +80,7 @@ class NamesExtractor(walkers.dag.DagWalker):
         op.OperatorKind.INT_CONSTANT,
         op.OperatorKind.REAL_CONSTANT,
         op.OperatorKind.PLUS,
+        op.OperatorKind.COUNT,
         op.OperatorKind.MINUS,
         op.OperatorKind.TIMES,
         op.OperatorKind.DIV,
