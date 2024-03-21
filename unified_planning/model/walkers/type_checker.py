@@ -117,7 +117,6 @@ class TypeChecker(walkers.dag.DagWalker):
         self, expression: FNode, args: List["unified_planning.model.types.Type"]
     ) -> Optional["unified_planning.model.types.Type"]:
         assert expression is not None
-        # si es true sumar 1 i si es false sumar 0, si no es res lower_bound += 1 and upper_bound +=1
         lower = 0
         upper = 0
         for x in args:
