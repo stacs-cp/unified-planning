@@ -257,7 +257,7 @@ class ConverterToPDDLString(walkers.DagWalker):
         print("walk_plus_bool pddl_writer")
         for arg in args:
             print(arg)
-        print(reduce(lambda x, y: f"(+ {y} {x})", args))
+        print(reduce(lambda x, y: f"(count {y} {x})", args))
         return f'(count {" ".join(args)})'
 
     def walk_and(self, expression, args):
