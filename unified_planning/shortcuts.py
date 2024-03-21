@@ -36,11 +36,11 @@ from unified_planning.plans import PlanKind
 from typing import IO, Any, Iterable, Union, Dict, Optional, Sequence, List
 from fractions import Fraction
 
-def PlusBool(*args: Union[Expression, Iterable[Expression]]) -> FNode:
+def Count(*args: Union[Expression, Iterable[Expression]]) -> FNode:
     """
 
     """
-    return get_environment().expression_manager.PlusBool(*args)
+    return get_environment().expression_manager.Count(*args)
 
 
 def And(*args: Union[BoolExpression, Iterable[BoolExpression]]) -> FNode:

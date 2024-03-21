@@ -81,8 +81,8 @@ def op_to_node_type(op: str) -> OperatorKind:
         return OperatorKind.LE
     elif op == "up:lt":
         return OperatorKind.LT
-    if op == "up:plus_bool":
-        return OperatorKind.PLUS_BOOL
+    if op == "up:count":
+        return OperatorKind.COUNT
     elif op == "up:and":
         return OperatorKind.AND
     elif op == "up:or":

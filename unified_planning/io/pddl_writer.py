@@ -252,9 +252,9 @@ class ConverterToPDDLString(walkers.DagWalker):
         assert len(args) == 0
         return f"{self.get_mangled_name(expression.variable())}"
 
-    def walk_plus_bool(self, expression, args):
+    def walk_count(self, expression, args):
         assert len(args) > 1
-        print("walk_plus_bool pddl_writer")
+        print("walk_count pddl_writer")
         for arg in args:
             print(arg)
         print(reduce(lambda x, y: f"(count {y} {x})", args))

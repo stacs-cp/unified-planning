@@ -115,8 +115,8 @@ class FNode(object):
             return f"Forall ({s}) {str(self.arg(0))}"
         elif self.is_plus():
             return self.get_nary_expression_string(" + ", self.args)
-        elif self.is_plus_bool():
-            return self.get_nary_expression_string(" + ", self.args)
+        elif self.is_count():
+            return f"Count ({str(self.arg(0))})"
         elif self.is_minus():
             return self.get_nary_expression_string(" - ", self.args)
         elif self.is_times():
@@ -291,9 +291,9 @@ class FNode(object):
         """Test whether the expression is the `False` Boolean constant."""
         return self.is_bool_constant() and self.constant_value() == False
 
-    def is_plus_bool(self) -> bool:
-        """Test whether the node is the `PlusBool` operator."""
-        return self.node_type == OperatorKind.PLUS_BOOL
+    def is_count(self) -> bool:
+        """Test whether the node is the `Count` operator."""
+        return self.node_type == OperatorKind.COUNT
 
     def is_and(self) -> bool:
         """Test whether the node is the `And` operator."""

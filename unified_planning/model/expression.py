@@ -222,7 +222,7 @@ class ExpressionManager(object):
             self.environment.type_checker.get_type(n)
             return n
 
-    def PlusBool(
+    def Count(
         self, *args: Union[BoolExpression, Iterable[BoolExpression]]
     ) -> "up.model.fnode.FNode":
         """
@@ -234,7 +234,7 @@ class ExpressionManager(object):
         elif len(tuple_args) == 1:
             return tuple_args[0]
         else:
-            return self.create_node(node_type=OperatorKind.PLUS_BOOL, args=tuple_args)
+            return self.create_node(node_type=OperatorKind.COUNT, args=tuple_args)
 
     def And(
         self, *args: Union[BoolExpression, Iterable[BoolExpression]]

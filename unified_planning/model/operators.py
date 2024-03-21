@@ -22,7 +22,6 @@ class OperatorKind(Enum):
     other fields of the `FNode`.
     """
 
-    PLUS_BOOL = auto()
     AND = auto()
     OR = auto()
     NOT = auto()
@@ -52,11 +51,11 @@ class OperatorKind(Enum):
     SOMETIME_AFTER = auto()
     AT_MOST_ONCE = auto()
     DOT = auto()
+    COUNT = auto()
 
 
 BOOL_OPERATORS = frozenset(
     [
-        OperatorKind.PLUS_BOOL,
         OperatorKind.AND,
         OperatorKind.OR,
         OperatorKind.NOT,
@@ -64,6 +63,7 @@ BOOL_OPERATORS = frozenset(
         OperatorKind.IFF,
         OperatorKind.EXISTS,
         OperatorKind.FORALL,
+        OperatorKind.COUNT,
     ]
 )
 

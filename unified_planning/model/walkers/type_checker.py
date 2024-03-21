@@ -111,7 +111,7 @@ class TypeChecker(walkers.dag.DagWalker):
         return BOOL
 
     @walkers.handles(
-        OperatorKind.PLUS_BOOL
+        OperatorKind.COUNT
     )
     def walk_bool_to_int(
         self, expression: FNode, args: List["unified_planning.model.types.Type"]
