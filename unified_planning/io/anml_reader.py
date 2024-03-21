@@ -870,7 +870,6 @@ class ANMLReader:
     ) -> "up.model.FNode":
         # A string here means it is a number or a boolean token. To avoid code duplication, just
         # wrap it in a temporary list and let the stack management handle it.
-        print("PARSE EXPRESSION anml_reader")
         if isinstance(expression, str):
             expression = [expression]
         vars = {} if variables is None else variables

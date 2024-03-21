@@ -454,6 +454,9 @@ class FNode(object):
     def And(self, *other):
         return self._env.expression_manager.And(self, *other)
 
+    def Count(self, *other):
+        return self._env.expression_manager.Count(self, *other)
+
     def __and__(self, *other):
         return self._env.expression_manager.And(self, *other)
 
