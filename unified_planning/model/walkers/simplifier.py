@@ -64,6 +64,7 @@ class Simplifier(walkers.dag.DagWalker):
         return self.walk(expression)
 
     def walk_count(self, expression: FNode, args: List[FNode]) -> FNode:
+        print("walk_count simplifier")
         new_args: List[FNode] = list()
         for a in args:
             if a.is_true():
@@ -80,7 +81,7 @@ class Simplifier(walkers.dag.DagWalker):
                         new_args.append(s)
             else:
                 new_args.append(a)
-        print(new_args)
+        print("new_args: ", new_args)
         if len(new_args) == 0:
             return self.manager.Int(0)
         else:
