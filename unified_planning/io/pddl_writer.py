@@ -73,6 +73,7 @@ PDDL_KEYWORDS = {
     "or",
     "not",
     "imply",
+    "count",
     "exists",
     "scale-up",
     "scale-down",
@@ -257,7 +258,7 @@ class ConverterToPDDLString(walkers.DagWalker):
         for arg in args:
             print(arg)
         print(reduce(lambda x, y: f"(+ {y} {x})", args))
-        return f'(+ {" ".join(args)})'
+        return f'(count {" ".join(args)})'
 
     def walk_and(self, expression, args):
         assert len(args) > 1
