@@ -443,5 +443,4 @@ class Simplifier(walkers.dag.DagWalker):
         op.OperatorKind.TIMING_EXP,
     )
     def walk_identity(self, expression: FNode, args: List[FNode]) -> FNode:
-        print("walk_identity")
         return expression

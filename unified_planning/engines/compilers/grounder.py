@@ -347,6 +347,7 @@ class Grounder(engines.engine.Engine, CompilerMixin):
             problem, self._grounding_actions_map, self._prune_actions
         )
         trace_back_map: Dict[Action, Tuple[Action, List[FNode]]] = {}
+
         new_problem = problem.clone()
         new_problem.name = f"{self.name}_{problem.name}"
         new_problem.clear_actions()
