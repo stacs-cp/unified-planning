@@ -80,7 +80,7 @@ class Simplifier(walkers.dag.DagWalker):
                         new_args.append(s)
             else:
                 new_args.append(a)
-
+        print(new_args)
         if len(new_args) == 0:
             return self.manager.Int(0)
         else:
