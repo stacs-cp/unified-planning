@@ -259,7 +259,7 @@ class ConverterToPDDLString(walkers.DagWalker):
         new_args = []
         for a in args:
             #new_args.append(f"if (and (imply {a} {True}) (imply {True} {a}) ) (1) (0))")
-            new_args.append(f"(if (True) 1 0)")
+            new_args.append(f"(1)")
         print(new_args)
         return reduce(lambda x, y: f"(+ {y} {x})", new_args)
 
