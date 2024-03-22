@@ -196,7 +196,6 @@ class ConverterToPDDLString(walkers.DagWalker):
 
     def convert(self, expression):
         """Converts the given expression to a PDDL string."""
-        print("expression: ", expression)
         return self.walk(self.simplifier.simplify(expression))
 
     def convert_fraction(self, frac):
@@ -313,10 +312,6 @@ class ConverterToPDDLString(walkers.DagWalker):
         return str(expression.constant_value())
 
     def walk_plus(self, expression, args):
-        print("walk_plus pddl_writer")
-        for arg in args:
-            print(arg)
-        print(reduce(lambda x, y: f"(+ {y} {x})", args))
         assert len(args) > 1
         return reduce(lambda x, y: f"(+ {y} {x})", args)
 
@@ -731,7 +726,6 @@ class PDDLWriter:
         out.write(")\n")
         goals_str: List[str] = []
         for g in (c.simplify() for c in self.problem.goals):
-            print("goal: ", g)
             if g.is_and():
                 goals_str.extend(map(converter.convert, g.args))
             else:

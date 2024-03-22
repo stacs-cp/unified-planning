@@ -209,8 +209,6 @@ class ExpressionManager(object):
         content = up.model.fnode.FNodeContent(node_type, args, payload)
         res = self.expressions.get(content, None)
         if res is not None:
-            if res.type.is_int_type():
-                print("res int and bounds: ", res, res.type.lower_bound, res.type.upper_bound)
             return res
         else:
             assert all(
