@@ -259,7 +259,7 @@ class ConverterToPDDLString(walkers.DagWalker):
         new_args = []
         for a in args:
             #new_args.append(f"if (and (imply {a} {True}) (imply {True} {a}) ) (1) (0))")
-            new_args.append(f"(1)")
+            new_args.append()
         print(new_args)
         return reduce(lambda x, y: f"(+ {y} {x})", new_args)
 
@@ -317,6 +317,9 @@ class ConverterToPDDLString(walkers.DagWalker):
 
     def walk_plus(self, expression, args):
         assert len(args) > 1
+        print("walk_plus")
+        for a in args:
+            print(a, type(a))
         return reduce(lambda x, y: f"(+ {y} {x})", args)
 
     def walk_minus(self, expression, args):
