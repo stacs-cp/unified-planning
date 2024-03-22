@@ -256,9 +256,9 @@ class ConverterToPDDLString(walkers.DagWalker):
     def walk_count(self, expression, args):
         assert len(args) > 1
         # per cada argument mirar si es true, si es true sumar 1 i si es 0 sumar
-        new_args = ()
+        new_args = []
         for a in args:
-            new_args.__add__((1,))
+            new_args.append('1')
             #new_args.append(f"if (and (imply {a} {True}) (imply {True} {a}) ) (1) (0))")
         return reduce(lambda x, y: f"(+ {y} {x})", new_args)
 
