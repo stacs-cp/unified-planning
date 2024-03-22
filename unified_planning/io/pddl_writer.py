@@ -73,7 +73,6 @@ PDDL_KEYWORDS = {
     "or",
     "not",
     "imply",
-    "count",
     "exists",
     "scale-up",
     "scale-down",
@@ -254,8 +253,12 @@ class ConverterToPDDLString(walkers.DagWalker):
 
     def walk_count(self, expression, args):
         assert len(args) > 1
-        print("walk_count pddl_writer")
-        return f'(count {" ".join(args)})'
+        # per cada argument mirar si es true, si es true sumar 1 i si es 0 sumar
+        new_args = []
+        for a in args:
+            new_args.append(f"[1 if (and (imply {a} {True}) (imply {True} {a}) ) else 0")
+        print(new_args)
+        return f'(plus {" ".join(args)})'
 
     def walk_and(self, expression, args):
         assert len(args) > 1
