@@ -85,7 +85,7 @@ class Simplifier(walkers.dag.DagWalker):
         if len(new_args) == 0:
             return self.manager.Int(0)
         else:
-            return self.manager.Count(new_args)
+            return self.manager.Int(0) #Count(new_args)
 
     def walk_and(self, expression: FNode, args: List[FNode]) -> FNode:
         if len(args) == 2 and args[0] == args[1]:
