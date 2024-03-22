@@ -43,6 +43,7 @@ def convert_tarski_formula(
     formula: Union[Formula, Term],
 ) -> "unified_planning.model.FNode":
     """Converts a tarski formula in a unified_planning expression."""
+    print("!!!!!!!!!!! convert_tarski_formula")
     em = environment.expression_manager
     if is_and(formula):
         children = [
