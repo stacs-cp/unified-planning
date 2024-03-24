@@ -259,7 +259,7 @@ class ConverterToPDDLString(walkers.DagWalker):
         # per cada argument mirar si es true, si es true sumar 1 i si es 0 sumar
         new_args = []
         for a in args:
-            i = self.count_functions[-1].split('_')[1]
+            i = self.count_functions[-1]
             self.count_functions.append('count_' + i)
             print(i)
             print(self.count_functions)
