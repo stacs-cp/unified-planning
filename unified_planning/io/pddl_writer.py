@@ -196,7 +196,7 @@ class ConverterToPDDLString(walkers.DagWalker):
         walkers.DagWalker.__init__(self)
         self.get_mangled_name = get_mangled_name
         self.simplifier = environment.simplifier
-        self.count_functions = List[str]
+        self.count_functions = list
 
     def convert(self, expression):
         """Converts the given expression to a PDDL string."""
@@ -260,8 +260,8 @@ class ConverterToPDDLString(walkers.DagWalker):
         new_args = []
         for a in args:
             i = self.count_functions[-1]
-            self.count_functions.append('count_' + i)
             print(i)
+            self.count_functions.append('count_' + i)
             print(self.count_functions)
             new_args.append('(if True 1 0)')
             #new_args.append(f"if (and (imply {a} {True}) (imply {True} {a}) ) (1) (0))")
@@ -859,9 +859,6 @@ class PDDLWriter:
         out = StringIO()
         self._write_plan(plan, out)
         return out.getvalue()
-
-    def get_functions_count(self) -> List[str]:
-        return self.functions_count
 
     def write_domain(self, filename: str):
         """Dumps to file the `PDDL` domain."""
