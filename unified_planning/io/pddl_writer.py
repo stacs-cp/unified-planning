@@ -196,7 +196,7 @@ class ConverterToPDDLString(walkers.DagWalker):
         walkers.DagWalker.__init__(self)
         self.get_mangled_name = get_mangled_name
         self.simplifier = environment.simplifier
-        self.count_functions = list
+        self.count_functions: List[str] = []
 
     def convert(self, expression):
         """Converts the given expression to a PDDL string."""
@@ -259,7 +259,10 @@ class ConverterToPDDLString(walkers.DagWalker):
         # per cada argument mirar si es true, si es true sumar 1 i si es 0 sumar
         new_args = []
         for a in args:
-            i = self.count_functions[-1]
+            if self.count_functions:
+                i = self.count_functions[-1].split('_')[1]
+            else:
+                i = str(0)
             print(i)
             self.count_functions.append('count_' + i)
             print(self.count_functions)
