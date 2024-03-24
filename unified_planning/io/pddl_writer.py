@@ -260,13 +260,14 @@ class ConverterToPDDLString(walkers.DagWalker):
         new_args = []
         for a in args:
             if self.count_functions:
-                i = self.count_functions[-1].split('_')[1]
+                i = int(self.count_functions[-1].split('_')[1]) + 1
             else:
-                i = str(0)
+                i = 0
             print(i)
-            self.count_functions.append('count_' + i)
+            self.count_functions.append('count_' + str(i))
             print(self.count_functions)
-            new_args.append('(if True 1 0)')
+            new_args.append(f'(if ({a}) (count_{i}:=1) (count_{i}:=0))')
+            # if a count_i:=1 count_i:=0
             #new_args.append(f"if (and (imply {a} {True}) (imply {True} {a}) ) (1) (0))")
         return reduce(lambda x, y: f"(+ {y} {x})", new_args)
 
