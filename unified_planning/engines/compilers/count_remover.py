@@ -137,11 +137,20 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
 
     def check_initial_value(
             self, arg: "up.model.fnode.FNode", new_problem: "up.model.Problem") -> Int:
-        if arg.is_fluent_exp():
+        assert arg.type.is_bool_type()
+        if arg.is_true():
+            return Int(1)
+        elif arg.is_false():
+            return Int(0)
+        elif arg.is_fluent_exp():
             fluent = arg.fluent()
             assert fluent.type.is_bool_type()
             return Int(1) if new_problem.initial_value(arg).is_true() else Int(0)
         else:
+            print(arg)
+            print("arguments")
+            for a in arg.args:
+                print(a)
             return Int(0)
 
     def manage_node(
@@ -181,7 +190,6 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                     n_count += 1
 
                 new_args.append(Plus(new_ca_args))
-                # ...
             else:
                 new_args.append(self.manage_node(new_problem, arg, n_count))
         return em.create_node(goal.node_type, tuple(new_args))
