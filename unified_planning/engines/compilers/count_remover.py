@@ -154,12 +154,11 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
 
         for goal in problem.goals:
             print(goal)
-            if goal.is_count():
-                new_goal = []
-                print("es count")
-                print(goal.args)
-                for arg in goal.args:
-                    print(arg)
+            for arg in goal.args:
+                print(arg)
+                if arg.is_count():
+                    print("es count")
+                    print(arg.args)
             else:
                 new_problem.add_goal(goal)
         return CompilerResult(
