@@ -196,7 +196,6 @@ class ConverterToPDDLString(walkers.DagWalker):
         walkers.DagWalker.__init__(self)
         self.get_mangled_name = get_mangled_name
         self.simplifier = environment.simplifier
-        self.count_functions: List[str] = []
 
     def convert(self, expression):
         """Converts the given expression to a PDDL string."""
@@ -257,23 +256,8 @@ class ConverterToPDDLString(walkers.DagWalker):
     def walk_count(self, expression, args):
         # Count(has_pet, (n_pets == 1))
         assert len(args) > 1
-        # per cada argument mirar si es true, si es true sumar 1 i si es 0 sumar
-        new_args = []
-        for a in args:
-            # si el nom ja l'hem guardat
-            if self.count_functions:
-                i = int(self.count_functions[-1].split('_')[1]) + 1
-            else:
-                i = 0
-            print(a)
-            self.count_functions.append('count_' + str(i))
-
-            print(self.count_functions)
-            new_args.append(f'(if ({a}) (= n_pets 1) (= n_pets 0))')
-            #new_args.append(f'(if ({a}) (count_{i}:=1) (count_{i}:=0))')
-            # if a count_i:=1 count_i:=0
-            #new_args.append(f"if (and (imply {a} {True}) (imply {True} {a}) ) (1) (0))")
-        return reduce(lambda x, y: f"(+ {y} {x})", new_args)
+        # arreglar
+        return reduce(lambda x, y: f"(+ {y} {x})", args)
 
     def walk_and(self, expression, args):
         assert len(args) > 1
@@ -543,7 +527,6 @@ class PDDLWriter:
         converter = ConverterToPDDLString(
             self.problem.environment, self._get_mangled_name
         )
-        print(converter.count_functions)
         costs = {}
         metrics = self.problem.quality_metrics
         if len(metrics) == 1:

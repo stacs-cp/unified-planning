@@ -76,7 +76,6 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
         supported_kind.set_problem_type("GENERAL_NUMERIC_PLANNING")
         supported_kind.set_fluents_type("INT_FLUENTS")
         supported_kind.set_fluents_type("REAL_FLUENTS")
-        supported_kind.set_fluents_type("ARRAY_FLUENTS")
         supported_kind.set_fluents_type("OBJECT_FLUENTS")
         supported_kind.set_conditions_kind("NEGATIVE_CONDITIONS")
         supported_kind.set_conditions_kind("DISJUNCTIVE_CONDITIONS")
@@ -158,6 +157,9 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
             if goal.is_count():
                 new_goal = []
                 print("es count")
+                print(goal.args)
+                for arg in goal.args:
+                    print(arg)
             else:
                 new_problem.add_goal(goal)
         return CompilerResult(

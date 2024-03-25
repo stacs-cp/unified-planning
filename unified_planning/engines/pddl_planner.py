@@ -151,7 +151,6 @@ class PDDLPlanner(engines.engine.Engine, mixins.OneshotPlannerMixin):
         output_stream: Optional[Union[Tuple[IO[str], IO[str]], IO[str]]] = None,
     ) -> "up.engines.results.PlanGenerationResult":
         assert isinstance(problem, up.model.Problem)
-        print("SOLVE")
         self._writer = PDDLWriter(
             problem, self._needs_requirements, self._rewrite_bool_assignments
         )
