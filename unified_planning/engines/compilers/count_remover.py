@@ -43,7 +43,7 @@ from unified_planning.engines.compilers.utils import (
 )
 from typing import Dict, List, Optional, Tuple, OrderedDict, Any, Union
 from functools import partial
-from unified_planning.shortcuts import Int, Plus
+from unified_planning.shortcuts import Int, Plus, Not
 import re
 
 class CountRemover(engines.engine.Engine, CompilerMixin):
@@ -139,8 +139,6 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
             self, arg: "up.model.fnode.FNode", new_problem: "up.model.Problem") -> int:
         if arg.is_fluent_exp():
             assert arg.fluent().type.is_bool_type()
-            print("initial_defaults: ", new_problem.initial_defaults)
-            print("initial_values: ", new_problem.initial_values)
             return 1 if new_problem.initial_value(arg.fluent()) else 0
         #
         else:
@@ -168,11 +166,22 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                 for ca in arg.args:
                     print(ca)
                     fluent_name = 'count_' + str(n_count)
+                    print("adding", fluent_name, self.check_initial_value(ca, new_problem))
                     new_problem.add_fluent(fluent_name, tm.IntType(),
                                            default_initial_value=self.check_initial_value(ca, new_problem))
-                    new_ca_args.append(new_problem.fluent(fluent_name))
+                    new_fluent = new_problem.fluent(fluent_name)
+                    new_ca_args.append(new_fluent)
                     # add action
+                    new_action_true = InstantaneousAction("set_true_"+fluent_name)
+                    new_action_true.add_precondition(ca)
+                    new_action_true.add_effect(new_fluent, 1)
 
+                    new_action_false = InstantaneousAction("set_false_"+fluent_name)
+                    new_action_true.add_precondition(Not(ca))
+                    new_action_false.add_effect(fluent_name, 0)
+
+                    new_problem.add_action(new_action_true)
+                    new_problem.add_action(new_action_false)
                     n_count += 1
 
                 new_args.append(Plus(new_ca_args))
