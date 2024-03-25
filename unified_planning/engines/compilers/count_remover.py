@@ -135,13 +135,26 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
     ) -> ProblemKind:
         return problem_kind.clone()
 
+    def check_initial_value(
+            self, arg: "up.model.fnode.FNode", new_problem: "up.model.Problem") -> int:
+        if arg.is_fluent_exp():
+            assert arg.fluent().type.is_bool_type()
+            print(new_problem.initial_defaults)
+            return 1 if new_problem.initial_value(arg.fluent()) else 0
+        #
+        else:
+            return 0
+
     def manage_node(
             self,
-            problem: "up.model.AbstractProblem",
+            new_problem: "up.model.Problem",
             goal: "up.model.fnode.FNode",
+            n_count: int,
     ) -> Union["up.model.fnode.FNode", "up.model.fluent.Fluent", bool]:
-        env = problem.environment
+        env = new_problem.environment
         em = env.expression_manager
+        tm = env.type_manager
+
         print(goal)
         new_args = []
         for arg in goal.args:
@@ -152,9 +165,14 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                 new_args.append(arg)
             elif arg.is_count():
                 print("is count!: ", arg)
+                for ca in arg.args:
+                    self.check_initial_value(ca, new_problem)
+                    new_problem.add_fluent('count_'+str(n_count), tm.IntType(), )
+                    n_count += 1
+
                 # ...
             else:
-                new_args.append(self.manage_node(problem, arg))
+                new_args.append(self.manage_node(new_problem, arg))
         print("node_type: ", goal.node_type)
         print("new args: ", new_args)
         return em.create_node(goal.node_type, tuple(new_args))
@@ -175,12 +193,11 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
         # new_problem.clear_timed_goals()
         # new_problem.clear_quality_metrics()
         new_problem.clear_goals()
-
+        n_count = 0
         for goal in problem.goals:
             new_args = []
 
-            new_goal = self.manage_node(problem, goal)
-
+            new_goal = self.manage_node(new_problem, goal, n_count)
 
             new_problem.add_goal(new_goal)
 
