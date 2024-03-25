@@ -136,13 +136,13 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
         return problem_kind.clone()
 
     def check_initial_value(
-            self, arg: "up.model.fnode.FNode", new_problem: "up.model.Problem") -> int:
+            self, arg: "up.model.fnode.FNode", new_problem: "up.model.Problem") -> Int:
         if arg.is_fluent_exp():
             assert arg.fluent().type.is_bool_type()
-            return 1 if new_problem.initial_value(arg.fluent()) else 0
+            return Int(1) if new_problem.initial_value(arg.fluent()) else Int(0)
         #
         else:
-            return 0
+            return Int(0)
 
     def manage_node(
             self,
