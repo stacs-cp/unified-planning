@@ -159,20 +159,24 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
         new_args = []
         for arg in goal.args:
             print(arg)
-            if arg.is_fluent_exp():
-                new_args.append(arg.fluent())
-            elif arg.is_parameter_exp() or arg.is_constant():
+            if arg.is_fluent_exp() or arg.is_parameter_exp() or arg.is_constant():
                 new_args.append(arg)
             elif arg.is_count():
                 print("is count!: ", arg)
+                new_ca_args = []
                 for ca in arg.args:
-                    self.check_initial_value(ca, new_problem)
-                    new_problem.add_fluent('count_'+str(n_count), tm.IntType(), )
+                    print(ca)
+                    fluent_name = 'count_' + str(n_count)
+                    new_problem.add_fluent(fluent_name, tm.IntType(),
+                                           default_initial_value=self.check_initial_value(ca, new_problem))
+                    new_ca_args.append(new_problem.fluent(fluent_name))
+                    # add action
                     n_count += 1
 
+                new_args.append(Plus(new_ca_args))
                 # ...
             else:
-                new_args.append(self.manage_node(new_problem, arg))
+                new_args.append(self.manage_node(new_problem, arg, n_count))
         print("node_type: ", goal.node_type)
         print("new args: ", new_args)
         return em.create_node(goal.node_type, tuple(new_args))
@@ -195,10 +199,7 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
         new_problem.clear_goals()
         n_count = 0
         for goal in problem.goals:
-            new_args = []
-
             new_goal = self.manage_node(new_problem, goal, n_count)
-
             new_problem.add_goal(new_goal)
 
         return CompilerResult(
