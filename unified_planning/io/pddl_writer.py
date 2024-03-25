@@ -267,7 +267,7 @@ class ConverterToPDDLString(walkers.DagWalker):
             print(i)
             self.count_functions.append('count_' + str(i))
             print(self.count_functions)
-            new_args.append(f'(if ({a}) (n_pets:=1) (n_pets:=0))')
+            new_args.append(f'(if ({a}) (= n_pets 1) (= n_pets 0))')
             #new_args.append(f'(if ({a}) (count_{i}:=1) (count_{i}:=0))')
             # if a count_i:=1 count_i:=0
             #new_args.append(f"if (and (imply {a} {True}) (imply {True} {a}) ) (1) (0))")
