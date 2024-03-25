@@ -41,7 +41,7 @@ from unified_planning.engines.compilers.utils import (
     replace_action,
     updated_minimize_action_costs,
 )
-from typing import Dict, List, Optional, Tuple, OrderedDict, Any
+from typing import Dict, List, Optional, Tuple, OrderedDict, Any, Union
 from functools import partial
 from unified_planning.shortcuts import Int, Plus
 import re
@@ -135,6 +135,30 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
     ) -> ProblemKind:
         return problem_kind.clone()
 
+    def manage_node(
+            self,
+            problem: "up.model.AbstractProblem",
+            goal: "up.model.fnode.FNode",
+    ) -> Union["up.model.fnode.FNode", "up.model.fluent.Fluent", bool]:
+        env = problem.environment
+        em = env.expression_manager
+        print(goal)
+        new_args = []
+        for arg in goal.args:
+            print(arg)
+            if arg.is_fluent_exp():
+                new_args.append(arg.fluent())
+            elif arg.is_parameter_exp() or arg.is_constant():
+                new_args.append(arg)
+            elif arg.is_count():
+                print("is count!: ", arg)
+                # ...
+            else:
+                new_args.append(self.manage_node(problem, arg))
+        print("node_type: ", goal.node_type)
+        print("new args: ", new_args)
+        return em.create_node(goal.node_type, tuple(new_args))
+
     def _compile(
         self,
         problem: "up.model.AbstractProblem",
@@ -146,9 +170,6 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
 
         new_to_old: Dict[Action, Action] = {}
 
-        env = problem.environment
-        em = env.expression_manager
-
         new_problem = problem.clone()
         new_problem.name = f"{self.name}_{problem.name}"
         # new_problem.clear_timed_goals()
@@ -156,24 +177,12 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
         new_problem.clear_goals()
 
         for goal in problem.goals:
-            print(goal)
             new_args = []
-            for arg in goal.args:
-                print(arg.node_type)
-                if arg.is_count():
-                    new_arg = []
-                    print("es count")
-                    print(arg.args)
-                    # crear noves funcions - per cada element
-                    # crear 2 accions per cada funcio
-                    #Plus(new_arg)
-                    new_args.append(new_arg)
-                else:
-                    new_args.append(arg)
-                new_args.append(em.create_node(arg.node_type, tuple(new_args)))
 
-            print(new_args)
-            new_problem.add_goal(new_args)
+            new_goal = self.manage_node(problem, goal)
+
+
+            new_problem.add_goal(new_goal)
 
         return CompilerResult(
             new_problem, partial(replace_action, map=new_to_old), self.name
