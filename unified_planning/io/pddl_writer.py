@@ -390,7 +390,6 @@ class PDDLWriter:
         self.functions_count: List[str] = []
 
     def _write_domain(self, out: IO[str]):
-        print("write domain")
         if self.problem_kind.has_intermediate_conditions_and_effects():
             raise UPProblemDefinitionError(
                 "PDDL does not support ICE.\nICE are Intermediate Conditions and Effects therefore when an Effect (or Condition) are not at StartTIming(0) or EndTIming(0)."
@@ -545,6 +544,7 @@ class PDDLWriter:
         converter = ConverterToPDDLString(
             self.problem.environment, self._get_mangled_name
         )
+        print(converter.count_functions)
         costs = {}
         metrics = self.problem.quality_metrics
         if len(metrics) == 1:
