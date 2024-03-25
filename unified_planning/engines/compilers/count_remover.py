@@ -140,8 +140,6 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
         if arg.is_fluent_exp():
             fluent = arg.fluent()
             assert fluent.type.is_bool_type()
-            print(new_problem.initial_value(arg))
-            print(new_problem.initial_value(fluent))
             return Int(1) if new_problem.initial_value(arg).is_true() else Int(0)
         else:
             return Int(0)
