@@ -139,6 +139,8 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
             self, arg: "up.model.fnode.FNode", new_problem: "up.model.Problem") -> Int:
         if arg.is_fluent_exp():
             assert arg.fluent().type.is_bool_type()
+            print(new_problem.initial_values)
+            print(new_problem.initial_value(arg.fluent()))
             return Int(1) if new_problem.initial_value(arg.fluent()) else Int(0)
         #
         else:
@@ -171,14 +173,15 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                                            default_initial_value=self.check_initial_value(ca, new_problem))
                     new_fluent = new_problem.fluent(fluent_name)
                     new_ca_args.append(new_fluent)
-                    # add action
+
+                    # new actions
                     new_action_true = InstantaneousAction("set_true_"+fluent_name)
                     new_action_true.add_precondition(ca)
-                    new_action_true.add_effect(new_fluent, 1)
+                    new_action_true.add_effect(new_fluent, Int(1))
 
                     new_action_false = InstantaneousAction("set_false_"+fluent_name)
                     new_action_true.add_precondition(Not(ca))
-                    new_action_false.add_effect(fluent_name, 0)
+                    new_action_false.add_effect(fluent_name, Int(0))
 
                     new_problem.add_action(new_action_true)
                     new_problem.add_action(new_action_false)
