@@ -255,6 +255,7 @@ class ConverterToPDDLString(walkers.DagWalker):
         return f"{self.get_mangled_name(expression.variable())}"
 
     def walk_count(self, expression, args):
+        # Count(has_pet, (n_pets == 1))
         assert len(args) > 1
         # per cada argument mirar si es true, si es true sumar 1 i si es 0 sumar
         new_args = []
@@ -264,8 +265,9 @@ class ConverterToPDDLString(walkers.DagWalker):
                 i = int(self.count_functions[-1].split('_')[1]) + 1
             else:
                 i = 0
-            print(i)
+            print(a)
             self.count_functions.append('count_' + str(i))
+
             print(self.count_functions)
             new_args.append(f'(if ({a}) (= n_pets 1) (= n_pets 0))')
             #new_args.append(f'(if ({a}) (count_{i}:=1) (count_{i}:=0))')
@@ -388,6 +390,7 @@ class PDDLWriter:
         self.functions_count: List[str] = []
 
     def _write_domain(self, out: IO[str]):
+        print("write domain")
         if self.problem_kind.has_intermediate_conditions_and_effects():
             raise UPProblemDefinitionError(
                 "PDDL does not support ICE.\nICE are Intermediate Conditions and Effects therefore when an Effect (or Condition) are not at StartTIming(0) or EndTIming(0)."
