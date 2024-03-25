@@ -181,7 +181,7 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
 
                     new_action_false = InstantaneousAction("set_false_"+fluent_name)
                     new_action_true.add_precondition(Not(ca))
-                    new_action_false.add_effect(fluent_name, Int(0))
+                    new_action_false.add_effect(new_fluent, Int(0))
 
                     new_problem.add_action(new_action_true)
                     new_problem.add_action(new_action_false)
