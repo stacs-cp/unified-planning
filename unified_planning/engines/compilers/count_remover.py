@@ -138,8 +138,9 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
     def check_initial_value(
             self, arg: "up.model.fnode.FNode", new_problem: "up.model.Problem") -> Int:
         if arg.is_fluent_exp():
-            assert arg.fluent().type.is_bool_type()
-            return Int(1) if new_problem.initial_value(arg.fluent()).is_true() else Int(0)
+            fluent = arg.fluent()
+            assert fluent.type.is_bool_type()
+            return Int(1) if new_problem.initial_value(fluent(*fluent.signature)).is_true() else Int(0)
         else:
             return Int(0)
 
