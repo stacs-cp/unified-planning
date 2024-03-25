@@ -544,7 +544,6 @@ class PDDLWriter:
         converter = ConverterToPDDLString(
             self.problem.environment, self._get_mangled_name
         )
-        print(converter.count_functions)
         costs = {}
         metrics = self.problem.quality_metrics
         if len(metrics) == 1:
@@ -783,6 +782,7 @@ class PDDLWriter:
                 goals_str.extend(map(converter.convert, g.args))
             else:
                 goals_str.append(converter.convert(g))
+        print(converter.count_functions)
         out.write(f' (:goal (and {" ".join(goals_str)}))\n')
         if len(self.problem.trajectory_constraints) > 0:
             out.write(
