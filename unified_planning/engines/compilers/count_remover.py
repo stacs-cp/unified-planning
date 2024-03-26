@@ -156,7 +156,7 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
         assert arg.type.is_bool_type()
         env = new_problem.environment
         em = env.expression_manager
-        if arg.constant_value():
+        if arg.is_constant():
             return arg
         elif arg.is_fluent_exp():
             fluent = arg.fluent()
