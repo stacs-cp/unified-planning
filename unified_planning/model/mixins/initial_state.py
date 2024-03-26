@@ -57,6 +57,8 @@ class InitialStateMixin:
         :param fluent: The grounded `Fluent` of which the initial value must be set.
         :param value: The `value` assigned in the initial state to the given `fluent`.
         """
+        if fluent.type.is_array_type() and type(value) is list:
+            value = [value]
         fluent_exp, value_exp = self._env.expression_manager.auto_promote(fluent, value)
         assert fluent_exp.is_fluent_exp(), "fluent field must be a fluent"
         if not fluent_exp.type.is_compatible(value_exp.type):
