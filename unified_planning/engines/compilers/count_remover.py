@@ -170,6 +170,7 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
             for a in arg.args:
                 new_args.append(self.decompose_expression(a, new_problem))
             new_fnode = (em.create_node(arg.node_type, tuple(new_args)))
+            print("new_fnode: ", new_fnode)
             print(new_fnode.simplify())
             return Int(1) if new_fnode.simplify() else Int(0)
 
