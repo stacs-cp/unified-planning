@@ -189,7 +189,7 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                     new_problem.add_fluent(fluent_name, tm.IntType(),
                                            default_initial_value=self.check_initial_value(ca, new_problem))
                     new_fluent = new_problem.fluent(fluent_name)
-                    new_ca_args.append(new_fluent)
+                    new_ca_args.append(new_fluent())
 
                     actions = new_problem.actions
                     new_problem.clear_actions()
@@ -201,7 +201,7 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                         new_problem.add_action(new_action)
                         new_to_old[new_action] = action
                     n_count += 1
-
+                print("plus de: ", new_ca_args)
                 new_args.append(em.create_node(OperatorKind.PLUS, tuple(new_ca_args)))
             else:
                 new_args.append(self.manage_node(new_problem, new_to_old, arg, n_count))
