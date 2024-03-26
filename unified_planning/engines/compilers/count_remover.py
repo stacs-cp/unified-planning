@@ -188,7 +188,6 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                     fluent_name = 'count_' + str(n_count)
                     new_problem.add_fluent(fluent_name, tm.IntType(),
                                            default_initial_value=self.check_initial_value(ca, new_problem))
-                    print("new fluent: ", fluent_name, self.check_initial_value(ca, new_problem))
                     new_fluent = new_problem.fluent(fluent_name)
                     new_ca_args.append(new_fluent)
 
