@@ -373,6 +373,8 @@ class MultiAgentProblem(  # type: ignore[misc]
             self._kind.set_conditions_kind("EXISTENTIAL_CONDITIONS")
         if OperatorKind.FORALL in ops:
             self._kind.set_conditions_kind("UNIVERSAL_CONDITIONS")
+        if OperatorKind.COUNT in ops:
+            self._kind.set_conditions_kind("COUNTINGS")
 
     def _update_problem_kind_type(self, type: "up.model.types.Type"):
         if type.is_user_type():
