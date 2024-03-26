@@ -155,6 +155,7 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
     def manage_node(
             self,
             new_problem: "up.model.Problem",
+            new_to_old: Dict[Action, Action],
             goal: "up.model.fnode.FNode",
             n_count: int,
     ) -> Union["up.model.fnode.FNode", "up.model.fluent.Fluent", bool]:
@@ -181,35 +182,25 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                     for action in actions:
                         new_action = action.clone()
                         print(new_action)
+                        new_action.add_effect(new_fluent, Int(1), ca)
+                        new_action.add_effect(new_fluent, Int(0), Not(ca))
 
-                        #new_action.clear_effects()
+                        new_problem.add_action(new_action)
+                        new_to_old[new_action] = action
 
-                        #for effect in action.effects:
-
-                            #if effect.is_increase():
-                            #    new_action.add_increase_effect(new_fnode, new_value, new_condition, effect.forall)
-                            #elif effect.is_decrease():
-                            #    new_action.add_decrease_effect(new_fnode, new_value, new_condition, effect.forall)
-                            #else:
-                            #    new_action.add_effect(new_fnode, new_value, new_condition, effect.forall)
-                        #new_problem.add_action(new_action)
-                        #new_to_old[new_action] = action
-
-                    new_action_true = InstantaneousAction("set_true_"+fluent_name)
-                    new_action_true.add_precondition(ca)
-                    new_action_true.add_effect(new_fluent, Int(1))
-
-                    new_action_false = InstantaneousAction("set_false_"+fluent_name)
-                    new_action_false.add_precondition(Not(ca))
-                    new_action_false.add_effect(new_fluent, Int(0))
-
-                    new_problem.add_action(new_action_true)
-                    new_problem.add_action(new_action_false)
+                    #new_action_true = InstantaneousAction("set_true_"+fluent_name)
+                    #new_action_true.add_precondition(ca)
+                    #new_action_true.add_effect(new_fluent, Int(1))
+                    #new_action_false = InstantaneousAction("set_false_"+fluent_name)
+                    #new_action_false.add_precondition(Not(ca))
+                    #new_action_false.add_effect(new_fluent, Int(0))
+                    #new_problem.add_action(new_action_true)
+                    #new_problem.add_action(new_action_false)
                     n_count += 1
 
                 new_args.append(Plus(new_ca_args))
             else:
-                new_args.append(self.manage_node(new_problem, arg, n_count))
+                new_args.append(self.manage_node(new_problem, new_to_old, arg, n_count))
         return em.create_node(goal.node_type, tuple(new_args))
 
     def _compile(
@@ -230,7 +221,7 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
         new_problem.clear_goals()
         n_count = 0
         for goal in problem.goals:
-            new_goal = self.manage_node(new_problem, goal, n_count)
+            new_goal = self.manage_node(new_problem, new_to_old, goal, n_count)
             new_problem.add_goal(new_goal)
 
         print(problem.goals)
