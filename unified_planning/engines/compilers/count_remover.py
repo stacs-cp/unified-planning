@@ -147,10 +147,7 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
             assert fluent.type.is_bool_type()
             return Int(1) if new_problem.initial_value(arg).is_true() else Int(0)
         else:
-            print(arg)
-            print("arguments")
-            for a in arg.args:
-                print(a)
+            # search initial value?
             return Int(0)
 
     def manage_node(
@@ -176,7 +173,26 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                     new_fluent = new_problem.fluent(fluent_name)
                     new_ca_args.append(new_fluent)
 
-                    # new actions
+                    actions = new_problem.actions
+                    new_problem.clear_actions()
+                    # new conditional effects to the actions
+                    for action in actions:
+                        new_action = action.clone()
+                        print(new_action)
+
+                        #new_action.clear_effects()
+
+                        #for effect in action.effects:
+
+                            #if effect.is_increase():
+                            #    new_action.add_increase_effect(new_fnode, new_value, new_condition, effect.forall)
+                            #elif effect.is_decrease():
+                            #    new_action.add_decrease_effect(new_fnode, new_value, new_condition, effect.forall)
+                            #else:
+                            #    new_action.add_effect(new_fnode, new_value, new_condition, effect.forall)
+                        #new_problem.add_action(new_action)
+                        #new_to_old[new_action] = action
+
                     new_action_true = InstantaneousAction("set_true_"+fluent_name)
                     new_action_true.add_precondition(ca)
                     new_action_true.add_effect(new_fluent, Int(1))
@@ -219,6 +235,7 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
         print(new_problem.goals)
         print("-------")
         print(new_problem.actions)
+
 
         return CompilerResult(
             new_problem, partial(replace_action, map=new_to_old), self.name
