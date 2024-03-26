@@ -149,7 +149,7 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
             assert fluent.type.is_bool_type()
             return Int(1) if new_problem.initial_value(arg).is_true() else Int(0)
         else:
-            # search initial value?
+            print("simplify: ", arg.simplify())
             return Int(0)
 
     def manage_node(
@@ -181,21 +181,11 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                     # new conditional effects to the actions
                     for action in actions:
                         new_action = action.clone()
-                        print(new_action)
                         new_action.add_effect(new_fluent, Int(1), ca)
                         new_action.add_effect(new_fluent, Int(0), Not(ca))
 
                         new_problem.add_action(new_action)
                         new_to_old[new_action] = action
-
-                    #new_action_true = InstantaneousAction("set_true_"+fluent_name)
-                    #new_action_true.add_precondition(ca)
-                    #new_action_true.add_effect(new_fluent, Int(1))
-                    #new_action_false = InstantaneousAction("set_false_"+fluent_name)
-                    #new_action_false.add_precondition(Not(ca))
-                    #new_action_false.add_effect(new_fluent, Int(0))
-                    #new_problem.add_action(new_action_true)
-                    #new_problem.add_action(new_action_false)
                     n_count += 1
 
                 new_args.append(Plus(new_ca_args))
@@ -216,19 +206,11 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
 
         new_problem = problem.clone()
         new_problem.name = f"{self.name}_{problem.name}"
-        # new_problem.clear_timed_goals()
-        # new_problem.clear_quality_metrics()
         new_problem.clear_goals()
         n_count = 0
         for goal in problem.goals:
             new_goal = self.manage_node(new_problem, new_to_old, goal, n_count)
             new_problem.add_goal(new_goal)
-
-        print(problem.goals)
-        print(new_problem.goals)
-        print("-------")
-        print(new_problem.actions)
-
 
         return CompilerResult(
             new_problem, partial(replace_action, map=new_to_old), self.name
