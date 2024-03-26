@@ -32,7 +32,7 @@ from unified_planning.model import (
     Object,
     Variable,
     Expression,
-    Effect,
+    Effect, OperatorKind,
 )
 from unified_planning.model.problem_kind_versioning import LATEST_PROBLEM_KIND_VERSION
 from unified_planning.model.walkers import ExpressionQuantifiersRemover
@@ -202,7 +202,7 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                         new_to_old[new_action] = action
                     n_count += 1
 
-                new_args.append(em.create_node(goal.node_type, tuple(new_ca_args)))
+                new_args.append(em.create_node(OperatorKind.PLUS, tuple(new_ca_args)))
             else:
                 new_args.append(self.manage_node(new_problem, new_to_old, arg, n_count))
         return em.create_node(goal.node_type, tuple(new_args))
