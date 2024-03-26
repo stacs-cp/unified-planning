@@ -199,7 +199,6 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                         new_action = action.clone()
                         new_action.add_effect(new_fluent, Int(1), ca)
                         new_action.add_effect(new_fluent, Int(0), Not(ca))
-
                         new_problem.add_action(new_action)
                         new_to_old[new_action] = action
                     n_count += 1
