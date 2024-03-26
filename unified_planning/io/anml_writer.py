@@ -152,10 +152,6 @@ class ConverterToANMLString(walkers.DagWalker):
         assert len(args) == 0
         return _get_anml_name(expression.variable(), self._names_mapping)
 
-    def walk_count(self, expression, args):
-        assert len(args) > 1
-        return f"(count({', '.join(args)}))"
-
     def walk_and(self, expression, args):
         assert len(args) > 1
         return f'({" and ".join(args)})'

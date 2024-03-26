@@ -210,8 +210,6 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
 
         new_problem = problem.clone()
         new_problem.name = f"{self.name}_{problem.name}"
-        # new_problem.clear_timed_goals()
-        # new_problem.clear_quality_metrics()
         new_problem.clear_fluents()
         new_problem.clear_actions()
         new_problem.clear_goals()
