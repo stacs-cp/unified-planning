@@ -16,9 +16,6 @@
 
 
 from itertools import product
-
-from unified_planning.model.operators import OperatorKind
-
 import unified_planning as up
 import unified_planning.engines as engines
 from unified_planning import model
@@ -205,7 +202,7 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                         new_to_old[new_action] = action
                     n_count += 1
 
-                new_args.append(em.create_node(OperatorKind.PLUS, tuple(new_args)))
+                new_args.append(em.create_node(goal.node_type, tuple(new_ca_args)))
             else:
                 new_args.append(self.manage_node(new_problem, new_to_old, arg, n_count))
         return em.create_node(goal.node_type, tuple(new_args))
