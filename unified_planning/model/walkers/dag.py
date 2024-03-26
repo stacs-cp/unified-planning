@@ -68,7 +68,6 @@ class DagWalker(Walker):
                 self.memoization[self._get_key(s, **kwargs)]
                 for s in self._get_children(expression)
             ]
-            print(expression, args)
             self.memoization[key] = f(expression, args=args, **kwargs)
         else:
             pass
