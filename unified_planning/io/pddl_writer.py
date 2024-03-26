@@ -253,12 +253,6 @@ class ConverterToPDDLString(walkers.DagWalker):
         assert len(args) == 0
         return f"{self.get_mangled_name(expression.variable())}"
 
-    def walk_count(self, expression, args):
-        # Count(has_pet, (n_pets == 1))
-        assert len(args) > 1
-        # arreglar
-        return reduce(lambda x, y: f"(+ {y} {x})", args)
-
     def walk_and(self, expression, args):
         assert len(args) > 1
         return f'(and {" ".join(args)})'
@@ -371,7 +365,6 @@ class PDDLWriter:
         ] = {}
         # those 2 maps are "simmetrical", meaning that "(otn[k] == v) implies (nto[v] == k)"
         self.domain_objects: Optional[Dict[_UserType, Set[Object]]] = None
-        self.functions_count: List[str] = []
 
     def _write_domain(self, out: IO[str]):
         if self.problem_kind.has_intermediate_conditions_and_effects():
