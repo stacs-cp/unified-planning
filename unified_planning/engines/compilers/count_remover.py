@@ -149,7 +149,7 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
             new_args = []
             for a in arg.args:
                 new_args.append(self.decompose_expression(a, new_problem))
-            return em.create_node(arg.node_type, tuple(new_args))
+            return em.create_node(arg.node_type, tuple(new_args)).simplify()
 
     def check_initial_value(
             self, arg: "up.model.fnode.FNode", new_problem: "up.model.Problem") -> Int:
@@ -166,7 +166,7 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
             new_args = []
             for a in arg.args:
                 new_args.append(self.decompose_expression(a, new_problem))
-            return Int(1) if em.create_node(arg.node_type, tuple(new_args)) else Int(0)
+            return Int(1) if em.create_node(arg.node_type, tuple(new_args)).simplify() else Int(0)
 
     def manage_node(
             self,
