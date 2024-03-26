@@ -170,6 +170,8 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
             new_fnode = (em.create_node(arg.node_type, tuple(new_args)))
             print("new_fnode: ", new_fnode)
             print(new_fnode.simplify())
+            print(new_fnode.simplify().is_true())
+            print(new_fnode.simplify().is_false())
             return Int(1) if new_fnode.simplify().is_true() else Int(0)
 
     def manage_node(
