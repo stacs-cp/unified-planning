@@ -162,7 +162,7 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
             self,
             new_problem: "up.model.Problem",
             expression: "up.model.fnode.FNode",
-            fluent: "up.model.fnode.FNode",
+            fluent: "up.model.fnode.FNode" = None,
             value: "up.model.fnode.FNode" = None,
     ) -> "up.model.fnode.FNode":
         env = new_problem.environment
@@ -170,7 +170,7 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
         if expression.is_constant():
             return expression
         elif expression.is_fluent_exp():
-            if value is None:
+            if fluent is None:
                 return new_problem.initial_value(expression.fluent())
             else:
                 if fluent == expression.fluent():
@@ -208,7 +208,7 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
         else:
             new_args = []
             for arg in expression.args:
-                new_args.append(self.decompose_expression(new_problem, arg, value))
+                new_args.append(self.decompose_expression(new_problem, arg, fluent, value))
             return em.create_node(expression.node_type, tuple(new_args)).simplify()
 
     def find_fluents_affected(
@@ -269,6 +269,7 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
 
                     for action in actions:
                         new_action = action.clone()
+                        print(action)
                         print("ca: ", ca)
                         new_expression = ca
                         fluent_in_action = False
