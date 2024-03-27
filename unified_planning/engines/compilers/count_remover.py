@@ -217,7 +217,7 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
             for arg in expression.args:
                 arg_fluents = self.find_fluents_affected(arg)
                 if arg_fluents:
-                    fluents.append(arg_fluents)
+                    fluents.append(*arg_fluents)
         return fluents
 
     def manage_node(
