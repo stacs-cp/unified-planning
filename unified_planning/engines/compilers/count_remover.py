@@ -201,7 +201,6 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                         new_problem.add_action(new_action)
                         new_to_old[new_action] = action
                     n_count += 1
-                print("plus de: ", new_ca_args)
                 new_args.append(em.create_node(OperatorKind.PLUS, tuple(new_ca_args)))
             else:
                 new_args.append(self.manage_node(new_problem, new_to_old, arg, n_count))

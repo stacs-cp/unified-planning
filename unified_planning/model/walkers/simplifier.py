@@ -63,28 +63,6 @@ class Simplifier(walkers.dag.DagWalker):
         """
         return self.walk(expression)
 
-    def walk_count(self, expression: FNode, args: List[FNode]) -> FNode:
-        new_args: List[FNode] = list()
-        for a in args:
-            if a.is_true():
-                new_args.append(a)
-            elif a.is_false():
-                continue
-            elif a.is_and():
-                for s in a.args:
-                    if s.is_true():
-                        new_args.append(a)
-                    elif s.is_false():
-                        continue
-                    else:
-                        new_args.append(s)
-            else:
-                new_args.append(a)
-        if len(new_args) == 0:
-            return self.manager.Int(0)
-        else:
-            return self.manager.Count(new_args)
-
     def walk_and(self, expression: FNode, args: List[FNode]) -> FNode:
         if len(args) == 2 and args[0] == args[1]:
             return args[0]
