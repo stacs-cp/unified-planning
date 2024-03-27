@@ -17,8 +17,6 @@
 from fractions import Fraction
 import re
 import sys
-from functools import reduce
-
 import unified_planning as up
 import unified_planning.environment
 import unified_planning.model.walkers as walkers
@@ -209,11 +207,7 @@ class ConverterToANMLString(walkers.DagWalker):
 
     def walk_plus(self, expression, args):
         assert len(args) > 1
-        if len(args) == 2:
-            return reduce(lambda x, y: f"(+ {y} {x})", args)
-        else:
-            print("walk_plus ",reduce(lambda x, y: f"(+ {y} {x})", args))
-            return reduce(lambda x, y: f"(+ {y} {x})", args)
+        return f"({' + '.join(args)})"
 
     def walk_minus(self, expression, args):
         assert len(args) == 2
