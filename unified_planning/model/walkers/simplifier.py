@@ -330,6 +330,24 @@ class Simplifier(walkers.dag.DagWalker):
     def walk_dot(self, expression: FNode, args: List[FNode]) -> FNode:
         return self.manager.Dot(expression.agent(), args[0])
 
+    def walk_count(self, expression: FNode, args: List[FNode]) -> FNode:
+        new_args_count: List[FNode] = list()
+        for a in args:
+            if a.is_false():
+                pass
+            elif a.is_count():
+                for s in a.args:
+                    if s.is_false():
+                        pass
+                    else:
+                        new_args_count.append(s)
+            else:
+                new_args_count.append(a)
+        if len(new_args_count) == 0:
+            return self.manager.Int(0)
+        else:
+            return self.manager.Count(new_args_count)
+
     def walk_plus(self, expression: FNode, args: List[FNode]) -> FNode:
         new_args_plus: List[FNode] = list()
         accumulator: Union[int, Fraction] = 0
