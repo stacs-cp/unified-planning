@@ -270,6 +270,7 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
 
                     for action in actions:
                         new_action = action.clone()
+                        print("ca: ", ca)
                         new_expression = ca
                         fluent_in_action = False
                         for effect in action.effects:
