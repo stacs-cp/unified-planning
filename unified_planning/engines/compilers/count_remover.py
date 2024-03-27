@@ -263,21 +263,21 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                     for action in actions:
                         print(action.effects)
                         new_action = action.clone()
-    
+                        new_expression = ca
                         for effect in action.effects:
                             print("is ", effect.fluent, "in ", fluents_affected[fluent_name])
                             if effect.fluent.fluent().name in fluents_affected[fluent_name]:
                                 print("yes")
-                                new_effect_value = self.expression_value(new_problem, ca, effect.fluent.fluent().name, effect.value)
-                                print(new_effect_value)
-                                if new_effect_value.is_bool_constant():
-                                    if new_effect_value.is_true():
+                                new_expression = self.expression_value(new_problem, new_expression, effect.fluent.fluent().name, effect.value)
+                                print(new_expression)
+                                if new_expression.is_bool_constant():
+                                    if new_expression.is_true():
                                         new_action.add_effect(new_fluent, 1)
                                     else:
                                         new_action.add_effect(new_fluent, 0)
                                 else:
-                                    new_action.add_effect(new_fluent, 1, new_effect_value)
-                                    new_action.add_effect(new_fluent, 0, Not(new_effect_value))
+                                    new_action.add_effect(new_fluent, 1, new_expression)
+                                    new_action.add_effect(new_fluent, 0, Not(new_expression))
 
                         # afegir la nova condicio amb en nou valor (effect.value) del fluent
                         #new_action.add_effect(new_fluent, Int(1), ca)
