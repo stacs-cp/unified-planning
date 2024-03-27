@@ -276,7 +276,7 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                         for effect in action.effects:
                             if effect.fluent.fluent().name in fluents_affected[fluent_name]:
                                 fluent_in_action = True
-                                new_expression = self.expression_value(new_problem, new_expression, effect.fluent.fluent().name, effect.value)
+                                new_expression = self.expression_value(new_problem, new_expression, effect.fluent.fluent(), effect.value)
                         print("new_expression: ", new_expression)
                         print(new_expression.is_bool_constant())
                         if fluent_in_action:
