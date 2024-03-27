@@ -176,16 +176,6 @@ class TarskiFormulaConverter(walkers.DagWalker):
                 new_args.append(args[i])
         return tarski_fluent_rep(*new_args)
 
-    def walk_count(
-        self,
-        expression: "unified_planning.model.FNode",
-        args: List["tarski.syntax.formulas.Formula"],
-    ) -> "tarski.syntax.formulas.Formula":
-        value = args[0]
-        for a in args[1:]:
-            value = value + a
-        return value
-
     def walk_plus(
         self,
         expression: "unified_planning.model.FNode",
