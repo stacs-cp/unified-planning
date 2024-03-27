@@ -270,14 +270,15 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                                 print("yes")
                                 new_expression = self.expression_value(new_problem, new_expression, effect.fluent.fluent().name, effect.value)
                                 print(new_expression)
-                                if new_expression.is_bool_constant():
-                                    if new_expression.is_true():
-                                        new_action.add_effect(new_fluent, 1)
-                                    else:
-                                        new_action.add_effect(new_fluent, 0)
-                                else:
-                                    new_action.add_effect(new_fluent, 1, new_expression)
-                                    new_action.add_effect(new_fluent, 0, Not(new_expression))
+
+                        if new_expression.is_bool_constant():
+                            if new_expression.is_true():
+                                new_action.add_effect(new_fluent, 1)
+                            else:
+                                new_action.add_effect(new_fluent, 0)
+                        else:
+                            new_action.add_effect(new_fluent, 1, new_expression)
+                            new_action.add_effect(new_fluent, 0, Not(new_expression))
 
                         # afegir la nova condicio amb en nou valor (effect.value) del fluent
                         #new_action.add_effect(new_fluent, Int(1), ca)
