@@ -211,13 +211,10 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
         if expression.is_constant():
             return fluents
         elif expression.is_fluent_exp():
-            fluent = expression.fluent()
-            fluents.append(fluent.name)
+            fluents.append(expression.fluent().name)
         else:
             for arg in expression.args:
-                arg_fluents = self.find_fluents_affected(arg)
-                if arg_fluents:
-                    fluents.append(*arg_fluents)
+                fluents.append(*self.find_fluents_affected(arg))
         return fluents
 
     def manage_node(
