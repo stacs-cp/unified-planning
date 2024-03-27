@@ -167,7 +167,7 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
     ) -> "up.model.fnode.FNode":
         env = new_problem.environment
         em = env.expression_manager
-        if expression.is_constant():
+        if expression.is_constant() or expression.is_parameter_exp():
             return expression
         elif expression.is_fluent_exp():
             if fluent is None:
