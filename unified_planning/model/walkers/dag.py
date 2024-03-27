@@ -96,7 +96,7 @@ class DagWalker(Walker):
     def walk(self, expression: FNode, **kwargs):
         if expression in self.memoization:
             return self.memoization[expression]
-
+        print(expression)
         res = self.iter_walk(expression, **kwargs)
 
         if self.invalidate_memoization:

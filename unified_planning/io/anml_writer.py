@@ -207,11 +207,7 @@ class ConverterToANMLString(walkers.DagWalker):
 
     def walk_plus(self, expression, args):
         assert len(args) > 1
-        if len(args) == 2:
-            return f"({' + '.join(args)})"
-        else:
-            print(f"(({args[0]} + {args[1]}) + {args[2:]}))")
-            return f"(({args[0]} + {args[1]}) + {args[2:]}))"
+        return f"({' + '.join(args)})"
 
     def walk_minus(self, expression, args):
         assert len(args) == 2
