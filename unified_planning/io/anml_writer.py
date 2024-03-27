@@ -209,7 +209,11 @@ class ConverterToANMLString(walkers.DagWalker):
 
     def walk_plus(self, expression, args):
         assert len(args) > 1
-        return reduce(lambda x, y: f"(+ {y} {x})", args)
+        if len(args) == 2:
+            return reduce(lambda x, y: f"(+ {y} {x})", args)
+        else:
+            print("walk_plus ",reduce(lambda x, y: f"(+ {y} {x})", args))
+            return reduce(lambda x, y: f"(+ {y} {x})", args)
 
     def walk_minus(self, expression, args):
         assert len(args) == 2
