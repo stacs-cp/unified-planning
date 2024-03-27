@@ -136,6 +136,28 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
     ) -> ProblemKind:
         return problem_kind.clone()
 
+    '''
+    def find_value_effect(
+            self,
+            expression: "up.model.fnode.FNode",
+            value: "up.model.fnode.FNode",
+            fluent_name: str,
+            fluents_affected: Dict[str, List[str]]
+    ) -> "up.model.fnode.FNode":
+        assert expression.type.is_bool_type()
+        if expression.is_constant():
+            return expression
+        elif expression.is_fluent_exp():
+            fluent = expression.fluent()
+            # sustituir el valor
+            return Int(1) if new_problem.initial_value(arg).is_true() else Int(0)
+        else:
+            new_args = []
+            for a in arg.args:
+                new_args.append(self.decompose_expression(a, new_problem, count_arg_name, fluents_affected))
+            return Int(1) if em.create_node(arg.node_type, tuple(new_args)).simplify().is_true() else Int(0)
+    '''
+
     def decompose_expression(
             self,
             arg: "up.model.fnode.FNode",
@@ -159,7 +181,7 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                 new_args.append(self.decompose_expression(a, new_problem, count_arg_name, fluents_affected))
             return em.create_node(arg.node_type, tuple(new_args))
 
-    def check_initial_value(
+    def check_value(
             self,
             arg: "up.model.fnode.FNode",
             new_problem: "up.model.Problem",
@@ -174,16 +196,27 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
         elif arg.is_fluent_exp():
             fluent = arg.fluent()
             assert fluent.type.is_bool_type()
-            if count_arg_name in fluents_affected:
-                fluents_affected[count_arg_name].append(fluent.name)
-            else:
-                fluents_affected[count_arg_name] = [fluent.name]
             return Int(1) if new_problem.initial_value(arg).is_true() else Int(0)
         else:
             new_args = []
             for a in arg.args:
                 new_args.append(self.decompose_expression(a, new_problem, count_arg_name, fluents_affected))
             return Int(1) if em.create_node(arg.node_type, tuple(new_args)).simplify().is_true() else Int(0)
+
+    def find_fluents_affected(
+            self,
+            expression: "up.model.fnode.FNode",
+    ) -> List[str]:
+        fluents = []
+        if expression.is_constant():
+            return fluents
+        elif expression.is_fluent_exp():
+            fluent = expression.fluent()
+            fluents.append(fluent.name)
+        else:
+            for arg in expression.args:
+                fluents.append(self.find_fluents_affected(arg))
+        return fluents
 
     def manage_node(
             self,
@@ -207,30 +240,43 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                 new_ca_args = []
                 for ca in arg.args:
                     fluent_name = 'count_' + str(n_count)
-                    fluent_value = self.check_initial_value(ca, new_problem, fluent_name, fluents_affected)
-                    new_problem.add_fluent(fluent_name, tm.IntType(), default_initial_value=fluent_value)
-                    new_fluent = new_problem.fluent(fluent_name)
-                    new_ca_args.append(new_fluent())
+                    fluents_affected[fluent_name] = self.find_fluents_affected(ca)
+
+                    #if self.check_value(ca, new_problem, fluent_name).is_true():
+                    #    fluent_value = 1
+                    #else:
+                    #    fluent_value = 0
+                    #new_problem.add_fluent(fluent_name, tm.IntType(), default_initial_value=fluent_value)
+                    #new_fluent = new_problem.fluent(fluent_name)
+                    #new_ca_args.append(new_fluent())
 
                     print("fluents affected: ", fluents_affected)
                     actions = new_problem.actions
                     new_problem.clear_actions()
                     # new conditional effects to the actions
+                    '''
                     for action in actions:
                         print(action.effects)
-
+                        new_action = action.clone()
+    
                         for effect in action.effects:
                             print("is ", effect.fluent, "in ", fluents_affected[fluent_name])
-                            print(type(effect.fluent))
                             if effect.fluent.fluent().name in fluents_affected[fluent_name]:
                                 print("yes")
+                                new_effect_value = self.find_value_effect(ca, effect.fluent.fluent().name, effect.value)
+                                print(new_effect_value)
+                                if new_effect_value.is_true():
+                                    new_action.add_effect(new_fluent, 1)
+                                else:
+                                    new_action.add_effect(new_fluent, 0)
 
-                        new_action = action.clone()
+
                         # afegir la nova condicio amb en nou valor (effect.value) del fluent
                         #new_action.add_effect(new_fluent, Int(1), ca)
                         #new_action.add_effect(new_fluent, Int(0), Not(ca))
                         new_problem.add_action(new_action)
                         new_to_old[new_action] = action
+                        '''
                     n_count += 1
                 new_args.append(em.create_node(OperatorKind.PLUS, tuple(new_ca_args)))
             else:
