@@ -187,8 +187,8 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
             self,
             new_problem: "up.model.Problem",
             expression: "up.model.fnode.FNode",
-            fluent: "up.model.fnode.FNode",
-            value: "up.model.fnode.FNode" = None,
+            fluent: Optional["up.model.fnode.FNode"] = None,
+            value: Optional["up.model.fnode.FNode"] = None,
     ) -> "up.model.fnode.FNode":
         assert expression.type.is_bool_type()
         env = new_problem.environment
@@ -256,7 +256,7 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                     initial_value = self.expression_value(new_problem, ca)
                     print(initial_value)
                     assert initial_value.is_bool_constant()
-                    if self.expression_value(new_problem, ca).is_true():
+                    if initial_value.is_true():
                         fluent_value = Int(1)
                     else:
                         fluent_value = Int(0)
