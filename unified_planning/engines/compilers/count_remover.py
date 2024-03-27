@@ -254,7 +254,7 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                     # controlar valor (en aquest cas inicial de l'expressio) per tant value=None
                     # retorna un boolea
                     initial_value = self.expression_value(new_problem, ca)
-                    print(initial_value)
+                    print(initial_value) # be
                     assert initial_value.is_bool_constant()
                     if initial_value.is_true():
                         fluent_value = Int(1)
@@ -271,19 +271,22 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                     for action in actions:
                         new_action = action.clone()
                         new_expression = ca
+                        fluent_in_action = False
                         for effect in action.effects:
                             if effect.fluent.fluent().name in fluents_affected[fluent_name]:
+                                fluent_in_action = True
                                 new_expression = self.expression_value(new_problem, new_expression, effect.fluent.fluent().name, effect.value)
                         print("new_expression: ", new_expression)
                         print(new_expression.is_bool_constant())
-                        if new_expression.is_bool_constant():
-                            if new_expression.is_true():
-                                new_action.add_effect(new_fluent, 1)
+                        if fluent_in_action:
+                            if new_expression.is_bool_constant():
+                                if new_expression.is_true():
+                                    new_action.add_effect(new_fluent, 1)
+                                else:
+                                    new_action.add_effect(new_fluent, 0)
                             else:
-                                new_action.add_effect(new_fluent, 0)
-                        else:
-                            new_action.add_effect(new_fluent, 1, new_expression)
-                            new_action.add_effect(new_fluent, 0, Not(new_expression))
+                                new_action.add_effect(new_fluent, 1, new_expression)
+                                new_action.add_effect(new_fluent, 0, Not(new_expression))
 
                         # afegir la nova condicio amb en nou valor (effect.value) del fluent
                         new_problem.add_action(new_action)
