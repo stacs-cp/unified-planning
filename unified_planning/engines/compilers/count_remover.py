@@ -236,9 +236,7 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
         em = env.expression_manager
         tm = env.type_manager
 
-        # 0 = arg del count, 1 = fluents affected
         fluents_affected: Dict[str, List[str]] = {}
-
         new_args = []
         for arg in goal.args:
             if arg.is_fluent_exp() or arg.is_parameter_exp() or arg.is_constant():
@@ -248,9 +246,6 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                 for ca in arg.args:
                     fluent_name = 'count_' + str(n_count)
                     fluents_affected[fluent_name] = self.find_fluents_affected(ca)
-                    print(fluents_affected)
-                    # controlar valor (en aquest cas inicial de l'expressio) per tant value=None
-                    # retorna un boolea
                     initial_value = self.expression_value(new_problem, ca)
                     assert initial_value.is_bool_constant()
                     if initial_value.is_true():
@@ -263,20 +258,15 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
 
                     actions = new_problem.actions
                     new_problem.clear_actions()
-                    # new conditional effects to the actions
 
                     for action in actions:
                         new_action = action.clone()
-                        print(action)
-                        print("ca: ", ca)
                         new_expression = ca
                         fluent_in_action = False
                         for effect in action.effects:
                             if effect.fluent.fluent().name in fluents_affected[fluent_name]:
                                 fluent_in_action = True
                                 new_expression = self.expression_value(new_problem, new_expression, effect.fluent.fluent(), effect.value)
-                        print("new_expression: ", new_expression)
-                        print(new_expression.is_bool_constant())
                         if fluent_in_action:
                             if new_expression.is_bool_constant():
                                 if new_expression.is_true():
@@ -286,11 +276,8 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                             else:
                                 new_action.add_effect(new_fluent, 1, new_expression)
                                 new_action.add_effect(new_fluent, 0, Not(new_expression))
-
-                        # afegir la nova condicio amb en nou valor (effect.value) del fluent
                         new_problem.add_action(new_action)
                         new_to_old[new_action] = action
-
                     n_count += 1
                 new_args.append(em.create_node(OperatorKind.PLUS, tuple(new_ca_args)))
             else:
