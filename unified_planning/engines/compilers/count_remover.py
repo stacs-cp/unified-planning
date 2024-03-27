@@ -181,6 +181,7 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
             new_args = []
             for arg in expression.args:
                 new_args.append(self.decompose_expression(new_problem, arg, fluent, value))
+            print(expression.node_type, tuple(new_args))
             return em.create_node(expression.node_type, tuple(new_args))
 
     def expression_value(
