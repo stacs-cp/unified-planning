@@ -221,12 +221,13 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
 
                         for effect in action.effects:
                             print("is ", effect.fluent, "in ", fluents_affected[fluent_name])
-                            if effect.fluent.name in fluents_affected[fluent_name]:
+                            if effect.fluent().name in fluents_affected[fluent_name]:
                                 print("yes")
 
                         new_action = action.clone()
-                        new_action.add_effect(new_fluent, Int(1), ca)
-                        new_action.add_effect(new_fluent, Int(0), Not(ca))
+                        # afegir la nova condicio amb en nou valor (effect.value) del fluent
+                        #new_action.add_effect(new_fluent, Int(1), ca)
+                        #new_action.add_effect(new_fluent, Int(0), Not(ca))
                         new_problem.add_action(new_action)
                         new_to_old[new_action] = action
                     n_count += 1
