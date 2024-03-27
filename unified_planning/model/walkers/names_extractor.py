@@ -43,7 +43,6 @@ class NamesExtractor(walkers.dag.DagWalker):
         return self.walk(expression)
 
     def _args_merge_in_place(self, args: List[Set[str]], base: Set[str]) -> Set[str]:
-        print("args merge in place names exractor")
         for a in args:
             base.update(a)
         return base
@@ -89,5 +88,4 @@ class NamesExtractor(walkers.dag.DagWalker):
         op.OperatorKind.EQUALS,
     )
     def walk_union(self, expression: FNode, args: List[Set[str]]) -> Set[str]:
-        print("walk_union names extractor")
         return self._args_merge_in_place(args, set())
