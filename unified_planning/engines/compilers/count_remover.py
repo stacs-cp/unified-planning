@@ -148,6 +148,7 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
         if arg.is_constant():
             return arg
         elif arg.is_fluent_exp():
+            print(fluents_affected, count_arg_name, arg.fluent().name)
             fluents_affected[count_arg_name].append(arg.fluent().name)
             return new_problem.initial_value(arg)
         else:
@@ -211,6 +212,7 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                     new_problem.clear_actions()
                     # new conditional effects to the actions
                     for action in actions:
+                        print(action.effects)
                         new_action = action.clone()
                         new_action.add_effect(new_fluent, Int(1), ca)
                         new_action.add_effect(new_fluent, Int(0), Not(ca))
