@@ -137,21 +137,32 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
         return problem_kind.clone()
 
     def decompose_expression(
-            self, arg: "up.model.fnode.FNode", new_problem: "up.model.Problem") -> "up.model.fnode.FNode":
+            self,
+            arg: "up.model.fnode.FNode",
+            new_problem: "up.model.Problem",
+            count_arg_name: str,
+            fluents_affected: Dict[str, List[str]]
+    ) -> "up.model.fnode.FNode":
         env = new_problem.environment
         em = env.expression_manager
         if arg.is_constant():
             return arg
         elif arg.is_fluent_exp():
+            fluents_affected[count_arg_name].append(arg.fluent().name)
             return new_problem.initial_value(arg)
         else:
             new_args = []
             for a in arg.args:
-                new_args.append(self.decompose_expression(a, new_problem))
+                new_args.append(self.decompose_expression(a, new_problem, count_arg_name, fluents_affected))
             return em.create_node(arg.node_type, tuple(new_args))
 
     def check_initial_value(
-            self, arg: "up.model.fnode.FNode", new_problem: "up.model.Problem") -> Int:
+            self,
+            arg: "up.model.fnode.FNode",
+            new_problem: "up.model.Problem",
+            count_arg_name: str,
+            fluents_affected: Dict[str, List[str]]
+    ) -> Int:
         assert arg.type.is_bool_type()
         env = new_problem.environment
         em = env.expression_manager
@@ -160,11 +171,12 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
         elif arg.is_fluent_exp():
             fluent = arg.fluent()
             assert fluent.type.is_bool_type()
+            fluents_affected[count_arg_name].append(fluent.name)
             return Int(1) if new_problem.initial_value(arg).is_true() else Int(0)
         else:
             new_args = []
             for a in arg.args:
-                new_args.append(self.decompose_expression(a, new_problem))
+                new_args.append(self.decompose_expression(a, new_problem, count_arg_name, fluents_affected))
             return Int(1) if em.create_node(arg.node_type, tuple(new_args)).simplify().is_true() else Int(0)
 
     def manage_node(
@@ -178,6 +190,9 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
         em = env.expression_manager
         tm = env.type_manager
 
+        # 0 = arg del count, 1 = fluents affected
+        fluents_affected: Dict[str, List[str]] = {}
+
         new_args = []
         for arg in goal.args:
             if arg.is_fluent_exp() or arg.is_parameter_exp() or arg.is_constant():
@@ -186,11 +201,12 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                 new_ca_args = []
                 for ca in arg.args:
                     fluent_name = 'count_' + str(n_count)
-                    new_problem.add_fluent(fluent_name, tm.IntType(),
-                                           default_initial_value=self.check_initial_value(ca, new_problem))
+                    fluent_value = self.check_initial_value(ca, new_problem, fluent_name, fluents_affected)
+                    new_problem.add_fluent(fluent_name, tm.IntType(), default_initial_value=fluent_value)
                     new_fluent = new_problem.fluent(fluent_name)
                     new_ca_args.append(new_fluent())
 
+                    print("fluents affected: ", fluents_affected)
                     actions = new_problem.actions
                     new_problem.clear_actions()
                     # new conditional effects to the actions
