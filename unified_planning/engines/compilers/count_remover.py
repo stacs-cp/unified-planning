@@ -222,9 +222,7 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
             fluents.append(expression.fluent().name)
         else:
             for arg in expression.args:
-                arg_fluents = self.find_fluents_affected(arg)
-                if arg_fluents:
-                    fluents.append(*arg_fluents)
+                fluents += self.find_fluents_affected(arg)
         return fluents
 
     def manage_node(
@@ -250,7 +248,7 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                 for ca in arg.args:
                     fluent_name = 'count_' + str(n_count)
                     fluents_affected[fluent_name] = self.find_fluents_affected(ca)
-
+                    print(fluents_affected)
                     # controlar valor (en aquest cas inicial de l'expressio) per tant value=None
                     # retorna un boolea
                     initial_value = self.expression_value(new_problem, ca)
