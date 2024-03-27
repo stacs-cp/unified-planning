@@ -136,28 +136,6 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
     ) -> ProblemKind:
         return problem_kind.clone()
 
-    '''
-    def find_value_effect(
-            self,
-            expression: "up.model.fnode.FNode",
-            value: "up.model.fnode.FNode",
-            fluent_name: str,
-            fluents_affected: Dict[str, List[str]]
-    ) -> "up.model.fnode.FNode":
-        assert expression.type.is_bool_type()
-        if expression.is_constant():
-            return expression
-        elif expression.is_fluent_exp():
-            fluent = expression.fluent()
-            # sustituir el valor
-            return Int(1) if new_problem.initial_value(arg).is_true() else Int(0)
-        else:
-            new_args = []
-            for a in arg.args:
-                new_args.append(self.decompose_expression(a, new_problem, count_arg_name, fluents_affected))
-            return Int(1) if em.create_node(arg.node_type, tuple(new_args)).simplify().is_true() else Int(0)
-    '''
-
     def decompose_expression(
             self,
             new_problem: "up.model.Problem",
@@ -181,7 +159,6 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
             new_args = []
             for arg in expression.args:
                 new_args.append(self.decompose_expression(new_problem, arg, fluent, value))
-            print(expression.node_type, tuple(new_args))
             return em.create_node(expression.node_type, tuple(new_args))
 
     def expression_value(
