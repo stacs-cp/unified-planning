@@ -148,8 +148,10 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
         if arg.is_constant():
             return arg
         elif arg.is_fluent_exp():
-            print(fluents_affected, count_arg_name, arg.fluent().name)
-            fluents_affected[count_arg_name] = [arg.fluent().name]
+            if count_arg_name in fluents_affected:
+                fluents_affected[count_arg_name].append(arg.fluent().name)
+            else:
+                fluents_affected[count_arg_name] = [arg.fluent().name]
             return new_problem.initial_value(arg)
         else:
             new_args = []
@@ -172,7 +174,10 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
         elif arg.is_fluent_exp():
             fluent = arg.fluent()
             assert fluent.type.is_bool_type()
-            fluents_affected[count_arg_name] = [fluent.name]
+            if count_arg_name in fluents_affected:
+                fluents_affected[count_arg_name].append(fluent.name)
+            else:
+                fluents_affected[count_arg_name] = [fluent.name]
             return Int(1) if new_problem.initial_value(arg).is_true() else Int(0)
         else:
             new_args = []
