@@ -872,6 +872,8 @@ class _KindFactory:
             self.kind.set_conditions_kind("EXISTENTIAL_CONDITIONS")
         if OperatorKind.FORALL in ops:
             self.kind.set_conditions_kind("UNIVERSAL_CONDITIONS")
+        if OperatorKind.COUNT in ops:
+            self._kind.set_conditions_kind("COUNTINGS")
         is_linear, _, _ = self.linear_checker.get_fluents(exp)
         if not is_linear:
             self.kind.unset_problem_type("SIMPLE_NUMERIC_PLANNING")
