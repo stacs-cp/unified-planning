@@ -160,48 +160,48 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
 
     def decompose_expression(
             self,
-            arg: "up.model.fnode.FNode",
             new_problem: "up.model.Problem",
-            count_arg_name: str,
-            fluents_affected: Dict[str, List[str]]
+            expression: "up.model.fnode.FNode",
+            value: "up.model.fnode.FNode" = None,
     ) -> "up.model.fnode.FNode":
         env = new_problem.environment
         em = env.expression_manager
-        if arg.is_constant():
-            return arg
-        elif arg.is_fluent_exp():
-            if count_arg_name in fluents_affected:
-                fluents_affected[count_arg_name].append(arg.fluent().name)
+        if expression.is_constant():
+            return expression
+        elif expression.is_fluent_exp():
+            if value is None:
+                return new_problem.initial_value(expression.fluent())
             else:
-                fluents_affected[count_arg_name] = [arg.fluent().name]
-            return new_problem.initial_value(arg)
+                return value
         else:
             new_args = []
-            for a in arg.args:
-                new_args.append(self.decompose_expression(a, new_problem, count_arg_name, fluents_affected))
-            return em.create_node(arg.node_type, tuple(new_args))
+            for arg in expression.args:
+                new_args.append(self.decompose_expression(new_problem, arg))
+            return em.create_node(expression.node_type, tuple(new_args))
 
-    def check_value(
+    def expression_value(
             self,
-            arg: "up.model.fnode.FNode",
             new_problem: "up.model.Problem",
-            count_arg_name: str,
-            fluents_affected: Dict[str, List[str]]
-    ) -> Int:
-        assert arg.type.is_bool_type()
+            expression: "up.model.fnode.FNode",
+            value: "up.model.fnode.FNode" = None,
+    ) -> "up.model.fnode.FNode":
+        assert expression.type.is_bool_type()
         env = new_problem.environment
         em = env.expression_manager
-        if arg.is_constant():
-            return arg
-        elif arg.is_fluent_exp():
-            fluent = arg.fluent()
-            assert fluent.type.is_bool_type()
-            return Int(1) if new_problem.initial_value(arg).is_true() else Int(0)
+        if expression.is_constant():
+            return expression
+        elif expression.is_fluent_exp():
+            assert expression.fluent().type.is_bool_type()
+            if value is None:
+                return new_problem.initial_value(expression.fluent())
+            else:
+                assert value.is_bool_constant()
+                return value
         else:
             new_args = []
-            for a in arg.args:
-                new_args.append(self.decompose_expression(a, new_problem, count_arg_name, fluents_affected))
-            return Int(1) if em.create_node(arg.node_type, tuple(new_args)).simplify().is_true() else Int(0)
+            for arg in expression.args:
+                new_args.append(self.decompose_expression(new_problem, arg, value))
+            return em.create_node(expression.node_type, tuple(new_args)).simplify()
 
     def find_fluents_affected(
             self,
@@ -243,19 +243,23 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                     fluent_name = 'count_' + str(n_count)
                     fluents_affected[fluent_name] = self.find_fluents_affected(ca)
 
-                    #if self.check_value(ca, new_problem, fluent_name).is_true():
-                    #    fluent_value = 1
-                    #else:
-                    #    fluent_value = 0
-                    #new_problem.add_fluent(fluent_name, tm.IntType(), default_initial_value=fluent_value)
-                    #new_fluent = new_problem.fluent(fluent_name)
-                    #new_ca_args.append(new_fluent())
+                    # controlar valor (en aquest cas inicial de l'expressio) per tant value=None
+                    # retorna un boolea
+                    initial_value = self.expression_value(new_problem, ca)
+                    print(initial_value)
+                    assert initial_value.is_bool_constant()
+                    if self.expression_value(new_problem, ca).is_true():
+                        fluent_value = Int(1)
+                    else:
+                        fluent_value = Int(0)
+                    new_problem.add_fluent(fluent_name, tm.IntType(), default_initial_value=fluent_value)
+                    new_fluent = new_problem.fluent(fluent_name)
+                    new_ca_args.append(new_fluent())
 
-                    print("fluents affected: ", fluents_affected)
                     actions = new_problem.actions
                     new_problem.clear_actions()
                     # new conditional effects to the actions
-                    '''
+
                     for action in actions:
                         print(action.effects)
                         new_action = action.clone()
@@ -264,20 +268,23 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                             print("is ", effect.fluent, "in ", fluents_affected[fluent_name])
                             if effect.fluent.fluent().name in fluents_affected[fluent_name]:
                                 print("yes")
-                                new_effect_value = self.find_value_effect(ca, effect.fluent.fluent().name, effect.value)
+                                new_effect_value = self.expression_value(new_problem, ca, effect.fluent.fluent().name, effect.value)
                                 print(new_effect_value)
-                                if new_effect_value.is_true():
-                                    new_action.add_effect(new_fluent, 1)
+                                if new_effect_value.is_bool_constant():
+                                    if new_effect_value.is_true():
+                                        new_action.add_effect(new_fluent, 1)
+                                    else:
+                                        new_action.add_effect(new_fluent, 0)
                                 else:
-                                    new_action.add_effect(new_fluent, 0)
-
+                                    new_action.add_effect(new_fluent, 1, new_effect_value)
+                                    new_action.add_effect(new_fluent, 0, Not(new_effect_value))
 
                         # afegir la nova condicio amb en nou valor (effect.value) del fluent
                         #new_action.add_effect(new_fluent, Int(1), ca)
                         #new_action.add_effect(new_fluent, Int(0), Not(ca))
                         new_problem.add_action(new_action)
                         new_to_old[new_action] = action
-                        '''
+
                     n_count += 1
                 new_args.append(em.create_node(OperatorKind.PLUS, tuple(new_ca_args)))
             else:
