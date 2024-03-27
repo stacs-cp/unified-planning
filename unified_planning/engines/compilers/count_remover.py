@@ -254,7 +254,6 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                     # controlar valor (en aquest cas inicial de l'expressio) per tant value=None
                     # retorna un boolea
                     initial_value = self.expression_value(new_problem, ca)
-                    print(initial_value) # be
                     assert initial_value.is_bool_constant()
                     if initial_value.is_true():
                         fluent_value = Int(1)
