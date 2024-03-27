@@ -149,7 +149,7 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
             return arg
         elif arg.is_fluent_exp():
             print(fluents_affected, count_arg_name, arg.fluent().name)
-            fluents_affected[count_arg_name].append(arg.fluent().name)
+            fluents_affected[count_arg_name] = [arg.fluent().name]
             return new_problem.initial_value(arg)
         else:
             new_args = []
