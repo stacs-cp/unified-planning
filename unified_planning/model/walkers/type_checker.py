@@ -148,8 +148,6 @@ class TypeChecker(walkers.dag.DagWalker):
     ) -> "unified_planning.model.types.Type":
         assert expression is not None
         assert len(args) == 0
-        print(expression)
-        print(expression.parameter())
         return expression.parameter().type
 
     def walk_always(
