@@ -152,7 +152,10 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
             if fluent is None:
                 return new_problem.initial_value(expression.fluent())
             else:
+                print("else")
                 if fluent == expression.fluent():
+                    print("same fluent")
+                    print(type_effect)
                     if type_effect == 'increase':
                         print("ei")
                         print(fluent, value)
