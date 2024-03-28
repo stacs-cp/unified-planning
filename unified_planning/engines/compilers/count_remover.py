@@ -228,7 +228,10 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                             if effect.fluent.fluent().name in fluents_affected[fluent_name]:
                                 fluent_in_action = True
                                 if effect.is_conditional():
-                                    effects_conditions = And(effects_conditions, effect.condition.condition())
+                                    if effects_conditions is None:
+                                        effects_conditions = effect.condition.condition()
+                                    else:
+                                        effects_conditions = And(effects_conditions, effect.condition.condition())
                                 if effect.is_increase():
                                     print("is_increase")
                                     new_expression = self.expression_value(new_problem, new_expression, effect.fluent.fluent(), effect.value, 'increase')
@@ -237,6 +240,8 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                                 else:
                                     new_expression = self.expression_value(new_problem, new_expression, effect.fluent.fluent(), effect.value)
                         print(effects_conditions)
+                        if effects_conditions is None:
+                            effects_conditions = True
                         if fluent_in_action:
                             if new_expression.is_bool_constant():
                                 if new_expression.is_true():
