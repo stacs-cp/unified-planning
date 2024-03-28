@@ -233,7 +233,6 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
             new_problem: "up.model.Problem",
             new_to_old: Dict[Action, Action],
             expression: "up.model.fnode.FNode",
-            n_count: int,
             fluents_affected: Dict[str, List[str]]
     ) -> Union["up.model.fnode.FNode", "up.model.fluent.Fluent", bool]:
         env = new_problem.environment
@@ -247,6 +246,7 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
             elif arg.is_count():
                 new_ca_args = []
                 for ca in arg.args:
+                    n_count = len(fluents_affected)
                     fluent_name = 'count_' + str(n_count)
                     fluents_affected[fluent_name] = self.find_fluents_affected(ca)
                     initial_value = self.expression_value(new_problem, ca)
@@ -261,7 +261,7 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                     n_count += 1
                 new_args.append(em.create_node(OperatorKind.PLUS, tuple(new_ca_args)))
             else:
-                new_args.append(self.add_counts(new_problem, new_to_old, arg, n_count, fluents_affected))
+                new_args.append(self.add_counts(new_problem, new_to_old, arg, fluents_affected))
         return em.create_node(expression.node_type, tuple(new_args))
 
     def _compile(
@@ -288,17 +288,16 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
             new_action = action.clone()
             new_action.clear_preconditions()
             for pre in action.preconditions:
-                new_precondition = self.add_counts(new_problem, new_to_old, pre, n_count, fluents_affected) # ?
+                new_precondition = self.add_counts(new_problem, new_to_old, pre, fluents_affected) # ?
                 print(new_precondition)
                 new_action.add_precondition(new_precondition)
             new_problem.add_action(new_action)
         print(fluents_affected)
-        print(len(fluents_affected))
 
         # no afegir els canvis a new_to_old encara !!
         new_problem.clear_goals()
         for goal in problem.goals:
-            new_goal = self.add_counts(new_problem, new_to_old, goal, n_count, fluents_affected)
+            new_goal = self.add_counts(new_problem, new_to_old, goal, fluents_affected)
             new_problem.add_goal(new_goal)
 
         # per cada accio afegir els canvis dels counts - modificar accions i afegir-les al problema
