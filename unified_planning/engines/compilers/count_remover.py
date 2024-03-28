@@ -43,7 +43,7 @@ from unified_planning.engines.compilers.utils import (
 )
 from typing import Dict, List, Optional, Tuple, OrderedDict, Any, Union
 from functools import partial
-from unified_planning.shortcuts import Int, Plus, Not
+from unified_planning.shortcuts import Int, Plus, Not, Minus
 import re
 
 class CountRemover(engines.engine.Engine, CompilerMixin):
@@ -142,6 +142,7 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
             expression: "up.model.fnode.FNode",
             fluent: Optional["up.model.fluent.Fluent"] = None,
             value: Optional["up.model.fnode.FNode"] = None,
+            type_effect: Optional[str] = None
     ) -> "up.model.fnode.FNode":
         env = new_problem.environment
         em = env.expression_manager
@@ -152,7 +153,12 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                 return new_problem.initial_value(expression.fluent())
             else:
                 if fluent == expression.fluent():
-                    return value
+                    if type_effect == 'increase':
+                        return em.create_node(OperatorKind.PLUS, tuple([fluent, value])).simplify()
+                    elif type_effect == 'decrease':
+                        return em.create_node(OperatorKind.MINUS, tuple([fluent, value])).simplify()
+                    else:
+                        return value
                 else:
                     return expression
         else:
@@ -179,7 +185,7 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
             self,
             new_problem: "up.model.Problem",
             new_to_old: Dict[Action, Action],
-            goal: "up.model.fnode.FNode",
+            expression: "up.model.fnode.FNode",
             n_count: int,
     ) -> Union["up.model.fnode.FNode", "up.model.fluent.Fluent", bool]:
         env = new_problem.environment
@@ -188,7 +194,7 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
 
         fluents_affected: Dict[str, List[str]] = {}
         new_args = []
-        for arg in goal.args:
+        for arg in expression.args:
             if arg.is_fluent_exp() or arg.is_parameter_exp() or arg.is_constant():
                 new_args.append(arg)
             elif arg.is_count():
@@ -215,7 +221,14 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                         for effect in action.effects:
                             if effect.fluent.fluent().name in fluents_affected[fluent_name]:
                                 fluent_in_action = True
-                                new_expression = self.expression_value(new_problem, new_expression, effect.fluent.fluent(), effect.value)
+                                if effect.is_increase():
+                                    new_expression = self.expression_value(new_problem, new_expression, effect.fluent.fluent(), effect.value, 'increase')
+                                elif effect.is_decrease():
+                                    new_expression = self.expression_value(new_problem, new_expression, effect.fluent.fluent(), effect.value, 'decrease')
+                                elif effect.is_conditional() and effect.condition.condition().is_true():
+                                    new_expression = self.expression_value(new_problem, new_expression, effect.fluent.fluent(), effect.value)
+                                else:
+                                    new_expression = self.expression_value(new_problem, new_expression, effect.fluent.fluent(), effect.value)
                         if fluent_in_action:
                             if new_expression.is_bool_constant():
                                 if new_expression.is_true():
@@ -231,7 +244,7 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                 new_args.append(em.create_node(OperatorKind.PLUS, tuple(new_ca_args)))
             else:
                 new_args.append(self.manage_node(new_problem, new_to_old, arg, n_count))
-        return em.create_node(goal.node_type, tuple(new_args))
+        return em.create_node(expression.node_type, tuple(new_args))
 
     def _compile(
         self,
@@ -246,8 +259,11 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
 
         new_problem = problem.clone()
         new_problem.name = f"{self.name}_{problem.name}"
-        new_problem.clear_goals()
         n_count = 0
+        # count pot estar en les precondicions d'accions
+        #new_problem.clear_actions()
+        #for action in problem.actions:
+        new_problem.clear_goals()
         for goal in problem.goals:
             new_goal = self.manage_node(new_problem, new_to_old, goal, n_count)
             new_problem.add_goal(new_goal)
