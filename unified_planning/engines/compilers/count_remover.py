@@ -172,68 +172,67 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
             expression: "up.model.fnode.FNode",
     ) -> List[str]:
         fluents = []
-        if expression.is_constant():
-            return fluents
-        elif expression.is_fluent_exp():
+        if expression.is_fluent_exp():
             fluents.append(expression.fluent().name)
         else:
             for arg in expression.args:
                 fluents += self.find_fluents_affected(arg)
         return fluents
 
-    '''
-    def nsencaraalgoambaccions(self):
-        actions = new_problem.actions
-        new_problem.clear_actions()
-        for action in actions:
-            new_action = action.clone()
-            new_expression = ca
-            fluent_in_action = False
+    def add_count_effects(
+            self,
+            new_problem: "up.model.Problem",
+            action: "up.model.action.Action",
+            count_expressions: Dict[str, "up.model.fnode.FNode"]
+    ) -> "up.model.action.Action":
+        print(count_expressions.keys())
+        # per cada count, si l'accio conte algun efecte a algun fluent que el count contingui, tractar
+        for count, expression in count_expressions:
+            count_fluents_in_action = False
             effects_conditions = None
             for effect in action.effects:
-                if effect.fluent.fluent().name in fluents_affected[fluent_name]:
-                    fluent_in_action = True
+                print(effect.fluent.fluent().name, expression)
+                if effect.fluent.fluent().name in self.find_fluents_affected(expression):
+                    print("si")
+                    count_fluents_in_action = True
                     if effect.is_conditional():
                         if effects_conditions is None:
                             effects_conditions = effect.condition
                         else:
                             effects_conditions = And(effects_conditions, effect.condition)
                     if effect.is_increase():
-                        new_expression = self.expression_value(new_problem, new_expression, effect.fluent.fluent(),
+                        expression = self.expression_value(new_problem, expression, effect.fluent.fluent(),
                                                                effect.value, 'increase')
                     elif effect.is_decrease():
-                        new_expression = self.expression_value(new_problem, new_expression, effect.fluent.fluent(),
+                        expression = self.expression_value(new_problem, expression, effect.fluent.fluent(),
                                                                effect.value, 'decrease')
                     else:
-                        new_expression = self.expression_value(new_problem, new_expression, effect.fluent.fluent(),
+                        expression = self.expression_value(new_problem, expression, effect.fluent.fluent(),
                                                                effect.value)
-            if fluent_in_action:
-                if new_expression.is_bool_constant():
-                    if new_expression.is_true():
+            if count_fluents_in_action:
+                if expression.is_bool_constant():
+                    if expression.is_true():
                         new_value = 1
                     else:
                         new_value = 0
                     if effects_conditions is None:
-                        new_action.add_effect(new_fluent, new_value)
+                        action.add_effect(new_problem.fluent(count), new_value)
                     else:
-                        new_action.add_effect(new_fluent, new_value, effects_conditions)
+                        action.add_effect(new_problem.fluent(count), new_value, effects_conditions)
                 else:
                     if effects_conditions is None:
-                        new_action.add_effect(new_fluent, 1, new_expression)
-                        new_action.add_effect(new_fluent, 0, Not(new_expression))
+                        action.add_effect(new_problem.fluent(count), 1, expression)
+                        action.add_effect(new_problem.fluent(count), 0, Not(expression))
                     else:
-                        new_action.add_effect(new_fluent, 1, And(new_expression, effects_conditions))
-                        new_action.add_effect(new_fluent, 0, And(Not(new_expression), effects_conditions))
-            new_problem.add_action(new_action)
-            new_to_old[new_action] = action
-    '''
+                        action.add_effect(new_problem.fluent(count), 1, And(expression, effects_conditions))
+                        action.add_effect(new_problem.fluent(count), 0, And(Not(expression), effects_conditions))
+        return action
 
     def add_counts(
             self,
             new_problem: "up.model.Problem",
-            new_to_old: Dict[Action, Action],
             expression: "up.model.fnode.FNode",
-            fluents_affected: Dict[str, List[str]]
+            count_expressions: Dict[str, "up.model.fnode.FNode"]
     ) -> Union["up.model.fnode.FNode", "up.model.fluent.Fluent", bool]:
         env = new_problem.environment
         em = env.expression_manager
@@ -246,9 +245,9 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
             elif arg.is_count():
                 new_ca_args = []
                 for ca in arg.args:
-                    n_count = len(fluents_affected)
+                    n_count = len(count_expressions)
                     fluent_name = 'count_' + str(n_count)
-                    fluents_affected[fluent_name] = self.find_fluents_affected(ca)
+                    count_expressions[fluent_name] = ca
                     initial_value = self.expression_value(new_problem, ca)
                     assert initial_value.is_bool_constant()
                     if initial_value.is_true():
@@ -261,7 +260,7 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                     n_count += 1
                 new_args.append(em.create_node(OperatorKind.PLUS, tuple(new_ca_args)))
             else:
-                new_args.append(self.add_counts(new_problem, new_to_old, arg, fluents_affected))
+                new_args.append(self.add_counts(new_problem, arg, count_expressions))
         return em.create_node(expression.node_type, tuple(new_args))
 
     def _compile(
@@ -280,28 +279,43 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
 
         # guardar els fluents que utilitza cada argument dels counts
         n_count = 0
-        fluents_affected: Dict[str, List[str]] = {}
+        count_expressions: Dict[str, "up.model.fnode.FNode"] = {}
 
         # per cada accio canviar les precondicions que tinguin count i guardar info a fluents affected
         new_problem.clear_actions()
+        old_actions = problem.actions
         for action in problem.actions:
             new_action = action.clone()
             new_action.clear_preconditions()
             for pre in action.preconditions:
-                new_precondition = self.add_counts(new_problem, new_to_old, pre, fluents_affected) # ?
-                print(new_precondition)
+                new_precondition = self.add_counts(new_problem, pre, count_expressions)
                 new_action.add_precondition(new_precondition)
             new_problem.add_action(new_action)
-        print(fluents_affected)
+            # en els efectes condicionals ?
 
-        # no afegir els canvis a new_to_old encara !!
+        # per cada goal canviar les expressions que tinguin count i guardar info a fluents affected
         new_problem.clear_goals()
         for goal in problem.goals:
-            new_goal = self.add_counts(new_problem, new_to_old, goal, fluents_affected)
+            new_goal = self.add_counts(new_problem, goal, count_expressions)
             new_problem.add_goal(new_goal)
+
+        print(count_expressions)
 
         # per cada accio afegir els canvis dels counts - modificar accions i afegir-les al problema
         # guardar canvis a new_to_old
+        new_actions = []
+        changed_actions = new_problem.actions
+        new_problem.clear_actions()
+        for action in changed_actions:
+            # oju perque com es canvien els canvis en el new_to_old ?
+            new_action = self.add_count_effects(new_problem, action, count_expressions)
+            new_actions.append(new_action)
+            new_problem.add_action(new_action)
+
+        print("new actions: ")
+        for i in range(0, len(old_actions)):
+            print(new_actions[i].name, old_actions[i].name)
+            new_to_old[new_actions[i]] = old_actions[i]
 
         return CompilerResult(
             new_problem, partial(replace_action, map=new_to_old), self.name
