@@ -136,7 +136,7 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
     ) -> ProblemKind:
         return problem_kind.clone()
 
-    def decompose_expression(
+    def expression_value(
             self,
             new_problem: "up.model.Problem",
             expression: "up.model.fnode.FNode",
@@ -158,35 +158,7 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
         else:
             new_args = []
             for arg in expression.args:
-                new_args.append(self.decompose_expression(new_problem, arg, fluent, value))
-            return em.create_node(expression.node_type, tuple(new_args))
-
-    def expression_value(
-            self,
-            new_problem: "up.model.Problem",
-            expression: "up.model.fnode.FNode",
-            fluent: Optional["up.model.fluent.Fluent"] = None,
-            value: Optional["up.model.fnode.FNode"] = None,
-    ) -> "up.model.fnode.FNode":
-        assert expression.type.is_bool_type()
-        env = new_problem.environment
-        em = env.expression_manager
-        if expression.is_constant():
-            return expression
-        elif expression.is_fluent_exp():
-            assert expression.fluent().type.is_bool_type()
-            if value is None:
-                return new_problem.initial_value(expression.fluent())
-            else:
-                assert value.is_bool_constant()
-                if fluent == expression.fluent():
-                    return value
-                else:
-                    return expression
-        else:
-            new_args = []
-            for arg in expression.args:
-                new_args.append(self.decompose_expression(new_problem, arg, fluent, value))
+                new_args.append(self.expression_value(new_problem, arg, fluent, value))
             return em.create_node(expression.node_type, tuple(new_args)).simplify()
 
     def find_fluents_affected(
@@ -236,7 +208,6 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
 
                     actions = new_problem.actions
                     new_problem.clear_actions()
-
                     for action in actions:
                         new_action = action.clone()
                         new_expression = ca
