@@ -244,8 +244,8 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                                 else:
                                     new_action.add_effect(new_fluent, 0, effects_conditions)
                             else:
-                                new_action.add_effect(new_fluent, 1, new_expression, effects_conditions)
-                                new_action.add_effect(new_fluent, 0, Not(new_expression), effects_conditions)
+                                new_action.add_effect(new_fluent, 1, And(new_expression, effects_conditions))
+                                new_action.add_effect(new_fluent, 0, And(Not(new_expression), effects_conditions))
                         new_problem.add_action(new_action)
                         new_to_old[new_action] = action
                     n_count += 1
