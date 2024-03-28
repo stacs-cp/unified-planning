@@ -236,6 +236,7 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                                     new_expression = self.expression_value(new_problem, new_expression, effect.fluent.fluent(), effect.value, 'decrease')
                                 else:
                                     new_expression = self.expression_value(new_problem, new_expression, effect.fluent.fluent(), effect.value)
+                        print(effects_conditions)
                         if fluent_in_action:
                             if new_expression.is_bool_constant():
                                 if new_expression.is_true():
