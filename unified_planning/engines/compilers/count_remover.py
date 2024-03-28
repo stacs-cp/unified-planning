@@ -159,9 +159,9 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                     if type_effect == 'increase':
                         print("ei")
                         print(fluent, value)
-                        return em.create_node(OperatorKind.PLUS, tuple([fluent, value])).simplify()
+                        return em.create_node(OperatorKind.PLUS, tuple([fluent(), value])).simplify()
                     elif type_effect == 'decrease':
-                        return em.create_node(OperatorKind.MINUS, tuple([fluent, value])).simplify()
+                        return em.create_node(OperatorKind.MINUS, tuple([fluent(), value])).simplify()
                     else:
                         return value
                 else:
