@@ -216,12 +216,9 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
         for action in problem.actions:
             new_parameters = OrderedDict()
             int_parameters = {}
-            int_domains = []
             n_i = 0
             usertype_parameters = []
-            #
             type_list: List[Type] = []
-            #
             for old_parameter in action.parameters:
                 if old_parameter.type.is_user_type():
                     new_parameters.update({old_parameter.name: old_parameter.type})
