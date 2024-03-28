@@ -224,7 +224,7 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                                 fluent_in_action = True
                                 if effect.is_conditional():
                                     if effects_conditions is None:
-                                        effects_conditions = effect.condition.condition()
+                                        effects_conditions = effect.condition
                                     else:
                                         effects_conditions = And(effects_conditions, effect.condition.condition())
                                 if effect.is_increase():
