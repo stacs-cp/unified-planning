@@ -293,7 +293,7 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                 new_action.add_precondition(new_precondition)
             new_problem.add_action(new_action)
         print(fluents_affected)
-        print(n_count)
+        print(len(fluents_affected))
 
         # no afegir els canvis a new_to_old encara !!
         new_problem.clear_goals()
