@@ -239,18 +239,23 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                                     new_expression = self.expression_value(new_problem, new_expression, effect.fluent.fluent(), effect.value, 'decrease')
                                 else:
                                     new_expression = self.expression_value(new_problem, new_expression, effect.fluent.fluent(), effect.value)
-                        print(effects_conditions)
-                        if effects_conditions is None:
-                            effects_conditions = True
                         if fluent_in_action:
                             if new_expression.is_bool_constant():
                                 if new_expression.is_true():
-                                    new_action.add_effect(new_fluent, 1, effects_conditions)
+                                    new_value = 1
                                 else:
-                                    new_action.add_effect(new_fluent, 0, effects_conditions)
+                                    new_value = 0
+                                if effects_conditions is None:
+                                    new_action.add_effect(new_fluent, new_value)
+                                else:
+                                    new_action.add_effect(new_fluent, new_value, effects_conditions)
                             else:
-                                new_action.add_effect(new_fluent, 1, And(new_expression, effects_conditions))
-                                new_action.add_effect(new_fluent, 0, And(Not(new_expression), effects_conditions))
+                                if effects_conditions is None:
+                                    new_action.add_effect(new_fluent, 1, And(new_expression, effects_conditions))
+                                    new_action.add_effect(new_fluent, 0, And(Not(new_expression), effects_conditions))
+                                else:
+                                    new_action.add_effect(new_fluent, 1, new_expression)
+                                    new_action.add_effect(new_fluent, 0, Not(new_expression))
                         new_problem.add_action(new_action)
                         new_to_old[new_action] = action
                     n_count += 1
