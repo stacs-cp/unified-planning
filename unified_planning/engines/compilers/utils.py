@@ -291,6 +291,7 @@ def replace_action(
     try:
         print("busco: ", action_instance.action.name)
         print(map[action_instance.action])
+        print(map)
         replaced_action = map[action_instance.action]
     except KeyError:
         raise UPUsageError(
