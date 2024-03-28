@@ -43,7 +43,7 @@ from unified_planning.engines.compilers.utils import (
 )
 from typing import Dict, List, Optional, Tuple, OrderedDict, Any, Union
 from functools import partial
-from unified_planning.shortcuts import Int, Plus, Not, Minus
+from unified_planning.shortcuts import Int, Plus, Not, Minus, And
 import re
 
 class CountRemover(engines.engine.Engine, CompilerMixin):
@@ -169,7 +169,7 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
         else:
             new_args = []
             for arg in expression.args:
-                new_args.append(self.expression_value(new_problem, arg, fluent, value))
+                new_args.append(self.expression_value(new_problem, arg, fluent, value, type_effect))
             return em.create_node(expression.node_type, tuple(new_args)).simplify()
 
     def find_fluents_affected(
@@ -223,27 +223,28 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                         new_action = action.clone()
                         new_expression = ca
                         fluent_in_action = False
+                        effects_conditions = True
                         for effect in action.effects:
                             if effect.fluent.fluent().name in fluents_affected[fluent_name]:
                                 fluent_in_action = True
+                                if effect.is_conditional():
+                                    effects_conditions = And(effects_conditions, effect.condition.condition())
                                 if effect.is_increase():
                                     print("is_increase")
                                     new_expression = self.expression_value(new_problem, new_expression, effect.fluent.fluent(), effect.value, 'increase')
                                 elif effect.is_decrease():
                                     new_expression = self.expression_value(new_problem, new_expression, effect.fluent.fluent(), effect.value, 'decrease')
-                                elif effect.is_conditional() and effect.condition.condition().is_true():
-                                    new_expression = self.expression_value(new_problem, new_expression, effect.fluent.fluent(), effect.value)
                                 else:
                                     new_expression = self.expression_value(new_problem, new_expression, effect.fluent.fluent(), effect.value)
                         if fluent_in_action:
                             if new_expression.is_bool_constant():
                                 if new_expression.is_true():
-                                    new_action.add_effect(new_fluent, 1)
+                                    new_action.add_effect(new_fluent, 1, effects_conditions)
                                 else:
-                                    new_action.add_effect(new_fluent, 0)
+                                    new_action.add_effect(new_fluent, 0, effects_conditions)
                             else:
-                                new_action.add_effect(new_fluent, 1, new_expression)
-                                new_action.add_effect(new_fluent, 0, Not(new_expression))
+                                new_action.add_effect(new_fluent, 1, new_expression, effects_conditions)
+                                new_action.add_effect(new_fluent, 0, Not(new_expression), effects_conditions)
                         new_problem.add_action(new_action)
                         new_to_old[new_action] = action
                     n_count += 1
