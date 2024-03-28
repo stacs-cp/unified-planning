@@ -223,7 +223,7 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                         new_action = action.clone()
                         new_expression = ca
                         fluent_in_action = False
-                        effects_conditions = True
+                        effects_conditions = None
                         for effect in action.effects:
                             if effect.fluent.fluent().name in fluents_affected[fluent_name]:
                                 fluent_in_action = True
