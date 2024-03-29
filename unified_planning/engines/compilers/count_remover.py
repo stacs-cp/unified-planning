@@ -185,15 +185,12 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
             action: "up.model.action.Action",
             count_expressions: Dict[str, "up.model.fnode.FNode"]
     ) -> "up.model.action.Action":
-        print(count_expressions.keys())
         # per cada count, si l'accio conte algun efecte a algun fluent que el count contingui, tractar
         for count, expression in count_expressions.items():
             count_fluents_in_action = False
             effects_conditions = None
             for effect in action.effects:
-                print(effect.fluent.fluent().name, count, expression)
                 if effect.fluent.fluent().name in self.find_fluents_affected(expression):
-                    print("si")
                     count_fluents_in_action = True
                     if effect.is_conditional():
                         if effects_conditions is None:
@@ -283,7 +280,6 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
 
         # per cada accio canviar les precondicions que tinguin count i guardar info a fluents affected
         new_problem.clear_actions()
-        old_actions = problem.actions
         for action in problem.actions:
             new_action = action.clone()
             new_action.clear_preconditions()
@@ -299,8 +295,6 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
             new_goal = self.add_counts(new_problem, goal, count_expressions)
             new_problem.add_goal(new_goal)
 
-        print(count_expressions)
-
         # per cada accio afegir els canvis dels counts - modificar accions i afegir-les al problema
         # guardar canvis a new_to_old
         new_actions = []
@@ -312,10 +306,9 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
             new_actions.append(new_action)
             new_problem.add_action(new_action)
 
-        print("new actions: ")
-        for i in range(0, len(old_actions)):
-            print(new_actions[i].name, old_actions[i].name)
-            new_to_old[new_actions[i]] = old_actions[i]
+        for i in range(0, len(problem.actions)):
+
+            new_to_old[new_actions[i]] = problem.actions[i]
 
         return CompilerResult(
             new_problem, partial(replace_action, map=new_to_old), self.name
