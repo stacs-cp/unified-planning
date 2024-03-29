@@ -268,14 +268,11 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
         """
         """
         assert isinstance(problem, Problem)
-
         new_to_old: Dict[Action, Action] = {}
-
         new_problem = problem.clone()
         new_problem.name = f"{self.name}_{problem.name}"
 
         # guardar els fluents que utilitza cada argument dels counts
-        n_count = 0
         count_expressions: Dict[str, "up.model.fnode.FNode"] = {}
 
         # per cada accio canviar les precondicions que tinguin count i guardar info a fluents affected
@@ -296,18 +293,15 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
             new_problem.add_goal(new_goal)
 
         # per cada accio afegir els canvis dels counts - modificar accions i afegir-les al problema
-        # guardar canvis a new_to_old
         new_actions = []
         changed_actions = new_problem.actions
         new_problem.clear_actions()
         for action in changed_actions:
-            # oju perque com es canvien els canvis en el new_to_old ?
             new_action = self.add_count_effects(new_problem, action, count_expressions)
             new_actions.append(new_action)
             new_problem.add_action(new_action)
 
         for i in range(0, len(problem.actions)):
-
             new_to_old[new_actions[i]] = problem.actions[i]
 
         return CompilerResult(
