@@ -193,7 +193,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                         new_args.append(n)
                 else:
                     new_args.append(new_node)
-            return em.create_node(node.node_type, tuple(new_args))
+            return em.create_node(node.node_type, tuple(new_args)).simplify()
 
     def _compile(
         self,
