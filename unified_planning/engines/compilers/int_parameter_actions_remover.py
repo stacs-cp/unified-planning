@@ -263,12 +263,21 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                     new_fnode = self._manage_node(em, effect.fluent, int_parameters, c)
                     new_value = self._manage_node(em, effect.value, int_parameters, c)
                     new_condition = self._manage_node(em, effect.condition, int_parameters, c)
-                    if effect.is_increase():
-                        new_action.add_increase_effect(new_fnode, new_value, new_condition, effect.forall)
-                    elif effect.is_decrease():
-                        new_action.add_decrease_effect(new_fnode, new_value, new_condition, effect.forall)
+                    if new_condition.is_bool_constant():
+                        if new_condition.is_true:
+                            if effect.is_increase():
+                                new_action.add_increase_effect(new_fnode, new_value, effect.forall)
+                            elif effect.is_decrease():
+                                new_action.add_decrease_effect(new_fnode, new_value, effect.forall)
+                            else:
+                                new_action.add_effect(new_fnode, new_value, effect.forall)
                     else:
-                        new_action.add_effect(new_fnode, new_value, new_condition, effect.forall)
+                        if effect.is_increase():
+                            new_action.add_increase_effect(new_fnode, new_value, new_condition, effect.forall)
+                        elif effect.is_decrease():
+                            new_action.add_decrease_effect(new_fnode, new_value, new_condition, effect.forall)
+                        else:
+                            new_action.add_effect(new_fnode, new_value, new_condition, effect.forall)
                 new_problem.add_action(new_action)
                 trace_back_map[new_action] = (action, c)
 
