@@ -280,7 +280,6 @@ def lift_action_instance(
     Where the grounded action is obtained by grounding
     the "original_action" with the specific "parameters"."""
     lifted_action, parameters = map[action_instance.action]
-    print((action_instance.actual_parameters + parameters))
     return ActionInstance(lifted_action, tuple(action_instance.actual_parameters + parameters))
 
 
@@ -288,9 +287,6 @@ def replace_action(
     action_instance: ActionInstance,
     map: Dict["up.model.Action", Optional["up.model.Action"]],
 ) -> Optional[ActionInstance]:
-    print("replace action")
-    print(action_instance.action.name)
-    print(map.keys())
     try:
         replaced_action = map[action_instance.action]
     except KeyError:
