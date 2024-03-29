@@ -190,6 +190,7 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
             count_fluents_in_action = False
             effects_conditions = None
             # per cada fluent de l'expressio...
+            print(count, expression)
             for fluent_affected in self.find_fluents_affected(expression):
                 for effect in action.effects:
                     # si aquest efecte modifica un dels fluents dins l'expressio
@@ -210,6 +211,7 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                         else:
                             expression = self.expression_value(new_problem, expression, effect.fluent.fluent(),
                                                                    effect.value)
+            print(expression)
             if count_fluents_in_action:
                 if expression.is_bool_constant():
                     if expression.is_true():
