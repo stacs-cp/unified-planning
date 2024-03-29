@@ -186,13 +186,12 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
             count_expressions: Dict[str, "up.model.fnode.FNode"]
     ) -> "up.model.action.Action":
         # per cada count, si l'accio conte algun efecte a algun fluent que el count contingui, tractar
-        print(action.name)
         for count, expression in count_expressions.items():
+            new_expression = expression
             count_fluents_in_action = False
             effects_conditions = None
             # per cada fluent de l'expressio...
-            print(count, expression)
-            for fluent_affected in self.find_fluents_affected(expression):
+            for fluent_affected in self.find_fluents_affected(new_expression):
                 for effect in action.effects:
                     # si aquest efecte modifica un dels fluents dins l'expressio
                     if effect.fluent.fluent().name == fluent_affected:
@@ -204,18 +203,17 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                                 effects_conditions = And(effects_conditions, effect.condition)
                         # es van fent els canvis addients a l'expressio
                         if effect.is_increase():
-                            expression = self.expression_value(new_problem, expression, effect.fluent.fluent(),
+                            new_expression = self.expression_value(new_problem, new_expression, effect.fluent.fluent(),
                                                                    effect.value, 'increase')
                         elif effect.is_decrease():
-                            expression = self.expression_value(new_problem, expression, effect.fluent.fluent(),
+                            new_expression = self.expression_value(new_problem, new_expression, effect.fluent.fluent(),
                                                                    effect.value, 'decrease')
                         else:
-                            expression = self.expression_value(new_problem, expression, effect.fluent.fluent(),
+                            new_expression = self.expression_value(new_problem, new_expression, effect.fluent.fluent(),
                                                                    effect.value)
-            print(expression)
             if count_fluents_in_action:
-                if expression.is_bool_constant():
-                    if expression.is_true():
+                if new_expression.is_bool_constant():
+                    if new_expression.is_true():
                         new_value = 1
                     else:
                         new_value = 0
@@ -225,11 +223,11 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                         action.add_effect(new_problem.fluent(count), new_value, effects_conditions)
                 else:
                     if effects_conditions is None:
-                        action.add_effect(new_problem.fluent(count), 1, expression)
-                        action.add_effect(new_problem.fluent(count), 0, Not(expression))
+                        action.add_effect(new_problem.fluent(count), 1, new_expression)
+                        action.add_effect(new_problem.fluent(count), 0, Not(new_expression))
                     else:
-                        action.add_effect(new_problem.fluent(count), 1, And(expression, effects_conditions))
-                        action.add_effect(new_problem.fluent(count), 0, And(Not(expression), effects_conditions))
+                        action.add_effect(new_problem.fluent(count), 1, And(new_expression, effects_conditions))
+                        action.add_effect(new_problem.fluent(count), 0, And(Not(new_expression), effects_conditions))
         return action
 
     def add_counts(
