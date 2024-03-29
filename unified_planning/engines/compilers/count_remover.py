@@ -210,23 +210,23 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                         else:
                             expression = self.expression_value(new_problem, expression, effect.fluent.fluent(),
                                                                    effect.value)
-                if count_fluents_in_action:
-                    if expression.is_bool_constant():
-                        if expression.is_true():
-                            new_value = 1
-                        else:
-                            new_value = 0
-                        if effects_conditions is None:
-                            action.add_effect(new_problem.fluent(count), new_value)
-                        else:
-                            action.add_effect(new_problem.fluent(count), new_value, effects_conditions)
+            if count_fluents_in_action:
+                if expression.is_bool_constant():
+                    if expression.is_true():
+                        new_value = 1
                     else:
-                        if effects_conditions is None:
-                            action.add_effect(new_problem.fluent(count), 1, expression)
-                            action.add_effect(new_problem.fluent(count), 0, Not(expression))
-                        else:
-                            action.add_effect(new_problem.fluent(count), 1, And(expression, effects_conditions))
-                            action.add_effect(new_problem.fluent(count), 0, And(Not(expression), effects_conditions))
+                        new_value = 0
+                    if effects_conditions is None:
+                        action.add_effect(new_problem.fluent(count), new_value)
+                    else:
+                        action.add_effect(new_problem.fluent(count), new_value, effects_conditions)
+                else:
+                    if effects_conditions is None:
+                        action.add_effect(new_problem.fluent(count), 1, expression)
+                        action.add_effect(new_problem.fluent(count), 0, Not(expression))
+                    else:
+                        action.add_effect(new_problem.fluent(count), 1, And(expression, effects_conditions))
+                        action.add_effect(new_problem.fluent(count), 0, And(Not(expression), effects_conditions))
         return action
 
     def add_counts(
