@@ -186,6 +186,7 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
             count_expressions: Dict[str, "up.model.fnode.FNode"]
     ) -> "up.model.action.Action":
         # per cada count, si l'accio conte algun efecte a algun fluent que el count contingui, tractar
+        print(action.name)
         for count, expression in count_expressions.items():
             count_fluents_in_action = False
             effects_conditions = None
