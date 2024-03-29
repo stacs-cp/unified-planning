@@ -266,11 +266,11 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                     if new_condition.is_bool_constant():
                         if new_condition.is_true:
                             if effect.is_increase():
-                                new_action.add_increase_effect(new_fnode, new_value, effect.forall)
+                                new_action.add_increase_effect(new_fnode, new_value, forall=effect.forall)
                             elif effect.is_decrease():
-                                new_action.add_decrease_effect(new_fnode, new_value, effect.forall)
+                                new_action.add_decrease_effect(new_fnode, new_value, forall=effect.forall)
                             else:
-                                new_action.add_effect(new_fnode, new_value, effect.forall)
+                                new_action.add_effect(new_fnode, new_value, forall=effect.forall)
                     else:
                         if effect.is_increase():
                             new_action.add_increase_effect(new_fnode, new_value, new_condition, effect.forall)
