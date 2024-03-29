@@ -187,9 +187,7 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
     ) -> "up.model.action.Action":
         print(count_expressions.keys())
         # per cada count, si l'accio conte algun efecte a algun fluent que el count contingui, tractar
-        for ce in count_expressions:
-            count = next(iter(ce))
-            expression = next(iter(count))
+        for count, expression in count_expressions.items():
             count_fluents_in_action = False
             effects_conditions = None
             for effect in action.effects:
