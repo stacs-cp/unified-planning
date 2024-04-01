@@ -225,22 +225,23 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                     int_parameters[old_parameter.name] = len(int_parameters)
             print(int_parameters)
             print(type_list)
-            ground_size = 1
             domain_sizes = []
             for t in type_list:
                 print(t)
                 ds = domain_size(problem, t)
                 print(ds)
                 domain_sizes.append(ds)
-                ground_size *= ds
-            print("ground size", ground_size)
             print("domain size", domain_sizes)
             items_list: List[List[FNode]] = []
             for size, type in zip(domain_sizes, type_list):
+                print(size, type)
+                print("append: ", [domain_item(problem, type, j) for j in range(size)])
                 items_list.append(
                     [domain_item(problem, type, j) for j in range(size)]
                 )
+            print(items_list)
             res = product(*items_list)
+            print(res)
 
             for c in res:
                 if isinstance(action, InstantaneousAction):
