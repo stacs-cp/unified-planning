@@ -208,7 +208,6 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
 
         env = problem.environment
         em = env.expression_manager
-        tm = env.type_manager
         new_problem = problem.clone()
         new_problem.name = f"{self.name}_{problem.name}"
         new_problem.clear_actions()
@@ -217,18 +216,20 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             new_parameters = OrderedDict()
             int_parameters = {}
             n_i = 0
-            usertype_parameters = []
             type_list: List[Type] = []
             for old_parameter in action.parameters:
+                print("old_parameter: ", old_parameter)
                 if old_parameter.type.is_user_type():
                     new_parameters.update({old_parameter.name: old_parameter.type})
-                    usertype_parameters.append(old_parameter)
                 else:
                     assert old_parameter.type.is_int_type()
+                    print(len(int_parameters))
+                    print(n_i)
                     type_list.append(old_parameter.type)
                     int_parameters[old_parameter.name] = n_i
                     n_i = n_i + 1
-
+            print(int_parameters)
+            print(type_list)
             ground_size = 1
             domain_sizes = []
             for t in type_list:
@@ -264,6 +265,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                     new_value = self._manage_node(em, effect.value, int_parameters, c)
                     new_condition = self._manage_node(em, effect.condition, int_parameters, c)
                     if new_condition.is_bool_constant():
+                        # aixo de la condicio esta be ?
                         if new_condition.is_true():
                             if effect.is_increase():
                                 new_action.add_increase_effect(new_fnode, new_value, forall=effect.forall)

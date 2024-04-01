@@ -230,7 +230,7 @@ class _RealType(Type):
 
 
 class _ArrayType(Type):
-    """Represents a list composed of n_elements elements of a given type elements_type."""
+    """Represents an array composed with a number (size) of elements of a given type (elements_type)."""
     def __init__(self, size: int, elements_type: Type = None):
         Type.__init__(self)
         self._size = size
