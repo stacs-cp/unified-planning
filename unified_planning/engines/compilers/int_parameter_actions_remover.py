@@ -158,7 +158,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             node: "up.model.fnode.FNode",
             int_parameters: dict[str, int],
             c: Any
-    ) -> Union[List["up.model.fnode.FNode"], "up.model.fnode.FNode"]:
+    ) -> "up.model.fnode.FNode":
         if node.is_fluent_exp():
             fluent = node.fluent()
             new_name = fluent.name
@@ -171,12 +171,15 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                 new_name = new_name.replace('[' + ti + ']', '[' + str(eval(new_ti)) + ']')
             return Fluent(new_name, fluent.type, fluent.signature, fluent.environment)(*fluent.signature)
         elif node.is_variable_exp():
+            print("variable: ", node)
             if node.variable().type.is_int_type():
-                new_int = c[int_parameters.get(node.variable().name)]
-                return Int(new_int)
+                print(Int(c[int_parameters.get(node.variable().name)]))
+                return Int(c[int_parameters.get(node.variable().name)])
             else:
                 return node
         elif node.is_parameter_exp():
+            print("parametre: ", node)
+            print(int_parameters.get(node.parameter().name))
             if int_parameters.get(node.parameter().name) is not None:
                 return c[int_parameters.get(node.parameter().name)]
             else:
@@ -186,13 +189,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
         else:
             new_args = []
             for arg in node.args:
-                new_node = self._manage_node(em, arg, int_parameters, c)
-                isinstance(new_node, List)
-                if isinstance(new_node, List):
-                    for n in new_node:
-                        new_args.append(n)
-                else:
-                    new_args.append(new_node)
+                new_args.append(self._manage_node(em, arg, int_parameters, c))
             return em.create_node(node.node_type, tuple(new_args)).simplify()
 
     def _compile(
@@ -241,13 +238,8 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
 
                 for precondition in action.preconditions:
                     new_precondition = self._manage_node(em, precondition, int_parameters, c)
-                    # what? List of what?
-                    if isinstance(new_precondition, List):
-                        print("is list: ", new_precondition)
-                        for p in new_precondition:
-                            new_action.add_precondition(p)
-                    else:
-                        new_action.add_precondition(new_precondition)
+                    new_action.add_precondition(new_precondition)
+
                 for effect in action.effects:
                     new_fnode = self._manage_node(em, effect.fluent, int_parameters, c)
                     new_value = self._manage_node(em, effect.value, int_parameters, c)
