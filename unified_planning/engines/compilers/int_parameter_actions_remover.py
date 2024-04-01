@@ -174,11 +174,11 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             print("parametre: ", node)
             if int_parameters.get(node.parameter().name) is not None:
                 print(c[int_parameters.get(node.parameter().name)])
-                print(type(c[int_parameters.get(node.parameter().name)]))
+                print(c[int_parameters.get(node.parameter().name)].type)
                 return c[int_parameters.get(node.parameter().name)]
             else:
                 return node
-        elif node.is_constant():
+        elif node.is_constant() or node.is_variable_exp() or node.is_fluent_exp():
             return node
         else:
             new_args = []
