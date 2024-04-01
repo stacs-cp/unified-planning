@@ -170,17 +170,11 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                         new_ti = new_ti.replace(key, str(c[int_parameters.get(key)]))
                 new_name = new_name.replace('[' + ti + ']', '[' + str(eval(new_ti)) + ']')
             return Fluent(new_name, fluent.type, fluent.signature, fluent.environment)(*fluent.signature)
-        elif node.is_variable_exp():
-            print("variable: ", node)
-            if node.variable().type.is_int_type():
-                print(Int(c[int_parameters.get(node.variable().name)]))
-                return Int(c[int_parameters.get(node.variable().name)])
-            else:
-                return node
         elif node.is_parameter_exp():
             print("parametre: ", node)
-            print(int_parameters.get(node.parameter().name))
             if int_parameters.get(node.parameter().name) is not None:
+                print(c[int_parameters.get(node.parameter().name)])
+                print(type(c[int_parameters.get(node.parameter().name)]))
                 return c[int_parameters.get(node.parameter().name)]
             else:
                 return node
