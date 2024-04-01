@@ -231,21 +231,19 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                 items_list.append([domain_item(problem, type, j) for j in range(size)])
 
             for c in product(*items_list):
-                print(c)
-                print(type(c))
-                print(type(c[0]))
+                new_action_name = action.name + '_' + '_'.join(map(str, c))
                 if isinstance(action, InstantaneousAction):
-                    new_action = InstantaneousAction(action.name + '_' + '_'.join(map(str, c)), new_parameters,
-                                                     action.environment)
+                    new_action = InstantaneousAction(new_action_name, new_parameters, action.environment)
                 elif isinstance(action, DurativeAction):
-                    new_action = DurativeAction(action.name + '_' + '_'.join(map(str, c)), new_parameters,
-                                                action.environment)
+                    new_action = DurativeAction(new_action_name, new_parameters, action.environment)
                 else:
-                    new_action = Action(action.name + '_' + '_'.join(map(str, c)), new_parameters,
-                                        action.environment)
+                    new_action = Action(new_action_name, new_parameters, action.environment)
+
                 for precondition in action.preconditions:
                     new_precondition = self._manage_node(em, precondition, int_parameters, c)
+                    # what? List of what?
                     if isinstance(new_precondition, List):
+                        print("is list: ", new_precondition)
                         for p in new_precondition:
                             new_action.add_precondition(p)
                     else:
