@@ -215,27 +215,26 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
         for action in problem.actions:
             new_parameters = OrderedDict()
             int_parameters = {}
-            n_i = 0
             type_list: List[Type] = []
             for old_parameter in action.parameters:
-                print("old_parameter: ", old_parameter)
                 if old_parameter.type.is_user_type():
                     new_parameters.update({old_parameter.name: old_parameter.type})
                 else:
                     assert old_parameter.type.is_int_type()
-                    print(len(int_parameters))
-                    print(n_i)
                     type_list.append(old_parameter.type)
-                    int_parameters[old_parameter.name] = n_i
-                    n_i = n_i + 1
+                    int_parameters[old_parameter.name] = len(int_parameters)
             print(int_parameters)
             print(type_list)
             ground_size = 1
             domain_sizes = []
             for t in type_list:
+                print(t)
                 ds = domain_size(problem, t)
+                print(ds)
                 domain_sizes.append(ds)
                 ground_size *= ds
+            print("ground size", ground_size)
+            print("domain size", domain_sizes)
             items_list: List[List[FNode]] = []
             for size, type in zip(domain_sizes, type_list):
                 items_list.append(
