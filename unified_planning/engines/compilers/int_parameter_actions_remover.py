@@ -231,6 +231,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                 items_list.append([domain_item(problem, type, j) for j in range(size)])
 
             for c in product(*items_list):
+                print(c, c.type, c[0].type)
                 if isinstance(action, InstantaneousAction):
                     new_action = InstantaneousAction(action.name + '_' + '_'.join(map(str, c)), new_parameters,
                                                      action.environment)
