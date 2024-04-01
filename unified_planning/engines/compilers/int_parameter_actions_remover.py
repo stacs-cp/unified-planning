@@ -216,32 +216,25 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             new_parameters = OrderedDict()
             int_parameters = {}
             type_list: List[Type] = []
+            domain_sizes = []
             for old_parameter in action.parameters:
                 if old_parameter.type.is_user_type():
                     new_parameters.update({old_parameter.name: old_parameter.type})
                 else:
                     assert old_parameter.type.is_int_type()
                     type_list.append(old_parameter.type)
+                    domain_sizes.append(domain_size(problem, old_parameter.type))
                     int_parameters[old_parameter.name] = len(int_parameters)
-            print(int_parameters)
-            print(type_list)
-            domain_sizes = []
-            for t in type_list:
-                print(t)
-                ds = domain_size(problem, t)
-                print(ds)
-                domain_sizes.append(ds)
-            print("domain size", domain_sizes)
+
             items_list: List[List[FNode]] = []
+            print(domain_sizes)
+            print(type_list)
+            print(zip(domain_sizes, type_list))
             for size, type in zip(domain_sizes, type_list):
-                print(size, type)
-                print("append: ", [domain_item(problem, type, j) for j in range(size)])
                 items_list.append(
                     [domain_item(problem, type, j) for j in range(size)]
                 )
-            print(items_list)
             res = product(*items_list)
-            print(res)
 
             for c in res:
                 if isinstance(action, InstantaneousAction):
