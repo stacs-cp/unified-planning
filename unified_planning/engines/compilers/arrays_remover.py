@@ -238,21 +238,18 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                     this_fluent = this_fluent.elements_type
 
                 for combination in list(product(*domain)):
-                    print("a: ", get_fresh_name(new_problem, fluent.name, list(map(str, combination))))
-                    new_fluent_name = fluent.name + ''.join(f'_{str(c)}' for c in combination)
-                    print("b: ", new_fluent_name)
+                    new_fluent_name = get_fresh_name(new_problem, fluent.name, list(map(str, combination)))
                     new_fluent = model.Fluent(new_fluent_name, new_type, fluent.signature, fluent.environment)
-                    if default_value is not None:
-                        print(combination)
+                    new_default_value = default_value
+                    new_initial_value = default_value
+                    if new_default_value is not None:
                         for i in combination:
-                            print(i)
-                            print("default_value: ", default_value)
-                            default_value = default_value[i].constant_value()
-                    new_problem.add_fluent(new_fluent, default_initial_value=default_value)
-                    if initial_value is not None:
+                            new_default_value = new_default_value[i].constant_value()
+                    new_problem.add_fluent(new_fluent, default_initial_value=new_default_value)
+                    if new_initial_value is not None:
                         for i in combination:
-                            initial_value = initial_value[i].constant_value()
-                        new_problem.set_initial_value(new_problem.fluent(new_fluent_name), initial_value)
+                            new_initial_value = new_initial_value[i].constant_value()
+                        new_problem.set_initial_value(new_problem.fluent(new_fluent_name), new_initial_value)
             else:
                 new_problem.add_fluent(fluent, default_initial_value=default_value)
                 if initial_value is not None:
