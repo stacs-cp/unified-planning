@@ -223,8 +223,8 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
             else:
                 default_value = None
                 initial_value = None
-            this_fluent = fluent.type
-            if this_fluent.is_array_type():
+            if fluent.type.is_array_type():
+                this_fluent = fluent.type
                 new_type = this_fluent.elements_type
                 domain = []
                 while this_fluent.is_array_type():
@@ -235,23 +235,25 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                     new_type = this_fluent.elements_type
                     this_fluent = this_fluent.elements_type
 
-                combinations = list(product(*domain))
-                for combination in combinations:
-                    new_name = fluent.name + ''.join(f'_{str(c)}' for c in combination)
-                    new_default_value = default_value
-                    new_initial_value = initial_value
-                    for i in combination:
-                        new_default_value = new_default_value[i].constant_value()
-                        new_initial_value = new_initial_value[i].constant_value()
-                    new_problem.add_fluent(model.Fluent(new_name, new_type, fluent.signature, fluent.environment),
-                                           default_initial_value=new_default_value)
-                    new_problem.set_initial_value(new_problem.fluent(new_name), new_initial_value)
+                for combination in list(product(*domain)):
+                    new_fluent_name = fluent.name + ''.join(f'_{str(c)}' for c in combination)
+                    new_fluent = model.Fluent(new_fluent_name, new_type, fluent.signature, fluent.environment)
+                    if default_value is not None:
+                        for i in combination:
+                            default_value = default_value[i].constant_value()
+                    new_problem.add_fluent(new_fluent, default_initial_value=default_value)
+                    if initial_value is not None:
+                        for i in combination:
+                            initial_value = initial_value[i].constant_value()
+                        new_problem.set_initial_value(new_problem.fluent(new_fluent_name), initial_value)
             else:
                 new_problem.add_fluent(fluent, default_initial_value=default_value)
+                if initial_value is not None:
+                    new_problem.set_initial_value(fluent, initial_value)
 
         for action in problem.actions:
             new_action = action.clone()
-            new_action.name = get_fresh_name(new_problem, action.name) # ?
+            new_action.name = get_fresh_name(new_problem, action.name)
             new_action.clear_preconditions()
             new_action.clear_effects()
 
