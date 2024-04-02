@@ -240,6 +240,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                     new_fluent = model.Fluent(new_fluent_name, new_type, fluent.signature, fluent.environment)
                     if default_value is not None:
                         for i in combination:
+                            print("default_value: ", default_value)
                             default_value = default_value[i].constant_value()
                     new_problem.add_fluent(new_fluent, default_initial_value=default_value)
                     if initial_value is not None:
