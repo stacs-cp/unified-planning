@@ -171,14 +171,11 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                 new_name = new_name.replace('[' + ti + ']', '[' + str(eval(new_ti)) + ']')
             return Fluent(new_name, fluent.type, fluent.signature, fluent.environment)(*fluent.signature)
         elif node.is_parameter_exp():
-            print("parametre: ", node)
             if int_parameters.get(node.parameter().name) is not None:
-                print(c[int_parameters.get(node.parameter().name)])
-                print(c[int_parameters.get(node.parameter().name)].type)
                 return c[int_parameters.get(node.parameter().name)]
             else:
                 return node
-        elif node.is_constant() or node.is_variable_exp() or node.is_fluent_exp():
+        elif node.is_constant() or node.is_variable_exp() or node.is_timing_exp():
             return node
         else:
             new_args = []
@@ -231,15 +228,13 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                     new_action = Action(new_action_name, new_parameters, action.environment)
 
                 for precondition in action.preconditions:
-                    new_precondition = self._manage_node(em, precondition, int_parameters, c)
-                    new_action.add_precondition(new_precondition)
+                    new_action.add_precondition(self._manage_node(em, precondition, int_parameters, c))
 
                 for effect in action.effects:
                     new_fnode = self._manage_node(em, effect.fluent, int_parameters, c)
                     new_value = self._manage_node(em, effect.value, int_parameters, c)
                     new_condition = self._manage_node(em, effect.condition, int_parameters, c)
                     if new_condition.is_bool_constant():
-                        # aixo de la condicio esta be ?
                         if new_condition.is_true():
                             if effect.is_increase():
                                 new_action.add_increase_effect(new_fnode, new_value, forall=effect.forall)
