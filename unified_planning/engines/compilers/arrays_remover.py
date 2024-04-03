@@ -217,14 +217,12 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
         new_problem.initial_values.clear()
 
         for fluent in problem.fluents:
-            print(fluent.name)
             if problem.fluents_defaults.get(fluent):
                 default_value = problem.fluents_defaults.get(fluent).constant_value()
                 initial_value = problem.initial_value(fluent).constant_value()
-                print(default_value, initial_value)
             else:
                 default_value = None
-                initial_value = None
+                v = None
             if fluent.type.is_array_type():
                 this_fluent = fluent.type
                 new_type = this_fluent.elements_type
@@ -241,7 +239,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                     new_fluent_name = get_fresh_name(new_problem, fluent.name, list(map(str, combination)))
                     new_fluent = model.Fluent(new_fluent_name, new_type, fluent.signature, fluent.environment)
                     new_default_value = default_value
-                    new_initial_value = default_value
+                    new_initial_value = initial_value
                     if new_default_value is not None:
                         for i in combination:
                             new_default_value = new_default_value[i].constant_value()
@@ -260,7 +258,6 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
             new_action.name = get_fresh_name(new_problem, action.name)
             new_action.clear_preconditions()
             new_action.clear_effects()
-
             for precondition in action.preconditions:
                 new_fnodes = self._get_new_fnodes(new_problem, precondition)
                 for fnode in new_fnodes:
