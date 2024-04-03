@@ -222,7 +222,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                 initial_value = problem.initial_value(fluent).constant_value()
             else:
                 default_value = None
-                v = None
+                initial_value = None
             if fluent.type.is_array_type():
                 this_fluent = fluent.type
                 new_type = this_fluent.elements_type
