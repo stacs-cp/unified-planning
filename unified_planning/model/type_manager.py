@@ -42,7 +42,7 @@ class TypeManager:
         self._bool = BOOL
         self._ints: Dict[Tuple[Optional[int], Optional[int]], Type] = {}
         self._reals: Dict[Tuple[Optional[Fraction], Optional[Fraction]], Type] = {}
-        self._arrays: Dict[Tuple[int, Optional[Type]], Type] = {}
+        self._arrays: Dict[Tuple[int, Type], Type] = {}
         self._user_types: Dict[Tuple[str, Optional[Type]], Type] = {}
         self._movable_types: Dict[Tuple[str, Optional[Type]], Type] = {}
         self._configuration_types: Dict[Tuple[str, OccupancyMap, int], Type] = {}
@@ -143,7 +143,10 @@ class TypeManager:
     ) -> Type:
         """Returns the list type with a specific element type."""
         assert size > 1, "Size of ArrayType must be greater than 1."
+        if elements_type is None:
+            elements_type = self.BoolType()
         k = (size, elements_type)
+        print(k)
         if k in self._arrays:
             return self._arrays[k]
         else:

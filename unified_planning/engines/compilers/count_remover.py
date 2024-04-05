@@ -35,11 +35,8 @@ from unified_planning.model import (
     Effect, OperatorKind,
 )
 from unified_planning.model.problem_kind_versioning import LATEST_PROBLEM_KIND_VERSION
-from unified_planning.model.walkers import ExpressionQuantifiersRemover
 from unified_planning.engines.compilers.utils import (
-    get_fresh_name,
     replace_action,
-    updated_minimize_action_costs,
 )
 from typing import Dict, List, Optional, Tuple, OrderedDict, Any, Union
 from functools import partial

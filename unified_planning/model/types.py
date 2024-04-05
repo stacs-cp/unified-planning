@@ -231,20 +231,20 @@ class _RealType(Type):
 
 class _ArrayType(Type):
     """Represents an array composed with a number (size) of elements of a given type (elements_type)."""
-    def __init__(self, size: int, elements_type: Type = None):
+    def __init__(self, size: int, elements_type: Type):
         Type.__init__(self)
         self._size = size
         self._elements_type = elements_type
 
     def __repr__(self) -> str:
-        return f"array[{self._size}, {self._elements_type if self._elements_type is not None else 'Type'}]"
+        return f"array[{self._size}, {self._elements_type}]"
 
     def is_array_type(self) -> bool:
         """Returns true iff is a list type."""
         return True
 
     @property
-    def elements_type(self) -> Optional[Type]:
+    def elements_type(self) -> Type:
         """Returns the type of elements in this list."""
         return self._elements_type
 

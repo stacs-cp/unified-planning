@@ -18,13 +18,9 @@ from itertools import product
 
 from unified_planning.model.fnode import FNode
 
-from unified_planning.engines.compilers.grounder import GrounderHelper
-
 import unified_planning as up
 import unified_planning.engines as engines
-from unified_planning import model
 from collections import OrderedDict
-from typing import OrderedDict as OrderedDictType, Union, Iterable
 from unified_planning.engines.mixins.compiler import CompilationKind, CompilerMixin
 from unified_planning.engines.results import CompilerResult
 from unified_planning.model.types import domain_size, domain_item
@@ -35,24 +31,15 @@ from unified_planning.model import (
     Action,
     ProblemKind,
     Type,
-    Oversubscription,
-    TemporalOversubscription,
-    Object,
-    Variable,
-    Expression,
-    Effect, Fluent,
+    Fluent,
 )
 from unified_planning.model.problem_kind_versioning import LATEST_PROBLEM_KIND_VERSION
-from unified_planning.model.walkers import ExpressionQuantifiersRemover
 from unified_planning.engines.compilers.utils import (
     get_fresh_name,
-    replace_action,
-    updated_minimize_action_costs, lift_action_instance,
+    lift_action_instance,
 )
 from typing import Dict, List, Optional, Tuple, Any, OrderedDict
 from functools import partial
-
-from unified_planning.shortcuts import Int
 
 
 class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
