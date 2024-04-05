@@ -96,7 +96,6 @@ class TypeChecker(walkers.dag.DagWalker):
         OperatorKind.OR,
         OperatorKind.NOT,
         OperatorKind.IMPLIES,
-        OperatorKind.IFF,
         OperatorKind.EXISTS,
         OperatorKind.FORALL,
         OperatorKind.DOT,
@@ -109,6 +108,24 @@ class TypeChecker(walkers.dag.DagWalker):
             if x is None or x != BOOL:
                 return None
         return BOOL
+
+    @walkers.handles(OperatorKind.IFF)
+    def walk_iff(
+        self, expression: FNode, args: List["unified_planning.model.types.Type"]
+    ) -> Optional["unified_planning.model.types.Type"]:
+        assert expression is not None
+        t = args[0]
+        if t.is_array_type():
+            for x in args:
+                if not x.is_array_type():
+                    return None
+                if not t.is_compatible(x) and not x.is_compatible(t):
+                    return self.walk_iff(expression, args=[t.elements_type, x.elements_type])
+        else:
+            for x in args:
+                if x is None or x != BOOL:
+                    return None
+            return BOOL
 
     @walkers.handles(
         OperatorKind.COUNT
