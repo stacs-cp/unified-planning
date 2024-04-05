@@ -117,6 +117,7 @@ class TypeChecker(walkers.dag.DagWalker):
         print(args)
         assert expression is not None
         t = args[0]
+        print(t.is_array_type())
         if t.is_array_type():
             for x in args:
                 if not x.is_array_type():
@@ -127,7 +128,7 @@ class TypeChecker(walkers.dag.DagWalker):
             for x in args:
                 if x is None or x != BOOL:
                     return None
-            return BOOL
+        return BOOL
 
     @walkers.handles(
         OperatorKind.COUNT

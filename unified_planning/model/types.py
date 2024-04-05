@@ -326,6 +326,8 @@ def is_compatible_type(
     :param t_right: the type of the element that wants to be assigned to the element of type t_left.
     :return: True if the element of type t_left can be assigned to the element of type t_right; False otherwise.
     """
+    print("compatibles ?")
+    print(t_left,t_right)
     if t_left == t_right:
         return True
     if t_left.is_user_type() and t_right.is_user_type():
