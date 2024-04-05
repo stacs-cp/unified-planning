@@ -146,7 +146,6 @@ class TypeManager:
         if elements_type is None:
             elements_type = self.BoolType()
         k = (size, elements_type)
-        print(k)
         if k in self._arrays:
             return self._arrays[k]
         else:
