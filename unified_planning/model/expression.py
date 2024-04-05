@@ -359,6 +359,10 @@ class ExpressionManager(object):
         :param right: The ``right`` member of the ``Iff expression``.
         :return: The created ``Iff`` expression.
         """
+        if type(left) is list:
+            left = [left]
+        if type(right) is list:
+            right = [right]
         left, right = self.auto_promote(left, right)
         return self.create_node(node_type=OperatorKind.IFF, args=(left, right))
 
