@@ -466,7 +466,7 @@ class TypeChecker(walkers.dag.DagWalker):
             ):
                 return None
             elif t.is_array_type():
-                if not x.is_array_type():
+                if not x.is_array_type() or x.elements_type.is_bool_type():
                     return None
                 if not t.is_compatible(x) and not x.is_compatible(t):
                     return self.walk_equals(expression, args=[t.elements_type, x.elements_type])
