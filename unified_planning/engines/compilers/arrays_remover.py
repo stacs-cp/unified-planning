@@ -215,7 +215,9 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
             object_combination = []
             for s in signature:
                 object_combination.append(problem.objects(s.type))
-            print(object_combination)
+            print(*object_combination)
+
+            # list(product(*domain))
 
             initial_value = problem.initial_value(fluent) # si el fluent no te parametres funciona, sino no
             if problem.fluents_defaults.get(fluent):
