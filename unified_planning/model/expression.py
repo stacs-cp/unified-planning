@@ -224,6 +224,17 @@ class ExpressionManager(object):
         self, *args: Union[BoolExpression, Iterable[BoolExpression]]
     ) -> "up.model.fnode.FNode":
         """
+        | Creates an expression of the form:
+
+            * ``Count(a,b,c)``
+            * ``Count([a,b,c])``
+
+        | This function has polymorphic n-arguments.
+        | Restriction: Arguments must be ``boolean``.
+
+        :param \\*args: Either an ``Iterable`` of ``boolean expressions``, like ``[a, b, c]``, or an unpacked version
+            of it, like ``a, b, c``.
+        :return: The ``COUNT`` expression created.
         """
         tuple_args = tuple(self.auto_promote(*args))
 

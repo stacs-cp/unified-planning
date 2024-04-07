@@ -209,9 +209,11 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
         for fluent in problem.fluents:
             if problem.fluents_defaults.get(fluent):
                 default_value = problem.fluents_defaults.get(fluent).constant_value()
-                initial_value = problem.initial_value(fluent).constant_value()
             else:
                 default_value = None
+            if problem.initial_value(fluent):
+                initial_value = problem.initial_value(fluent).constant_value()
+            else:
                 initial_value = None
             if fluent.type.is_array_type():
                 this_fluent = fluent.type
