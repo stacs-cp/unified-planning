@@ -211,6 +211,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
             print(problem.initial_values)
             print(problem.initial_values.items())
             print(problem.initial_values.keys())
+            print(fluent.signature)
             print(*problem.objects(fluent.signature))
             print(*problem.objects(fluent.signature.type))
 
