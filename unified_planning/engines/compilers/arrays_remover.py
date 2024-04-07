@@ -211,14 +211,13 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
             print(problem.initial_values)
             print(problem.initial_values.items())
             print(problem.initial_values.keys())
-            print(fluent.signature)
-            print(*problem.objects(fluent.signature))
-            print(*problem.objects(fluent.signature.type))
+            signature = fluent.signature
+            object_combination = []
+            for s in signature:
+                object_combination.append(problem.objects(s.type))
+            print(object_combination)
 
-            obj = problem.objects(fluent.signature.type)
-            print(obj)
-
-            initial_value = problem.initial_value(fluent)
+            initial_value = problem.initial_value(fluent) # si el fluent no te parametres funciona, sino no
             if problem.fluents_defaults.get(fluent):
                 default_value = problem.fluents_defaults.get(fluent).constant_value()
             else:
