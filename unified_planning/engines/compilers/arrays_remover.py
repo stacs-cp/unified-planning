@@ -213,9 +213,10 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
             print(problem.initial_values.keys())
             signature = fluent.signature
             object_combination = []
-            for s in signature:
-                object_combination.append(problem.objects(s.type))
-            print(*object_combination)
+            obj = problem.objects(signature[0].type)
+            print(obj)
+            for o in obj:
+                print(o.name, o.type)
 
             # list(product(*domain))
 
