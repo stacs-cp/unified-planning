@@ -209,7 +209,8 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
         for fluent in problem.fluents:
             print(fluent)
             print(problem.initial_values)
-            print(problem.initial_value(fluent))
+            print(fluent.signature)
+            print(problem.initial_value(fluent(*fluent.signature)))
             initial_value = problem.initial_value(fluent)
             if problem.fluents_defaults.get(fluent):
                 default_value = problem.fluents_defaults.get(fluent).constant_value()
