@@ -209,14 +209,15 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
         for fluent in problem.fluents:
             print(fluent)
             print(problem.initial_values)
-            print(problem.initial_values.items())
-            print(problem.initial_values.keys())
-            parameters = fluent.signature
             objects = []
-            for p in parameters:
-                objects.append(problem.objects(p.type))
-            print(objects)
-            print(list(product(*objects)))
+            for s in fluent.signature:
+                objects.append(problem.objects(s.type))
+            fluent_parameters = list(product(*objects))
+
+            for fp in fluent_parameters:
+                print(problem.initial_value(fluent(*fp)))
+
+            # [(judith, judith), (judith, carla), (carla, judith), (carla, carla)]
 
             initial_value = problem.initial_value(fluent) # si el fluent no te parametres funciona, sino no
             if problem.fluents_defaults.get(fluent):
