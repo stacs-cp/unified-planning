@@ -211,9 +211,11 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
             print(problem.initial_values)
             print(problem.initial_values.items())
             print(problem.initial_values.keys())
-            print(problem.objects(fluent.signature))
-            obj = problem.objects(fluent.signature)
-            print(problem.initial_values.get(obj[0]))
+            print(*problem.objects(fluent.signature))
+            print(*problem.objects(fluent.signature.type))
+
+            obj = problem.objects(fluent.signature.type)
+            print(obj)
 
             initial_value = problem.initial_value(fluent)
             if problem.fluents_defaults.get(fluent):
@@ -241,6 +243,8 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                         for i in combination:
                             new_default_value = new_default_value[i].constant_value()
                     new_problem.add_fluent(new_fluent, default_initial_value=new_default_value)
+                    # canviar
+                    # problem.initial_value(fluent(*obj))
                     if new_initial_value is not None:
                         for i in combination:
                             new_initial_value = new_initial_value[i].constant_value()
