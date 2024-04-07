@@ -208,18 +208,17 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
 
         for fluent in problem.fluents:
             print(fluent)
-            print(problem.initial_values)
             objects = []
             for s in fluent.signature:
                 objects.append(problem.objects(s.type))
             fluent_parameters = list(product(*objects))
-
+            initial_values = []
             for fp in fluent_parameters:
-                print(problem.initial_value(fluent(*fp)))
+                initial_values.append(problem.initial_value(fluent(*fp)))
 
-            # [(judith, judith), (judith, carla), (carla, judith), (carla, carla)]
+            print(fluent_parameters)
+            print(initial_values)
 
-            initial_value = problem.initial_value(fluent) # si el fluent no te parametres funciona, sino no
             if problem.fluents_defaults.get(fluent):
                 default_value = problem.fluents_defaults.get(fluent).constant_value()
             else:
@@ -253,8 +252,10 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                         new_problem.set_initial_value(new_problem.fluent(new_fluent_name), new_initial_value)
             else:
                 new_problem.add_fluent(fluent, default_initial_value=default_value)
-                if initial_value is not None:
-                    new_problem.set_initial_value(fluent, initial_value)
+                if initial_values is not None:
+                    for p in range(0, len(fluent_parameters)):
+                        print(fluent(fluent_parameters[p]), initial_values[p])
+                        new_problem.set_initial_value(fluent(fluent_parameters[p]), initial_values[p])
 
         for action in problem.actions:
             new_action = action.clone()
