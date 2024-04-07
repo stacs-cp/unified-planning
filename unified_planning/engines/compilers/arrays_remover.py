@@ -239,7 +239,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                     new_fluent_name = get_fresh_name(new_problem, fluent.name, list(map(str, combination)))
                     new_fluent = model.Fluent(new_fluent_name, new_type, fluent.signature, fluent.environment)
                     new_default_value = default_value
-                    new_initial_value = initial_value
+                    new_initial_value = initial_values
                     if new_default_value is not None:
                         for i in combination:
                             new_default_value = new_default_value[i].constant_value()
@@ -247,9 +247,12 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                     # canviar
                     # problem.initial_value(fluent(*obj))
                     if new_initial_value is not None:
-                        for i in combination:
-                            new_initial_value = new_initial_value[i].constant_value()
-                        new_problem.set_initial_value(new_problem.fluent(new_fluent_name), new_initial_value)
+                        for p in range(0, len(fluent_parameters)):
+                            new_initial_value = initial_values[p]
+                            for i in combination:
+                                new_initial_value = new_initial_value[i].constant_value()
+                            new_problem.set_initial_value(new_problem.fluent(new_fluent_name)
+                                                          (fluent_parameters[p]), new_initial_value)
             else:
                 new_problem.add_fluent(fluent, default_initial_value=default_value)
                 if initial_values is not None:
