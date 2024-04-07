@@ -207,14 +207,14 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
         new_problem.initial_values.clear()
 
         for fluent in problem.fluents:
+            print(fluent)
+            print(problem.initial_values)
+            print(problem.initial_value(fluent))
+            initial_value = problem.initial_value(fluent)
             if problem.fluents_defaults.get(fluent):
                 default_value = problem.fluents_defaults.get(fluent).constant_value()
             else:
                 default_value = None
-            if problem.initial_value(fluent):
-                initial_value = problem.initial_value(fluent).constant_value()
-            else:
-                initial_value = None
             if fluent.type.is_array_type():
                 this_fluent = fluent.type
                 new_type = this_fluent.elements_type
