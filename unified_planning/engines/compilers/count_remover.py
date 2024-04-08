@@ -205,6 +205,11 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
             for fluent_affected in self.find_fluents_affected(new_expression):
                 for effect in action.effects:
                     # si aquest efecte modifica un dels fluents dins l'expressio
+                    print("fluents:")
+                    print(effect.fluent.fluent(), fluent_affected.fluent())
+                    print(effect.fluent.fluent() == fluent_affected.fluent())
+                    print(effect.fluent, fluent_affected)
+                    print(effect.fluent == fluent_affected)
                     if effect.fluent.fluent() == fluent_affected.fluent():
                         count_fluents_in_action = True
                         #if effect.fluent.args is not None and fluent_affected.args is not None:
