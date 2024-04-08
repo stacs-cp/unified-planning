@@ -40,7 +40,7 @@ from unified_planning.engines.compilers.utils import (
 )
 from typing import Dict, List, Optional, Tuple, OrderedDict, Any, Union
 from functools import partial
-from unified_planning.shortcuts import Int, Plus, Not, Minus, And
+from unified_planning.shortcuts import Int, Plus, Not, Minus, And, Equals
 import re
 
 class CountRemover(engines.engine.Engine, CompilerMixin):
@@ -198,8 +198,8 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                     print("fluent_affected: ", fluent_affected)
                     print("effect fluent: ", effect.fluent.fluent())
                     if effect.fluent.fluent().name == fluent_affected.fluent().name:
-                        print(fluent_affected.args)
-                        print(effect.fluent.args)
+                        if fluent_affected.args is not None:
+                            effects_conditions = Equals(fluent_affected.args, effect.fluent.args)
                         count_fluents_in_action = True
                         if effect.is_conditional():
                             if effects_conditions is None:
