@@ -237,11 +237,15 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
         em = env.expression_manager
         tm = env.type_manager
         print("expression: ", expression)
+        if expression.is_fluent_exp() or expression.is_parameter_exp() or expression.is_constant():
+            return expression
         new_args = []
         for arg in expression.args:
-            if arg.is_fluent_exp() or arg.is_parameter_exp() or arg.is_constant():
-                new_args.append(arg)
-            elif arg.is_count():
+            print(arg)
+            #if arg.is_fluent_exp() or arg.is_parameter_exp() or arg.is_constant():
+            #    print("ns")
+            #    new_args.append(arg)
+            if arg.is_count():
                 new_ca_args = []
                 for ca in arg.args:
                     n_count = len(count_expressions)
