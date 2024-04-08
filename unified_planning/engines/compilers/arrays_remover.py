@@ -207,8 +207,6 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
         new_problem.initial_values.clear()
 
         for fluent in problem.fluents:
-            print(fluent)
-            print(problem.initial_values)
             objects = []
             for s in fluent.signature:
                 objects.append(problem.objects(s.type))

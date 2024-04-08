@@ -236,7 +236,7 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
         env = new_problem.environment
         em = env.expression_manager
         tm = env.type_manager
-
+        print("expression: ", expression)
         new_args = []
         for arg in expression.args:
             if arg.is_fluent_exp() or arg.is_parameter_exp() or arg.is_constant():
@@ -260,6 +260,7 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                 new_args.append(em.create_node(OperatorKind.PLUS, tuple(new_ca_args)))
             else:
                 new_args.append(self.add_counts(new_problem, arg, count_expressions))
+        print(expression.node_type, tuple(new_args))
         return em.create_node(expression.node_type, tuple(new_args))
 
     def _compile(
