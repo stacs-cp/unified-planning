@@ -253,6 +253,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                             new_initial_value = initial_values[p].constant_value()
                             for i in combination:
                                 new_initial_value = new_initial_value[i].constant_value()
+                            print("ee: ", new_fluent_name, fluent_parameters[p], new_initial_value)
                             new_problem.set_initial_value(new_problem.fluent(new_fluent_name)
                                                           (fluent_parameters[p]), new_initial_value)
             else:
