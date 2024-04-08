@@ -152,16 +152,28 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
             if fluent is None:
                 return new_problem.initial_value(expression)
             else:
+                # condicio de que els arguments dels fluents han de ser els mateixos
+                same_objects = []
+                if fluent.args is not None and expression.args is not None:
+                    assert len(fluent.args) == len(expression.args)
+                    for i in range(len(fluent.args)):
+                        same_objects.append(em.create_node(OperatorKind.EQUALS,
+                                                           tuple([fluent.arg(i), expression.arg(i)])).simplify())
+                print(same_objects)
                 print(fluent, expression.fluent())
+                print(fluent == expression.fluent())
                 if fluent == expression.fluent():
                     if type_effect == 'increase':
-                        return em.create_node(OperatorKind.PLUS, tuple([fluent, value])).simplify()
+                        # changed fluent per expression.fluent
+                        new_expression = em.create_node(OperatorKind.PLUS, tuple([expression.fluent, value])).simplify()
                     elif type_effect == 'decrease':
-                        return em.create_node(OperatorKind.MINUS, tuple([fluent, value])).simplify()
+                        new_expression = em.create_node(OperatorKind.MINUS, tuple([expression.fluent, value])).simplify()
                     else:
-                        return value
+                        new_expression = value
                 else:
-                    return expression
+                    new_expression = expression
+                return em.create_node(OperatorKind.AND, tuple([new_expression, same_objects])).simplify()
+
         else:
             new_args = []
             for arg in expression.args:
@@ -195,16 +207,7 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
             for fluent_affected in self.find_fluents_affected(new_expression):
                 for effect in action.effects:
                     # si aquest efecte modifica un dels fluents dins l'expressio
-                    print(effect.fluent.fluent(), fluent_affected.fluent())
-                    print(effect.fluent.fluent() == fluent_affected.fluent())
                     if effect.fluent.fluent() == fluent_affected.fluent():
-                        if fluent_affected.args is not None and effect.fluent.args is not None:
-                            assert len(fluent_affected.args) == len(effect.fluent.args)
-                            for i in range(len(fluent_affected.args)):
-                                if effects_conditions is None:
-                                    effects_conditions = Equals(fluent_affected.arg(i), effect.fluent.arg(i))
-                                else:
-                                    effects_conditions = And(effects_conditions, Equals(fluent_affected.arg(i), effect.fluent.arg(i)))
                         count_fluents_in_action = True
                         if effect.is_conditional():
                             if effects_conditions is None:
