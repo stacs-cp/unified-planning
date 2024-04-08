@@ -204,26 +204,35 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
             effects_conditions = True
             # per cada fluent de l'expressio...
             fluents_affected = self.find_fluents_affected(expression)
-            # per cada efecte de l'accio
+            fluents_replaced = []
+            # canviar expressio pels valors dels efectes (fluents) que sabem
             for effect in action.effects:
-                print(effect.fluent)
                 if effect.fluent in fluents_affected:
-                    print("fa: ", fluents_affected)
-                    fluents_affected = list(set(fluents_affected) - set(list(effect.fluent)))
-                    print("fa: ", fluents_affected)
-                    # si aquest efecte modifica un dels fluents dins l'expressio
+                    fluents_replaced.append(effect.fluent)
                     count_fluents_in_action = True
                     if effect.is_conditional():
                         effects_conditions = And(effects_conditions, effect.condition).simplify()
-                    # es van fent els canvis addients a l'expressio
                     if effect.is_increase():
                         type_effect = 'increase'
                     elif effect.is_decrease():
                         type_effect = 'decrease'
                     else:
                         type_effect = None
-                    new_expression = self.expression_value(new_problem, new_expression, effect.fluent,effect.value,
+                    new_expression = self.expression_value(new_problem, new_expression, effect.fluent, effect.value,
                                                            type_effect)
+
+            print(fluents_affected, fluents_replaced)
+            restant_fluents = list(set(fluents_affected) - set(fluents_replaced))
+            print(restant_fluents)
+            # hem canviat tots els que son estatics
+            # canviar els dinamics
+            for effect in action.effects:
+                for fa in fluents_affected:
+                    if effect.fluent.name == fa.fluent().name:
+                        print("same name: ", effect.fluent.name)
+                        new_expression = self.expression_value(new_problem, new_expression, effect.fluent, effect.value,
+                                                               type_effect)
+
 
             print("new expression: ", new_expression)
             if count_fluents_in_action:
