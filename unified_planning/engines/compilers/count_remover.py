@@ -196,45 +196,32 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
         # per cada count, si l'accio conte algun efecte a algun fluent que el count contingui, tractar
         for count, expression in count_expressions.items():
             print("ITEMS: ")
-            print(count, expression)
+            print("count: ", count)
+            print("expression: ", expression)
             print(self.find_fluents_affected(expression))
             new_expression = expression
             count_fluents_in_action = False
-            effects_conditions = None
+            effects_conditions = True
             # per cada fluent de l'expressio...
             for fluent_affected in self.find_fluents_affected(new_expression):
                 for effect in action.effects:
                     # si aquest efecte modifica un dels fluents dins l'expressio
-                    print("fluents:")
-                    print(effect.fluent.fluent(), fluent_affected.fluent())
-                    print(effect.fluent.fluent() == fluent_affected.fluent())
-                    print(effect.fluent, fluent_affected)
-                    print(effect.fluent == fluent_affected)
-                    if effect.fluent.fluent() == fluent_affected.fluent():
+                    if effect.fluent == fluent_affected:
+                        print("iguals: ", effect.fluent, fluent_affected)
                         count_fluents_in_action = True
-                        #if effect.fluent.args is not None and fluent_affected.args is not None:
-                        #    assert len(effect.fluent.args) == len(fluent_affected.args)
-                        #    same_objects = []
-                        #    for i in range(len(effect.fluent.args)):
-                        #        same_objects.append(Equals(effect.fluent.arg(i), fluent_affected.arg(i)))
-                        #    effects_conditions = And(same_objects)
                         if effect.is_conditional():
-                            if effects_conditions is None:
-                                effects_conditions = effect.condition
-                            else:
-                                effects_conditions = And(effects_conditions, effect.condition)
+                            effects_conditions = And(effects_conditions, effect.condition).simplify()
                         # es van fent els canvis addients a l'expressio
                         if effect.is_increase():
-                            new_expression = self.expression_value(new_problem, new_expression, effect.fluent,
-                                                                   effect.value, 'increase')
+                            type_effect = 'increase'
                         elif effect.is_decrease():
-                            new_expression = self.expression_value(new_problem, new_expression, effect.fluent,
-                                                                   effect.value, 'decrease')
+                            type_effect = 'decrease'
                         else:
-                            new_expression = self.expression_value(new_problem, new_expression, effect.fluent,
-                                                                   effect.value)
+                            type_effect = None
+                        new_expression = self.expression_value(new_problem, new_expression, effect.fluent,effect.value,
+                                                               type_effect)
 
-            print(new_expression)
+            print("new expression: ", new_expression)
             if count_fluents_in_action:
                 if new_expression.is_bool_constant():
                     if new_expression.is_true():
