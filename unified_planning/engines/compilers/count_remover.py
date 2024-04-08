@@ -143,11 +143,13 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
     ) -> "up.model.fnode.FNode":
         env = new_problem.environment
         em = env.expression_manager
+        print("expression ", expression)
+        print("fluent ", fluent)
         if expression.is_constant() or expression.is_parameter_exp():
             return expression
         elif expression.is_fluent_exp():
             if fluent is None:
-                return new_problem.initial_value(expression.fluent())
+                return new_problem.initial_value(expression)
             else:
                 if fluent == expression.fluent():
                     if type_effect == 'increase':
@@ -236,20 +238,16 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
         env = new_problem.environment
         em = env.expression_manager
         tm = env.type_manager
-        print("expression: ", expression)
         if expression.is_fluent_exp() or expression.is_parameter_exp() or expression.is_constant():
             return expression
         new_args = []
         for arg in expression.args:
-            print(arg)
-            #if arg.is_fluent_exp() or arg.is_parameter_exp() or arg.is_constant():
-            #    print("ns")
-            #    new_args.append(arg)
             if arg.is_count():
                 new_ca_args = []
                 for ca in arg.args:
                     n_count = len(count_expressions)
                     fluent_name = 'count_' + str(n_count)
+                    print(fluent_name)
                     count_expressions[fluent_name] = ca
                     initial_value = self.expression_value(new_problem, ca)
                     assert initial_value.is_bool_constant()
@@ -264,7 +262,6 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                 new_args.append(em.create_node(OperatorKind.PLUS, tuple(new_ca_args)))
             else:
                 new_args.append(self.add_counts(new_problem, arg, count_expressions))
-        print(expression.node_type, tuple(new_args))
         return em.create_node(expression.node_type, tuple(new_args))
 
     def _compile(
