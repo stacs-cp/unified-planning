@@ -220,19 +220,20 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                         type_effect = None
                     new_expression = self.expression_value(new_problem, new_expression, effect.fluent, effect.value,
                                                            type_effect)
-
+            print("new_expression: ", new_expression)
             print(fluents_affected, fluents_replaced)
             restant_fluents = list(set(fluents_affected) - set(fluents_replaced))
             print(restant_fluents)
             # hem canviat tots els que son estatics
             # canviar els dinamics
-            for effect in action.effects:
-                for fa in fluents_affected:
-                    if effect.fluent.name == fa.fluent().name:
-                        print("same name: ", effect.fluent.name)
-                        new_expression = self.expression_value(new_problem, new_expression, effect.fluent, effect.value,
-                                                               type_effect)
-
+            if restant_fluents:
+                # per cada fluent restant substituir pel que cal
+                for effect in action.effects:
+                    for fa in fluents_affected:
+                        if effect.fluent.fluent().name == fa.fluent().name:
+                            print("same name: ", effect.fluent.name)
+                            new_expression = self.expression_value(new_problem, new_expression, effect.fluent,
+                                                                   effect.value)
 
             print("new expression: ", new_expression)
             if count_fluents_in_action:
