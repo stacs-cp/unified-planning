@@ -152,14 +152,6 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
             if fluent is None:
                 return new_problem.initial_value(expression)
             else:
-                # condicio de que els arguments dels fluents han de ser els mateixos
-                same_objects = []
-                if fluent.args is not None and expression.args is not None:
-                    assert len(fluent.args) == len(expression.args)
-                    for i in range(len(fluent.args)):
-                        same_objects.append(em.create_node(OperatorKind.EQUALS,
-                                                           tuple([fluent.arg(i), expression.arg(i)])).simplify())
-                print(same_objects)
                 print(fluent.fluent(), expression.fluent())
                 print(expression)
                 print(fluent.fluent() == expression.fluent())
@@ -175,11 +167,7 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                     print("new_expression", new_expression)
                 else:
                     new_expression = expression
-                if same_objects:
-                    so = em.create_node(OperatorKind.AND, tuple(same_objects)).simplify()
-                    return em.create_node(OperatorKind.AND, tuple([new_expression, so])).simplify()
-                else:
-                    return new_expression
+                return new_expression
 
         else:
             new_args = []
@@ -216,6 +204,12 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                     # si aquest efecte modifica un dels fluents dins l'expressio
                     if effect.fluent.fluent() == fluent_affected.fluent():
                         count_fluents_in_action = True
+                        if effect.fluent.args is not None and fluent_affected.args is not None:
+                            assert len(effect.fluent.args) == len(fluent_affected.args)
+                            same_objects = []
+                            for i in range(len(effect.fluent.args)):
+                                same_objects.append(Equals(effect.fluent.arg(i), fluent_affected.arg(i)))
+                            effects_conditions = And(same_objects)
                         if effect.is_conditional():
                             if effects_conditions is None:
                                 effects_conditions = effect.condition
