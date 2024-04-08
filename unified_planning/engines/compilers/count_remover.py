@@ -137,7 +137,7 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
             self,
             new_problem: "up.model.Problem",
             expression: "up.model.fnode.FNode",
-            fluent: Optional["up.model.fluent.Fluent"] = None,
+            fluent: Optional["up.model.fnode.FNode"] = None,
             value: Optional["up.model.fnode.FNode"] = None,
             type_effect: Optional[str] = None
     ) -> "up.model.fnode.FNode":
@@ -151,12 +151,12 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
             if fluent is None:
                 return new_problem.initial_value(expression)
             else:
+                print(fluent, expression.fluent())
                 if fluent == expression.fluent():
                     if type_effect == 'increase':
-                        print(fluent(), value)
-                        return em.create_node(OperatorKind.PLUS, tuple([fluent(), value])).simplify()
+                        return em.create_node(OperatorKind.PLUS, tuple([fluent, value])).simplify()
                     elif type_effect == 'decrease':
-                        return em.create_node(OperatorKind.MINUS, tuple([fluent(), value])).simplify()
+                        return em.create_node(OperatorKind.MINUS, tuple([fluent, value])).simplify()
                     else:
                         return value
                 else:
@@ -210,13 +210,13 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                                 effects_conditions = And(effects_conditions, effect.condition)
                         # es van fent els canvis addients a l'expressio
                         if effect.is_increase():
-                            new_expression = self.expression_value(new_problem, new_expression, effect.fluent.fluent(),
+                            new_expression = self.expression_value(new_problem, new_expression, effect.fluent,
                                                                    effect.value, 'increase')
                         elif effect.is_decrease():
-                            new_expression = self.expression_value(new_problem, new_expression, effect.fluent.fluent(),
+                            new_expression = self.expression_value(new_problem, new_expression, effect.fluent,
                                                                    effect.value, 'decrease')
                         else:
-                            new_expression = self.expression_value(new_problem, new_expression, effect.fluent.fluent(),
+                            new_expression = self.expression_value(new_problem, new_expression, effect.fluent,
                                                                    effect.value)
             if count_fluents_in_action:
                 if new_expression.is_bool_constant():
