@@ -160,8 +160,8 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                         same_objects.append(em.create_node(OperatorKind.EQUALS,
                                                            tuple([fluent.arg(i), expression.arg(i)])).simplify())
                 print(same_objects)
-                print(fluent, expression.fluent())
-                print(fluent == expression.fluent())
+                print(fluent.fluent(), expression.fluent())
+                print(fluent.fluent() == expression.fluent())
                 if fluent == expression.fluent():
                     if type_effect == 'increase':
                         # changed fluent per expression.fluent
