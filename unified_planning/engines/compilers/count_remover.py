@@ -183,11 +183,7 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
             count_expressions: Dict[str, "up.model.fnode.FNode"]
     ) -> "up.model.action.Action":
         # per cada count, si l'accio conte algun efecte a algun fluent que el count contingui, tractar
-        print(count_expressions.items())
-        print("items:")
         for count, expression in count_expressions.items():
-            print(count,expression)
-            print("fluents_affected: ", self.find_fluents_affected(expression))
             new_expression = expression
             count_fluents_in_action = False
             effects_conditions = None
@@ -195,14 +191,11 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
             for fluent_affected in self.find_fluents_affected(new_expression):
                 for effect in action.effects:
                     # si aquest efecte modifica un dels fluents dins l'expressio
-                    print("fluent_affected: ", fluent_affected)
-                    print("effect fluent: ", effect.fluent.fluent())
                     if effect.fluent.fluent().name == fluent_affected.fluent().name:
                         if fluent_affected.args is not None and effect.fluent.args is not None:
                             assert len(fluent_affected.args) == len(effect.fluent.args)
-                            for arg_l, arg_d in fluent_affected.args, effect.fluent.args:
-                                print(arg_l, arg_d)
-                                effects_conditions = Equals(arg_l, arg_d)
+                            for i in range(len(fluent_affected.args)):
+                                effects_conditions = Equals(fluent_affected.arg(i), effect.fluent.arg(i))
                         count_fluents_in_action = True
                         if effect.is_conditional():
                             if effects_conditions is None:
