@@ -161,6 +161,7 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                                                            tuple([fluent.arg(i), expression.arg(i)])).simplify())
                 print(same_objects)
                 print(fluent.fluent(), expression.fluent())
+                print(expression)
                 print(fluent.fluent() == expression.fluent())
                 if fluent == expression.fluent():
                     if type_effect == 'increase':
