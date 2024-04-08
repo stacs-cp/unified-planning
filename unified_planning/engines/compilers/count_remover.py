@@ -195,6 +195,7 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
     ) -> "up.model.action.Action":
         # per cada count, si l'accio conte algun efecte a algun fluent que el count contingui, tractar
         for count, expression in count_expressions.items():
+            print("ITEMS: ")
             print(count, expression)
             print(self.find_fluents_affected(expression))
             new_expression = expression
@@ -206,12 +207,12 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                     # si aquest efecte modifica un dels fluents dins l'expressio
                     if effect.fluent.fluent() == fluent_affected.fluent():
                         count_fluents_in_action = True
-                        if effect.fluent.args is not None and fluent_affected.args is not None:
-                            assert len(effect.fluent.args) == len(fluent_affected.args)
-                            same_objects = []
-                            for i in range(len(effect.fluent.args)):
-                                same_objects.append(Equals(effect.fluent.arg(i), fluent_affected.arg(i)))
-                            effects_conditions = And(same_objects)
+                        #if effect.fluent.args is not None and fluent_affected.args is not None:
+                        #    assert len(effect.fluent.args) == len(fluent_affected.args)
+                        #    same_objects = []
+                        #    for i in range(len(effect.fluent.args)):
+                        #        same_objects.append(Equals(effect.fluent.arg(i), fluent_affected.arg(i)))
+                        #    effects_conditions = And(same_objects)
                         if effect.is_conditional():
                             if effects_conditions is None:
                                 effects_conditions = effect.condition
@@ -227,6 +228,8 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                         else:
                             new_expression = self.expression_value(new_problem, new_expression, effect.fluent,
                                                                    effect.value)
+
+            print(new_expression)
             if count_fluents_in_action:
                 if new_expression.is_bool_constant():
                     if new_expression.is_true():
