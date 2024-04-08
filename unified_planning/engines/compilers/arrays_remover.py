@@ -208,6 +208,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
 
         for fluent in problem.fluents:
             print(fluent)
+            print(problem.initial_values)
             objects = []
             for s in fluent.signature:
                 objects.append(problem.objects(s.type))
@@ -215,9 +216,6 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
             initial_values = []
             for fp in fluent_parameters:
                 initial_values.append(problem.initial_value(fluent(*fp)))
-
-            print(fluent_parameters)
-            print(initial_values)
 
             if problem.fluents_defaults.get(fluent):
                 default_value = problem.fluents_defaults.get(fluent).constant_value()
@@ -244,16 +242,12 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                             new_default_value = new_default_value[i].constant_value()
                     new_problem.add_fluent(new_fluent, default_initial_value=new_default_value)
                     # canviar
-                    print(initial_values)
                     new_initial_value = initial_values
                     if new_initial_value is not None:
                         for p in range(0, len(fluent_parameters)):
-                            print(initial_values[p])
-                            print(initial_values[p].constant_value())
                             new_initial_value = initial_values[p].constant_value()
                             for i in combination:
                                 new_initial_value = new_initial_value[i].constant_value()
-                            print("ee: ", new_fluent_name, fluent_parameters[p], new_initial_value)
                             new_problem.set_initial_value(new_problem.fluent(new_fluent_name)
                                                           (*fluent_parameters[p]), new_initial_value)
             else:
