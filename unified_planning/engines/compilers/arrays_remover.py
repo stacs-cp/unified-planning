@@ -146,11 +146,9 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
     ) -> List["up.model.fnode.FNode"]:
         env = new_problem.environment
         em = env.expression_manager
-        print("node: ", node)
         if node.is_fluent_exp():
             new_fluent = self._get_new_fluent(node.fluent())
             assert new_problem.fluent(new_fluent.name)(*node.fluent().signature)
-            print(node.args)
             return [new_fluent(*node.args)]
         elif node.is_parameter_exp() or node.is_constant():
             return [node]

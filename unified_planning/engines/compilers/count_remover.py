@@ -143,8 +143,6 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
     ) -> "up.model.fnode.FNode":
         env = new_problem.environment
         em = env.expression_manager
-        print("expression ", expression)
-        print("fluent ", fluent)
         if expression.is_constant() or expression.is_parameter_exp():
             return expression
         elif expression.is_fluent_exp():
@@ -238,7 +236,6 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
         env = new_problem.environment
         em = env.expression_manager
         tm = env.type_manager
-        print("expression: ", expression)
         if expression.is_fluent_exp() or expression.is_parameter_exp() or expression.is_constant():
             return expression
         elif expression.is_count():
@@ -246,7 +243,6 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
             for ca in expression.args:
                 n_count = len(count_expressions)
                 fluent_name = 'count_' + str(n_count)
-                print(fluent_name)
                 count_expressions[fluent_name] = ca
                 initial_value = self.expression_value(new_problem, ca)
                 assert initial_value.is_bool_constant()
