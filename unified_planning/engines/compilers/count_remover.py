@@ -203,23 +203,27 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
             count_fluents_in_action = False
             effects_conditions = True
             # per cada fluent de l'expressio...
-            for fluent_affected in self.find_fluents_affected(new_expression):
-                for effect in action.effects:
+            fluents_affected = self.find_fluents_affected(expression)
+            # per cada efecte de l'accio
+            for effect in action.effects:
+                print(effect.fluent)
+                if effect.fluent in fluents_affected:
+                    print("fa: ", fluents_affected)
+                    fluents_affected = fluents_affected - [effect.fluent]
+                    print("fa: ", fluents_affected)
                     # si aquest efecte modifica un dels fluents dins l'expressio
-                    if effect.fluent == fluent_affected:
-                        print("iguals: ", effect.fluent, fluent_affected)
-                        count_fluents_in_action = True
-                        if effect.is_conditional():
-                            effects_conditions = And(effects_conditions, effect.condition).simplify()
-                        # es van fent els canvis addients a l'expressio
-                        if effect.is_increase():
-                            type_effect = 'increase'
-                        elif effect.is_decrease():
-                            type_effect = 'decrease'
-                        else:
-                            type_effect = None
-                        new_expression = self.expression_value(new_problem, new_expression, effect.fluent,effect.value,
-                                                               type_effect)
+                    count_fluents_in_action = True
+                    if effect.is_conditional():
+                        effects_conditions = And(effects_conditions, effect.condition).simplify()
+                    # es van fent els canvis addients a l'expressio
+                    if effect.is_increase():
+                        type_effect = 'increase'
+                    elif effect.is_decrease():
+                        type_effect = 'decrease'
+                    else:
+                        type_effect = None
+                    new_expression = self.expression_value(new_problem, new_expression, effect.fluent,effect.value,
+                                                           type_effect)
 
             print("new expression: ", new_expression)
             if count_fluents_in_action:
