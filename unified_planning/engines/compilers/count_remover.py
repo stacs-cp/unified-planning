@@ -209,7 +209,7 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                 print(effect.fluent)
                 if effect.fluent in fluents_affected:
                     print("fa: ", fluents_affected)
-                    fluents_affected = fluents_affected - [effect.fluent]
+                    fluents_affected = list(set(fluents_affected) - set(effect.fluent))
                     print("fa: ", fluents_affected)
                     # si aquest efecte modifica un dels fluents dins l'expressio
                     count_fluents_in_action = True
