@@ -141,6 +141,8 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
             value: Optional["up.model.fnode.FNode"] = None,
             type_effect: Optional[str] = None
     ) -> "up.model.fnode.FNode":
+        print("expression: ", expression)
+        print("fluent: ", fluent)
         env = new_problem.environment
         em = env.expression_manager
         if expression.is_constant() or expression.is_parameter_exp():
@@ -151,6 +153,7 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
             else:
                 if fluent == expression.fluent():
                     if type_effect == 'increase':
+                        print(fluent(), value)
                         return em.create_node(OperatorKind.PLUS, tuple([fluent(), value])).simplify()
                     elif type_effect == 'decrease':
                         return em.create_node(OperatorKind.MINUS, tuple([fluent(), value])).simplify()
