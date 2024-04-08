@@ -166,9 +166,9 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                 if fluent == expression.fluent():
                     if type_effect == 'increase':
                         # changed fluent per expression.fluent
-                        new_expression = em.create_node(OperatorKind.PLUS, tuple([expression.fluent(), value])).simplify()
+                        new_expression = em.create_node(OperatorKind.PLUS, tuple([expression, value])).simplify()
                     elif type_effect == 'decrease':
-                        new_expression = em.create_node(OperatorKind.MINUS, tuple([expression.fluent(), value])).simplify()
+                        new_expression = em.create_node(OperatorKind.MINUS, tuple([expression, value])).simplify()
                     else:
                         new_expression = value
                 else:
