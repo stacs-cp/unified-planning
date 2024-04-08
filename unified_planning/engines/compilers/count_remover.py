@@ -173,7 +173,8 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                 else:
                     new_expression = expression
                 if same_objects:
-                    return em.create_node(OperatorKind.AND, tuple([new_expression, tuple(same_objects)])).simplify()
+                    so = em.create_node(OperatorKind.AND, tuple(same_objects)).simplify()
+                    return em.create_node(OperatorKind.AND, tuple([new_expression, so])).simplify()
                 else:
                     return new_expression
 
