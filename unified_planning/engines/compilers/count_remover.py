@@ -143,6 +143,7 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
     ) -> "up.model.fnode.FNode":
         print("expression: ", expression)
         print("fluent: ", fluent)
+        print("value: ", value)
         env = new_problem.environment
         em = env.expression_manager
         if expression.is_constant() or expression.is_parameter_exp():
@@ -194,7 +195,9 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
             for fluent_affected in self.find_fluents_affected(new_expression):
                 for effect in action.effects:
                     # si aquest efecte modifica un dels fluents dins l'expressio
-                    if effect.fluent.fluent().name == fluent_affected.fluent().name:
+                    print(effect.fluent.fluent(), fluent_affected.fluent())
+                    print(effect.fluent.fluent() == fluent_affected.fluent())
+                    if effect.fluent.fluent() == fluent_affected.fluent():
                         if fluent_affected.args is not None and effect.fluent.args is not None:
                             assert len(fluent_affected.args) == len(effect.fluent.args)
                             for i in range(len(fluent_affected.args)):
