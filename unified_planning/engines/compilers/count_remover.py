@@ -195,7 +195,10 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                         if fluent_affected.args is not None and effect.fluent.args is not None:
                             assert len(fluent_affected.args) == len(effect.fluent.args)
                             for i in range(len(fluent_affected.args)):
-                                effects_conditions = Equals(fluent_affected.arg(i), effect.fluent.arg(i))
+                                if effects_conditions is None:
+                                    effects_conditions = Equals(fluent_affected.arg(i), effect.fluent.arg(i))
+                                else:
+                                    effects_conditions = And(effects_conditions, Equals(fluent_affected.arg(i), effect.fluent.arg(i)))
                         count_fluents_in_action = True
                         if effect.is_conditional():
                             if effects_conditions is None:
