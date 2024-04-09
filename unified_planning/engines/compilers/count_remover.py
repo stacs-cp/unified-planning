@@ -200,7 +200,8 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
             fluents_replaced = []
             # canviar expressio pels valors dels efectes (fluents) que sabem
             for effect in action.effects:
-                if effect.fluent in fluents_affected:
+                print(effect.fluent.fluent())
+                if effect.fluent.fluent() in fluents_affected:
                     fluents_replaced.append(effect.fluent)
                     if effect.is_conditional():
                         effects_conditions = And(effects_conditions, effect.condition).simplify()
