@@ -141,9 +141,6 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
             value: Optional["up.model.fnode.FNode"] = None,
             type_effect: Optional[str] = None
     ) -> "up.model.fnode.FNode":
-        print("expression: ", expression)
-        print("fluent: ", fluent)
-        print("value: ", value)
         env = new_problem.environment
         em = env.expression_manager
         if expression.is_constant() or expression.is_parameter_exp():
@@ -152,11 +149,7 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
             if fluent is None:
                 return new_problem.initial_value(expression)
             else:
-                print(fluent.fluent(), expression.fluent())
-                print(expression)
-                print(fluent.fluent() == expression.fluent())
                 if fluent.fluent() == expression.fluent():
-                    print(type_effect)
                     if type_effect == 'increase':
                         # changed fluent per expression.fluent
                         new_expression = em.create_node(OperatorKind.PLUS, tuple([expression, value])).simplify()
@@ -164,11 +157,9 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                         new_expression = em.create_node(OperatorKind.MINUS, tuple([expression, value])).simplify()
                     else:
                         new_expression = value
-                    print("new_expression", new_expression)
                 else:
                     new_expression = expression
                 return new_expression
-
         else:
             new_args = []
             for arg in expression.args:
@@ -224,19 +215,24 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
             print("new_expression: ", new_expression)
             print(fluents_affected, fluents_replaced)
             restant_fluents = list(set(fluents_affected) - set(fluents_replaced))
-            print(restant_fluents)
+            print("restant fluents: ", restant_fluents)
             # hem canviat tots els que son estatics
             # canviar els dinamics
+
+
             if restant_fluents:
-                # per cada fluent restant substituir pel que cal
-                for effect in action.effects:
-                    for fa in fluents_affected:
-                        if effect.fluent.fluent().name == fa.fluent().name:
-                            print("same name: ", effect.fluent.fluent().name)
+                # per cada fluent restant
+                for fr in restant_fluents:
+                    # mirar cada efecte
+                    for effect in action.effects:
+                        # si el nom es igual
+                        if fr.fluent().name == effect.fluent.fluent().name:
+                            print(effect.fluent.args)
+                            print(fr.args)
+                            print("same name!")
                             new_expression = self.expression_value(new_problem, new_expression, effect.fluent,
                                                                    effect.value)
 
-            print("new expression: ", new_expression)
             if count_fluents_in_action:
                 if new_expression.is_bool_constant():
                     if new_expression.is_true():
