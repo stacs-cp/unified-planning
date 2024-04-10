@@ -149,9 +149,11 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
             if fluent is None:
                 return new_problem.initial_value(expression)
             else:
+                print("ELSEEEEEE")
+                print(fluent.fluent(), expression.fluent())
+                print(fluent.fluent() == expression.fluent())
                 if fluent.fluent() == expression.fluent():
                     if type_effect == 'increase':
-                        # changed fluent per expression.fluent
                         new_expression = em.create_node(OperatorKind.PLUS, tuple([expression, value])).simplify()
                     elif type_effect == 'decrease':
                         new_expression = em.create_node(OperatorKind.MINUS, tuple([expression, value])).simplify()
@@ -250,12 +252,10 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                             # per cada argument del fluent, substituir per l'adequat
                             for arg in effect.fluent.args:
                                 print("arg: ", arg)
-                                if arg in keys:
-                                    i = keys.index(arg)
-                                    new_args_fluent.append(c[i])
-                                    comb_effects_conditions = And(comb_effects_conditions, Equals(c[i], arg)).simplify()
-                                else:
-                                    new_args_fluent.append(arg)
+                                i = keys.index(arg)
+                                new_args_fluent.append(c[i])
+                                comb_effects_conditions = And(comb_effects_conditions, Equals(c[i], arg)).simplify()
+
                             if effect.is_conditional():
                                 comb_effects_conditions = And(comb_effects_conditions, effect.condition).simplify()
                             if effect.is_increase():
