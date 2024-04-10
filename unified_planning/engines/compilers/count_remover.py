@@ -198,20 +198,19 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
 
             # guardar els fluents de l'accio que la nostra expressio conte
             for effect in action.effects:
-                fluents = self.find_fluents_affected(expression)
-                fluent_names = [node.fluent().name for node in fluents]
-                if effect.fluent in fluents:
-                    direct_effect_fluents.append(effect)
-                elif effect.fluent.fluent().name in fluent_names:
-                    indirect_effect_fluents.append(effect)
-                    for i in range(len(effect.fluent.args)):
-                        this_parameter = effect.fluent.arg(i)
-                        this_object = fluents[fluent_names.index(effect.fluent.fluent().name)].arg(i)
-                        print("eeeeeeee: ",this_parameter, this_object)
-                        if this_parameter in possible_parameters.keys():
-                            possible_parameters[this_parameter].append(this_object)
-                        else:
-                            possible_parameters[this_parameter] = [this_object]
+                for fe in self.find_fluents_affected(expression):
+                    if effect.fluent == fe:
+                        direct_effect_fluents.append(effect)
+                    elif effect.fluent.fluent().name == fe.fluent().name:
+                        if indirect_effect_fluents.count(effect) == 0:
+                            indirect_effect_fluents.append(effect)
+                        for i in range(len(effect.fluent.args)):
+                            this_parameter = effect.fluent.arg(i)
+                            this_object = fe.arg(i)
+                            if this_parameter in possible_parameters.keys():
+                                possible_parameters[this_parameter].append(this_object)
+                            else:
+                                possible_parameters[this_parameter] = [this_object]
 
             print("direct effects: ", direct_effect_fluents)
             print("indirect effects: ", indirect_effect_fluents)
