@@ -252,7 +252,7 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                                 if arg in keys:
                                     i = keys.index(arg)
                                     new_args_fluent.append(c[i])
-                                    comb_effects_conditions = And(comb_effects_conditions, Equals(i, arg)).simplify()
+                                    comb_effects_conditions = And(comb_effects_conditions, Equals(c[i], arg)).simplify()
                                 else:
                                     new_args_fluent.append(arg)
                             if effect.is_conditional():
