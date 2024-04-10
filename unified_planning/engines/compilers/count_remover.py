@@ -214,20 +214,51 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
             print("direct effects: ", direct_effect_fluents)
             print("indirect effects: ", indirect_effect_fluents)
             print("possible parameters: ", possible_parameters)
+            if direct_effect_fluents:
+                # canviar els que son directes (que no tenen parametres a sustituir
+                for effect in direct_effect_fluents:
+                    if effect.is_conditional():
+                        effects_conditions = And(effects_conditions, effect.condition).simplify()
+                    if effect.is_increase():
+                        type_effect = 'increase'
+                    elif effect.is_decrease():
+                        type_effect = 'decrease'
+                    else:
+                        type_effect = None
+                    new_expression = self.expression_value(new_problem, new_expression, effect.fluent, effect.value,
+                                                               type_effect)
+                print("new_expression: ", new_expression)
 
-            # canviar els que son directes (que no tenen parametres a sustituir
-            for effect in direct_effect_fluents:
-                if effect.is_conditional():
-                    effects_conditions = And(effects_conditions, effect.condition).simplify()
-                if effect.is_increase():
-                    type_effect = 'increase'
-                elif effect.is_decrease():
-                    type_effect = 'decrease'
-                else:
-                    type_effect = None
-                new_expression = self.expression_value(new_problem, new_expression, effect.fluent, effect.value,
-                                                           type_effect)
-            print("new_expression: ", new_expression)
+            if indirect_effect_fluents:
+                # canviar els parametres per cada possible combinacio
+                combinations = list(itertools.product(*possible_parameters))
+                print(combinations)
+                # per cada combinacio possible dels parametres
+                for c in combinations:
+                    print("this combination: ", c)
+                    # per cada effect
+                    for effect in indirect_effect_fluents:
+                        new_args_fluent = []
+                        for arg in effect.fluent.args:
+                            if arg in possible_parameters.keys():
+                                print("arg: ", arg)
+                                print(possible_parameters.fromkeys(arg))
+                                # arg == e
+                                # p = e
+                                if arg == p:
+                                    print("arg i p")
+                            else:
+                                new_args_fluent.append(arg)
+                        if effect.is_conditional():
+                            effects_conditions = And(effects_conditions, effect.condition).simplify()
+                        if effect.is_increase():
+                            type_effect = 'increase'
+                        elif effect.is_decrease():
+                            type_effect = 'decrease'
+                        else:
+                            type_effect = None
+                        new_expression = self.expression_value(new_problem, new_expression, effect.fluent.fluent(),
+                                                               effect.value,type_effect)
 
             if False:
                 if new_expression.is_bool_constant():
