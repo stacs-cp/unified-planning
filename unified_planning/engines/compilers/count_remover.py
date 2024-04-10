@@ -149,9 +149,6 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
             if fluent is None:
                 return new_problem.initial_value(expression)
             else:
-                print("ELSEEEEEE")
-                print(fluent, expression)
-                print(fluent == expression)
                 if fluent == expression:
                     if type_effect == 'increase':
                         new_expression = em.create_node(OperatorKind.PLUS, tuple([expression, value])).simplify()
@@ -190,8 +187,6 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
         # pels fluents que es poden canviar directament -> canviar
         # per cada fluent afectat afegir un nou efecte
         for count, expression in count_expressions.items():
-            print(" -------> count: ", count, " | expression: ", expression)
-            print("action: ", action.effects)
             new_expression = expression
             effects_conditions = True
             direct_effect_fluents = []
@@ -214,13 +209,7 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                             else:
                                 possible_parameters[this_parameter] = [this_object]
 
-            print("direct effects: ", direct_effect_fluents)
-            print("indirect effects: ", indirect_effect_fluents)
-            print("possible parameters: ", possible_parameters)
-
             if direct_effect_fluents or indirect_effect_fluents:
-                print("canvis")
-
                 # canviar els que son directes (que no tenen parametres a sustituir
                 for effect in direct_effect_fluents:
                     if effect.is_conditional():
@@ -233,25 +222,20 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                         type_effect = None
                     new_expression = self.expression_value(new_problem, new_expression, effect.fluent, effect.value,
                                                                type_effect)
-                print("new_expression: ", new_expression)
 
                 if indirect_effect_fluents:
                     # canviar els parametres per cada possible combinacio
                     combinations = list(product(*possible_parameters.values()))
-                    print(combinations)
                     keys = list(possible_parameters.keys())
-                    print("keys: ", keys)
                     # per cada combinacio possible dels parametres
                     for c in combinations:
                         comb_new_expression = new_expression
                         comb_effects_conditions = effects_conditions
-                        print("this combination: ", c)
                         # per cada effect
                         for effect in indirect_effect_fluents:
                             new_args_fluent = []
                             # per cada argument del fluent, substituir per l'adequat
                             for arg in effect.fluent.args:
-                                print("arg: ", arg)
                                 i = keys.index(arg)
                                 new_args_fluent.append(c[i])
                                 comb_effects_conditions = And(comb_effects_conditions, Equals(c[i], arg)).simplify()
@@ -264,11 +248,8 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                                 type_effect = 'decrease'
                             else:
                                 type_effect = None
-                            print("fluent: ", effect.fluent.fluent()(*new_args_fluent))
-                            print("value: ", effect.value)
                             comb_new_expression = self.expression_value(new_problem, comb_new_expression, effect.fluent.fluent()(*new_args_fluent),
                                                                    effect.value, type_effect)
-                        print("new expression!! ", comb_new_expression)
                         if comb_new_expression.is_bool_constant():
                             if comb_new_expression.is_true():
                                 new_value = 1
