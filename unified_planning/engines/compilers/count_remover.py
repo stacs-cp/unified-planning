@@ -189,6 +189,7 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
         # per cada fluent afectat afegir un nou efecte
         for count, expression in count_expressions.items():
             print(" -------> count: ", count, " | expression: ", expression)
+            print("action: ", action.effects)
             new_expression = expression
             effects_conditions = True
             direct_effect_fluents = []
