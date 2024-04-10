@@ -196,15 +196,15 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
             indirect_effect_fluents = []
             possible_parameters: Dict["up.model.fnode.FNode", List["up.model.fnode.FNode"]] = {}
 
-            # guardar els fluents que canviem directe de la nostra expressio i els indirectes
+            # guardar els fluents de l'accio que la nostra expressio conte
             for effect in action.effects:
                 for fe in self.find_fluents_affected(expression):
                     if effect.fluent == fe:
                         direct_effect_fluents.append(effect)
                     elif effect.fluent.fluent().name == fe.fluent().name:
                         indirect_effect_fluents.append(effect)
-                        for i in range(len(effect.args)):
-                            this_parameter = effect.arg(i)
+                        for i in range(len(effect.fluent.args)):
+                            this_parameter = effect.fluent.arg(i)
                             this_object = fe.arg(i)
                             if this_parameter in possible_parameters.keys():
                                 possible_parameters[this_parameter].append(this_object)
