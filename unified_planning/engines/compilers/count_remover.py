@@ -209,14 +209,14 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                     print("sustituir directe")
                     if effect.is_conditional():
                         effects_conditions = And(effects_conditions, effect.condition).simplify()
-                        if effect.is_increase():
-                            type_effect = 'increase'
-                        elif effect.is_decrease():
-                            type_effect = 'decrease'
-                        else:
-                            type_effect = None
-                        new_expression = self.expression_value(new_problem, new_expression, effect.fluent, effect.value,
-                                                               type_effect)
+                    if effect.is_increase():
+                        type_effect = 'increase'
+                    elif effect.is_decrease():
+                        type_effect = 'decrease'
+                    else:
+                        type_effect = None
+                    new_expression = self.expression_value(new_problem, new_expression, effect.fluent, effect.value,
+                                                           type_effect)
             print("new_expression: ", new_expression)
 
             # canviar els que son directes (que no tenen parametres a sustituir)
