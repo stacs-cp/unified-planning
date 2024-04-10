@@ -240,7 +240,8 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                     print("keys: ", keys)
                     # per cada combinacio possible dels parametres
                     for c in combinations:
-                        new_expression_comb = new_expression
+                        comb_new_expression = new_expression
+                        comb_effects_conditions = effects_conditions
                         print("this combination: ", c)
                         # per cada effect
                         for effect in indirect_effect_fluents:
@@ -251,10 +252,11 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                                 if arg in keys:
                                     i = keys.index(arg)
                                     new_args_fluent.append(c[i])
+                                    comb_effects_conditions = And(comb_effects_conditions, Equals(i, arg)).simplify()
                                 else:
                                     new_args_fluent.append(arg)
                             if effect.is_conditional():
-                                effects_conditions = And(effects_conditions, effect.condition).simplify()
+                                comb_effects_conditions = And(comb_effects_conditions, effect.condition).simplify()
                             if effect.is_increase():
                                 type_effect = 'increase'
                             elif effect.is_decrease():
@@ -263,27 +265,26 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                                 type_effect = None
                             print("fluent: ", effect.fluent.fluent()(*new_args_fluent))
                             print("value: ", effect.value)
-                            new_expression_comb = self.expression_value(new_problem, new_expression_comb, effect.fluent.fluent()(*new_args_fluent),
+                            comb_new_expression = self.expression_value(new_problem, comb_new_expression, effect.fluent.fluent()(*new_args_fluent),
                                                                    effect.value, type_effect)
-                        print("new expression!! ", new_expression_comb)
-                        if new_expression_comb.is_bool_constant():
-                            if new_expression_comb.is_true():
+                        print("new expression!! ", comb_new_expression)
+                        if comb_new_expression.is_bool_constant():
+                            if comb_new_expression.is_true():
                                 new_value = 1
                             else:
                                 new_value = 0
-                            if effects_conditions is None:
+                            if comb_effects_conditions is None:
                                 action.add_effect(new_problem.fluent(count), new_value)
                             else:
-                                action.add_effect(new_problem.fluent(count), new_value, effects_conditions)
+                                action.add_effect(new_problem.fluent(count), new_value, comb_effects_conditions)
                         else:
-                            if effects_conditions is None:
-                                action.add_effect(new_problem.fluent(count), 1, new_expression_comb)
-                                action.add_effect(new_problem.fluent(count), 0, Not(new_expression_comb))
+                            if comb_effects_conditions is None:
+                                action.add_effect(new_problem.fluent(count), 1, comb_new_expression)
+                                action.add_effect(new_problem.fluent(count), 0, Not(comb_new_expression).simplify())
                             else:
-                                action.add_effect(new_problem.fluent(count), 1, And(new_expression_comb, effects_conditions))
+                                action.add_effect(new_problem.fluent(count), 1, And(comb_new_expression, comb_effects_conditions).simplify())
                                 action.add_effect(new_problem.fluent(count), 0,
-                                                  And(Not(new_expression_comb), effects_conditions))
-
+                                                  And(Not(comb_new_expression), comb_effects_conditions).simplify())
                 else:
                     if new_expression.is_bool_constant():
                         if new_expression.is_true():
@@ -297,10 +298,10 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                     else:
                         if effects_conditions is None:
                             action.add_effect(new_problem.fluent(count), 1, new_expression)
-                            action.add_effect(new_problem.fluent(count), 0, Not(new_expression))
+                            action.add_effect(new_problem.fluent(count), 0, Not(new_expression).simplify())
                         else:
-                            action.add_effect(new_problem.fluent(count), 1, And(new_expression, effects_conditions))
-                            action.add_effect(new_problem.fluent(count), 0, And(Not(new_expression), effects_conditions))
+                            action.add_effect(new_problem.fluent(count), 1, And(new_expression, effects_conditions).simplify())
+                            action.add_effect(new_problem.fluent(count), 0, And(Not(new_expression), effects_conditions).simplify())
         return action
 
     def add_counts(
