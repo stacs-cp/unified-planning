@@ -201,8 +201,8 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
             fluents_action = []
             for effect in action.effects:
                 fluents_action.append(effect.fluent)
-            print(fluents_replaced, fluents_action)
-            fluents_affected = set(fluents_replaced).intersection(fluents_action)
+            print(fluents_expression, fluents_action)
+            fluents_affected = set(fluents_expression).intersection(fluents_action)
             print(fluents_affected)
 
             for effect in action.effects:
