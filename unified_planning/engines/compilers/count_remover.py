@@ -188,28 +188,23 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
         # pels fluents que es poden canviar directament -> canviar
         # per cada fluent afectat afegir un nou efecte
         for count, expression in count_expressions.items():
-            print("ITEMS: ")
-            print("count: ", count)
-            print("expression: ", expression)
-            print(self.find_fluents_affected(expression))
+            print(" -------> count: ", count, "expression: ", expression)
             new_expression = expression
             effects_conditions = True
             # per cada fluent de l'expressio...
             fluents_expression = self.find_fluents_affected(expression)
             fluents_replaced = []
-            # canviar expressio pels valors dels efectes (fluents) que sabem
-            fluents_action = []
+            # guardar els efectes que contenen algun fluent de l'expressio
+            effects_action = []
             for effect in action.effects:
-                fluents_action.append(effect.fluent)
-            print(fluents_expression, fluents_action)
-            fluents_affected = set(fluents_expression).intersection(fluents_action)
-            print(fluents_affected)
+                for fe in fluents_expression:
+                    if effect.fluent.fluent().name == fe.fluent().name:
+                        effects_action.append(effect)
 
-            for effect in action.effects:
-                if effect.fluent in fluents_replaced:
-                    fluents_replaced.append(effect.fluent)
-                    if effect.is_conditional():
-                        effects_conditions = And(effects_conditions, effect.condition).simplify()
+            print("fluents from expression that appear in effects: ", effects_action)
+            for effect in effects_action:
+                if effect.is_conditional():
+                    effects_conditions = And(effects_conditions, effect.condition).simplify()
                     if effect.is_increase():
                         type_effect = 'increase'
                     elif effect.is_decrease():
@@ -226,7 +221,7 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
             #    possible_parameters[this_parameter].append(this_object)
             #else:
             #    possible_parameters[this_parameter] = [this_object]
-            if fluents_affected:
+            if False:
                 if new_expression.is_bool_constant():
                     if new_expression.is_true():
                         new_value = 1
