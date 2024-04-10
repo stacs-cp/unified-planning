@@ -231,7 +231,7 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
 
             if indirect_effect_fluents:
                 # canviar els parametres per cada possible combinacio
-                combinations = list(product(*possible_parameters))
+                combinations = list(product(*possible_parameters.values()))
                 print(combinations)
                 # per cada combinacio possible dels parametres
                 for c in combinations:
