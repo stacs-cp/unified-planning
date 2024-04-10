@@ -200,7 +200,6 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
             fluents_replaced = []
             # canviar expressio pels valors dels efectes (fluents) que sabem
             for effect in action.effects:
-                print(effect.fluent)
                 if effect.fluent in fluents_affected:
                     fluents_replaced.append(effect.fluent)
                     if effect.is_conditional():
@@ -214,24 +213,35 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                     new_expression = self.expression_value(new_problem, new_expression, effect.fluent, effect.value,
                                                            type_effect)
             print("new_expression: ", new_expression)
-            print(fluents_affected, fluents_replaced)
             restant_fluents = list(set(fluents_affected) - set(fluents_replaced))
             print("restant fluents: ", restant_fluents)
             # hem canviat tots els que son estatics
             # canviar els dinamics
-
-
             if restant_fluents:
+                possible_parameters: Dict[str, List[str]] = {}
                 # per cada fluent restant
                 for fr in restant_fluents:
                     # mirar cada efecte
                     for effect in action.effects:
                         # si el nom es igual
                         if fr.fluent().name == effect.fluent.fluent().name:
+                            # per cada argument del fluent l'efecte
+                            print("fluent restant: ", fr.fluent(), "| efecte: ", effect.fluent.fluent())
+                            for i in range(len(effect.fluent.args)):
+                                this_parameter = effect.fluent.arg(i)
+                                this_object = fr.arg(i)
+                                print(this_parameter, type(this_parameter), this_object, type(this_object))
+                                # si encara no s'ha afegit
+                                if this_parameter in possible_parameters.keys():
+                                    possible_parameters[this_parameter] = [this_object]
+                                else:
+                                    possible_parameters[this_parameter].append([this_object])
+
                             print(effect.fluent.args)
                             print(fr.args)
                             print("same name!")
-                            new_expression = self.expression_value(new_problem, new_expression, effect.fluent,
+                            print(effect.fluent.args)
+                            new_expression = self.expression_value(new_problem, new_expression, fr,
                                                                    effect.value)
 
             if count_fluents_in_action:
