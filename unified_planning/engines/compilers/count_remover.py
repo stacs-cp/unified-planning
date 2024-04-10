@@ -194,7 +194,7 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
             effects_conditions = True
             direct_effect_fluents = []
             indirect_effect_fluents = []
-            possible_parameters: Dict["up.model.fnode.FNode", List["up.model.fnode.FNode"]]
+            possible_parameters: Dict["up.model.fnode.FNode", List["up.model.fnode.FNode"]] = {}
 
             # guardar els fluents que canviem directe de la nostra expressio i els indirectes
             for effect in action.effects:
