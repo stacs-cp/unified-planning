@@ -194,6 +194,8 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
             effects_conditions = True
             direct_effect_fluents = []
             indirect_effect_fluents = []
+            possible_parameters: Dict["up.model.fnode.FNode", List["up.model.fnode.FNode"]]
+
             # guardar els fluents que canviem directe de la nostra expressio i els indirectes
             for effect in action.effects:
                 for fe in self.find_fluents_affected(expression):
@@ -201,10 +203,17 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                         direct_effect_fluents.append(effect)
                     elif effect.fluent.fluent().name == fe.fluent().name:
                         indirect_effect_fluents.append(effect)
-                        # fer diccionari i tal...
+                        for i in range(len(effect.args)):
+                            this_parameter = effect.arg(i)
+                            this_object = fe.arg(i)
+                            if this_parameter in possible_parameters.keys():
+                                possible_parameters[this_parameter].append(this_object)
+                            else:
+                                possible_parameters[this_parameter] = [this_object]
 
             print("direct effects: ", direct_effect_fluents)
             print("indirect effects: ", indirect_effect_fluents)
+            print("possible parameters: ", possible_parameters)
 
             # canviar els que son directes (que no tenen parametres a sustituir
             for effect in direct_effect_fluents:
@@ -220,13 +229,6 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                                                            type_effect)
             print("new_expression: ", new_expression)
 
-
-            #if fr.fluent().name == effect.fluent.fluent().name:
-
-            #if this_parameter in possible_parameters.keys():
-            #    possible_parameters[this_parameter].append(this_object)
-            #else:
-            #    possible_parameters[this_parameter] = [this_object]
             if False:
                 if new_expression.is_bool_constant():
                     if new_expression.is_true():
