@@ -267,7 +267,7 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                                                                    effect.value, type_effect)
                         print("new expression!! ", new_expression_comb)
                         if new_expression_comb.is_bool_constant():
-                            if new_expression.is_true():
+                            if new_expression_comb.is_true():
                                 new_value = 1
                             else:
                                 new_value = 0
