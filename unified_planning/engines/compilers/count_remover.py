@@ -218,7 +218,7 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
             # hem canviat tots els que son estatics
             # canviar els dinamics
             if restant_fluents:
-                possible_parameters: Dict[str, List[str]] = {}
+                possible_parameters: Dict["up.model.fnode.FNode", List["up.model.fnode.FNode"]] = {}
                 # per cada fluent restant
                 for fr in restant_fluents:
                     # mirar cada efecte
@@ -235,7 +235,7 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                                 if this_parameter in possible_parameters.keys():
                                     possible_parameters[this_parameter] = [this_object]
                                 else:
-                                    possible_parameters[this_parameter].append([this_object])
+                                    possible_parameters[this_parameter].append(this_object)
 
                             print(effect.fluent.args)
                             print(fr.args)
