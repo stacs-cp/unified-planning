@@ -201,6 +201,7 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
             # canviar expressio pels valors dels efectes (fluents) que sabem
             for effect in action.effects:
                 if effect.fluent in fluents_affected:
+                    count_fluents_in_action = True
                     fluents_replaced.append(effect.fluent)
                     if effect.is_conditional():
                         effects_conditions = And(effects_conditions, effect.condition).simplify()
@@ -225,25 +226,17 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                     for effect in action.effects:
                         # si el nom es igual
                         if fr.fluent().name == effect.fluent.fluent().name:
+                            count_fluents_in_action = True
                             # per cada argument del fluent l'efecte
-                            print("fluent restant: ", fr.fluent(), "| efecte: ", effect.fluent.fluent())
                             for i in range(len(effect.fluent.args)):
                                 this_parameter = effect.fluent.arg(i)
                                 this_object = fr.arg(i)
-                                print(this_parameter, type(this_parameter), this_object, type(this_object))
                                 # si encara no s'ha afegit
                                 if this_parameter in possible_parameters.keys():
                                     possible_parameters[this_parameter].append(this_object)
                                 else:
                                     possible_parameters[this_parameter] = [this_object]
-
-                            print(effect.fluent.args)
-                            print(fr.args)
-                            print("same name!")
-                            print(effect.fluent.args)
-                            new_expression = self.expression_value(new_problem, new_expression, fr,
-                                                                   effect.value)
-
+                print("POSSIBLE PARAMETERS", possible_parameters)
             if count_fluents_in_action:
                 if new_expression.is_bool_constant():
                     if new_expression.is_true():
