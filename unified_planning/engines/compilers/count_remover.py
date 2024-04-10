@@ -260,28 +260,47 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                                 type_effect = 'decrease'
                             else:
                                 type_effect = None
-                            print("new args: ", new_args_fluent)
-                            print(effect.fluent.fluent()(*new_args_fluent))
+                            print("fluent: ", effect.fluent.fluent()(*new_args_fluent))
+                            print("value: ", effect.value)
                             new_expression = self.expression_value(new_problem, new_expression, effect.fluent.fluent()(*new_args_fluent),
                                                                    effect.value, type_effect)
-                print("new expression!! ", new_expression)
-                if new_expression.is_bool_constant():
-                    if new_expression.is_true():
-                        new_value = 1
-                    else:
-                        new_value = 0
-                    if effects_conditions is None:
-                        action.add_effect(new_problem.fluent(count), new_value)
-                    else:
-                        action.add_effect(new_problem.fluent(count), new_value, effects_conditions)
+                        print("new expression!! ", new_expression)
+                        if new_expression.is_bool_constant():
+                            if new_expression.is_true():
+                                new_value = 1
+                            else:
+                                new_value = 0
+                            if effects_conditions is None:
+                                action.add_effect(new_problem.fluent(count), new_value)
+                            else:
+                                action.add_effect(new_problem.fluent(count), new_value, effects_conditions)
+                        else:
+                            if effects_conditions is None:
+                                action.add_effect(new_problem.fluent(count), 1, new_expression)
+                                action.add_effect(new_problem.fluent(count), 0, Not(new_expression))
+                            else:
+                                action.add_effect(new_problem.fluent(count), 1, And(new_expression, effects_conditions))
+                                action.add_effect(new_problem.fluent(count), 0,
+                                                  And(Not(new_expression), effects_conditions))
+
                 else:
-                    if effects_conditions is None:
-                        action.add_effect(new_problem.fluent(count), 1, new_expression)
-                        action.add_effect(new_problem.fluent(count), 0, Not(new_expression))
+                    if new_expression.is_bool_constant():
+                        if new_expression.is_true():
+                            new_value = 1
+                        else:
+                            new_value = 0
+                        if effects_conditions is None:
+                            action.add_effect(new_problem.fluent(count), new_value)
+                        else:
+                            action.add_effect(new_problem.fluent(count), new_value, effects_conditions)
                     else:
-                        action.add_effect(new_problem.fluent(count), 1, And(new_expression, effects_conditions))
-                        action.add_effect(new_problem.fluent(count), 0, And(Not(new_expression), effects_conditions))
-        return action
+                        if effects_conditions is None:
+                            action.add_effect(new_problem.fluent(count), 1, new_expression)
+                            action.add_effect(new_problem.fluent(count), 0, Not(new_expression))
+                        else:
+                            action.add_effect(new_problem.fluent(count), 1, And(new_expression, effects_conditions))
+                            action.add_effect(new_problem.fluent(count), 0, And(Not(new_expression), effects_conditions))
+            return action
 
     def add_counts(
             self,
