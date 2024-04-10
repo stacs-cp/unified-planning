@@ -375,7 +375,9 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
         changed_actions = new_problem.actions
         new_problem.clear_actions()
         for action in changed_actions:
+            print("OLD ACTION: ", action)
             new_action = self.add_count_effects(new_problem, action, count_expressions)
+            print("NEW ACTION: ", new_action)
             new_actions.append(new_action)
             new_problem.add_action(new_action)
 
