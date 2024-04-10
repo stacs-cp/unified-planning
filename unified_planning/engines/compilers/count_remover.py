@@ -188,10 +188,9 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
         # pels fluents que es poden canviar directament -> canviar
         # per cada fluent afectat afegir un nou efecte
         for count, expression in count_expressions.items():
-            print(" -------> count: ", count, "expression: ", expression)
+            print(" -------> count: ", count, " | expression: ", expression)
             new_expression = expression
             effects_conditions = True
-            # per cada fluent de l'expressio...
             fluents_expression = self.find_fluents_affected(expression)
             fluents_replaced = []
             # guardar els efectes que contenen algun fluent de l'expressio
@@ -201,19 +200,27 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                     if effect.fluent.fluent().name == fe.fluent().name:
                         effects_action.append(effect)
 
-            print("fluents from expression that appear in effects: ", effects_action)
+            print("effects from expression that appear in effects: ", effects_action)
+
+            # canviar els que son directes (que no tenen parametres a sustituir
             for effect in effects_action:
-                if effect.is_conditional():
-                    effects_conditions = And(effects_conditions, effect.condition).simplify()
-                    if effect.is_increase():
-                        type_effect = 'increase'
-                    elif effect.is_decrease():
-                        type_effect = 'decrease'
-                    else:
-                        type_effect = None
-                    new_expression = self.expression_value(new_problem, new_expression, effect.fluent, effect.value,
-                                                           type_effect)
+                if effect.fluent in fluents_expression:
+                    effects_action.remove(effect)
+                    print("sustituir directe")
+                    if effect.is_conditional():
+                        effects_conditions = And(effects_conditions, effect.condition).simplify()
+                        if effect.is_increase():
+                            type_effect = 'increase'
+                        elif effect.is_decrease():
+                            type_effect = 'decrease'
+                        else:
+                            type_effect = None
+                        new_expression = self.expression_value(new_problem, new_expression, effect.fluent, effect.value,
+                                                               type_effect)
             print("new_expression: ", new_expression)
+
+            # canviar els que son directes (que no tenen parametres a sustituir)
+            print("els restants que no son directes: ", effects_action)
 
             #if fr.fluent().name == effect.fluent.fluent().name:
 
