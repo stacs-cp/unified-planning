@@ -233,9 +233,9 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                                 print(this_parameter, type(this_parameter), this_object, type(this_object))
                                 # si encara no s'ha afegit
                                 if this_parameter in possible_parameters.keys():
-                                    possible_parameters[this_parameter] = [this_object]
-                                else:
                                     possible_parameters[this_parameter].append(this_object)
+                                else:
+                                    possible_parameters[this_parameter] = [this_object]
 
                             print(effect.fluent.args)
                             print(fr.args)
