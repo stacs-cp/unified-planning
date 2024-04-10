@@ -248,10 +248,8 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                             for arg in effect.fluent.args:
                                 print("arg: ", arg)
                                 if arg in keys:
-                                    for i in range(len(keys)):
-                                        if arg == keys[i]:
-                                            print(c[i], keys[i])
-                                            new_args_fluent.append(c[i])
+                                    i = keys.index(arg)
+                                    new_args_fluent.append(c[i])
                                 else:
                                     new_args_fluent.append(arg)
                             if effect.is_conditional():
