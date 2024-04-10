@@ -247,10 +247,11 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                             # per cada argument del fluent, substituir per l'adequat
                             for arg in effect.fluent.args:
                                 print("arg: ", arg)
-                                for i in range(len(keys)):
-                                    if arg == keys[i]:
-                                        print(c[i], keys[i])
-                                        new_args_fluent.append(c[i])
+                                if arg in keys:
+                                    for i in range(len(keys)):
+                                        if arg == keys[i]:
+                                            print(c[i], keys[i])
+                                            new_args_fluent.append(c[i])
                                 else:
                                     new_args_fluent.append(arg)
                             if effect.is_conditional():
