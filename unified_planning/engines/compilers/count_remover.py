@@ -193,15 +193,20 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
             print("expression: ", expression)
             print(self.find_fluents_affected(expression))
             new_expression = expression
-            count_fluents_in_action = False
             effects_conditions = True
             # per cada fluent de l'expressio...
-            fluents_affected = self.find_fluents_affected(expression)
+            fluents_expression = self.find_fluents_affected(expression)
             fluents_replaced = []
             # canviar expressio pels valors dels efectes (fluents) que sabem
+            fluents_action = []
             for effect in action.effects:
-                if effect.fluent in fluents_affected:
-                    count_fluents_in_action = True
+                fluents_action.append(effect.fluent)
+            print(fluents_replaced, fluents_action)
+            fluents_affected = set(fluents_replaced).intersection(fluents_action)
+            print(fluents_affected)
+
+            for effect in action.effects:
+                if effect.fluent in fluents_replaced:
                     fluents_replaced.append(effect.fluent)
                     if effect.is_conditional():
                         effects_conditions = And(effects_conditions, effect.condition).simplify()
@@ -214,30 +219,14 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                     new_expression = self.expression_value(new_problem, new_expression, effect.fluent, effect.value,
                                                            type_effect)
             print("new_expression: ", new_expression)
-            restant_fluents = list(set(fluents_affected) - set(fluents_replaced))
-            print("restant fluents: ", restant_fluents)
-            # hem canviat tots els que son estatics
-            # canviar els dinamics
-            if restant_fluents:
-                possible_parameters: Dict["up.model.fnode.FNode", List["up.model.fnode.FNode"]] = {}
-                # per cada fluent restant
-                for fr in restant_fluents:
-                    # mirar cada efecte
-                    for effect in action.effects:
-                        # si el nom es igual
-                        if fr.fluent().name == effect.fluent.fluent().name:
-                            count_fluents_in_action = True
-                            # per cada argument del fluent l'efecte
-                            for i in range(len(effect.fluent.args)):
-                                this_parameter = effect.fluent.arg(i)
-                                this_object = fr.arg(i)
-                                # si encara no s'ha afegit
-                                if this_parameter in possible_parameters.keys():
-                                    possible_parameters[this_parameter].append(this_object)
-                                else:
-                                    possible_parameters[this_parameter] = [this_object]
-                print("POSSIBLE PARAMETERS", possible_parameters)
-            if count_fluents_in_action:
+
+            #if fr.fluent().name == effect.fluent.fluent().name:
+
+            #if this_parameter in possible_parameters.keys():
+            #    possible_parameters[this_parameter].append(this_object)
+            #else:
+            #    possible_parameters[this_parameter] = [this_object]
+            if fluents_affected:
                 if new_expression.is_bool_constant():
                     if new_expression.is_true():
                         new_value = 1
