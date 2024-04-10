@@ -264,7 +264,7 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                             print(effect.fluent.fluent()(*new_args_fluent))
                             new_expression = self.expression_value(new_problem, new_expression, effect.fluent.fluent()(*new_args_fluent),
                                                                    effect.value, type_effect)
-
+                print("new expression!! ", new_expression)
                 if new_expression.is_bool_constant():
                     if new_expression.is_true():
                         new_value = 1
