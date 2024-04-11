@@ -183,9 +183,6 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
             action: "up.model.action.Action",
             count_expressions: Dict[str, "up.model.fnode.FNode"]
     ) -> "up.model.action.Action":
-        # per cada count, si l'accio conte algun efecte a algun fluent que el count contingui, tractar
-        # pels fluents que es poden canviar directament -> canviar
-        # per cada fluent afectat afegir un nou efecte
         for count, expression in count_expressions.items():
             new_expression = expression
             effects_conditions = True
@@ -193,7 +190,6 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
             indirect_effect_fluents = []
             possible_parameters: Dict["up.model.fnode.FNode", List["up.model.fnode.FNode"]] = {}
 
-            # guardar els fluents de l'accio que la nostra expressio conte
             for effect in action.effects:
                 for fe in self.find_fluents_affected(expression):
                     if effect.fluent == fe:
@@ -210,7 +206,6 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                                 possible_parameters[this_parameter] = [this_object]
 
             if direct_effect_fluents or indirect_effect_fluents:
-                # canviar els que son directes (que no tenen parametres a sustituir
                 for effect in direct_effect_fluents:
                     if effect.is_conditional():
                         effects_conditions = And(effects_conditions, effect.condition).simplify()
@@ -224,17 +219,13 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                                                                type_effect)
 
                 if indirect_effect_fluents:
-                    # canviar els parametres per cada possible combinacio
                     combinations = list(product(*possible_parameters.values()))
                     keys = list(possible_parameters.keys())
-                    # per cada combinacio possible dels parametres
                     for c in combinations:
                         comb_new_expression = new_expression
                         comb_effects_conditions = effects_conditions
-                        # per cada effect
                         for effect in indirect_effect_fluents:
                             new_args_fluent = []
-                            # per cada argument del fluent, substituir per l'adequat
                             for arg in effect.fluent.args:
                                 i = keys.index(arg)
                                 new_args_fluent.append(c[i])
@@ -332,11 +323,7 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
         new_to_old: Dict[Action, Action] = {}
         new_problem = problem.clone()
         new_problem.name = f"{self.name}_{problem.name}"
-
-        # guardar els fluents que utilitza cada argument dels counts
         count_expressions: Dict[str, "up.model.fnode.FNode"] = {}
-
-        # per cada accio canviar les precondicions que tinguin count i guardar info a fluents affected
         new_problem.clear_actions()
         for action in problem.actions:
             new_action = action.clone()
@@ -345,15 +332,12 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                 new_precondition = self.add_counts(new_problem, pre, count_expressions)
                 new_action.add_precondition(new_precondition)
             new_problem.add_action(new_action)
-            # en els efectes condicionals ?
 
-        # per cada goal canviar les expressions que tinguin count i guardar info a fluents affected
         new_problem.clear_goals()
         for goal in problem.goals:
             new_goal = self.add_counts(new_problem, goal, count_expressions)
             new_problem.add_goal(new_goal)
 
-        # per cada accio afegir els canvis dels counts - modificar accions i afegir-les al problema
         new_actions = []
         changed_actions = new_problem.actions
         new_problem.clear_actions()
