@@ -60,13 +60,14 @@ class Effect:
         kind: EffectKind = EffectKind.ASSIGN,
         forall: Iterable["up.model.variable.Variable"] = tuple(),
     ):
-        fve = fluent.environment.free_vars_extractor
-        fluents_in_fluent = fve.get(fluent)
-        fluents_in_fluent.remove(fluent)
-        if fluents_in_fluent:
-            raise UPProblemDefinitionError(
-                f"The fluent: {fluent} contains other fluents in his arguments: {fluents_in_fluent}"
-            )
+        if not fluent.type.is_array_type():
+            fve = fluent.environment.free_vars_extractor
+            fluents_in_fluent = fve.get(fluent)
+            fluents_in_fluent.remove(fluent)
+            if fluents_in_fluent:
+                raise UPProblemDefinitionError(
+                    f"The fluent: {fluent} contains other fluents in his arguments: {fluents_in_fluent}"
+                )
         self._fluent = fluent
         self._value = value
         self._condition = condition
