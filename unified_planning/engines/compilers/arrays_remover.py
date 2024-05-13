@@ -236,7 +236,11 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                     new_fluent = model.Fluent(new_fluent_name, new_type, fluent.signature, fluent.environment)
                     new_default_value = default_value
                     if new_default_value is not None:
+                        print("combination: ", combination)
                         for i in combination:
+                            print("i: ", i)
+                            print("new_default_value: ", new_default_value)
+                            print(new_default_value[i])
                             new_default_value = new_default_value[i].constant_value()
                     new_problem.add_fluent(new_fluent, default_initial_value=new_default_value)
                     # canviar
