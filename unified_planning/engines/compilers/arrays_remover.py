@@ -241,7 +241,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                             print("i: ", i)
                             print("new_default_value: ", new_default_value)
                             print(new_default_value[i])
-                            new_default_value = new_default_value[i].constant_value()
+                            new_default_value = new_default_value[i]
                     new_problem.add_fluent(new_fluent, default_initial_value=new_default_value)
                     # canviar
                     new_initial_value = initial_values
