@@ -325,6 +325,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
             new_goals = self._get_new_fnodes(new_problem, g)
             for ng in new_goals:
                 new_problem.add_goal(ng)
+        print("fluents_default: ", new_problem.fluents_defaults)
         return CompilerResult(
             new_problem, partial(replace_action, map=new_to_old), self.name
         )
