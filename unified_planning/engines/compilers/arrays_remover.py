@@ -243,7 +243,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                     if new_default_value is not None:
                         print("default_value", new_default_value)
                         for i in combination:
-                            new_default_value = new_default_value[i].constant_value()
+                            new_default_value = new_default_value.constant_value()[i]
                     new_problem.add_fluent(new_fluent, default_initial_value=new_default_value)
                     # canviar
                     print(combination)
