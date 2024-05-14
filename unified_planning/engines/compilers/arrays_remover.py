@@ -255,7 +255,8 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                             if iv:
                                 new_problem.set_initial_value(new_fluent(*fp), iv)
                     else:
-                        iv = problem.initial_values.fromkeys(new_fluent())
+                        print(problem.initial_values)
+                        iv = problem.initial_values.get(new_fluent())
                         print("iv: ", iv)
 
                         new_problem.set_initial_value(new_fluent(), iv)
