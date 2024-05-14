@@ -211,7 +211,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
             print("fluent: ", fluent)
             # guardar el default_initial_value
             if problem.fluents_defaults.get(fluent):
-                default_value = problem.fluents_defaults.get(fluent).constant_value()
+                default_value = problem.fluents_defaults.get(fluent)
             else:
                 # si no hi ha vol dir que tots els possibles valors (amb parametres) hauran d'estar inicialitzats
                 default_value = None
@@ -272,15 +272,16 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                 new_problem.add_fluent(fluent, default_initial_value=default_value)
                 if fluent_parameters:
                     for fp in fluent_parameters:
+                        print("fp:", fp)
                         iv = problem.initial_value(fluent(*fp))
+                        print("iv: ", iv)
                         if iv:
                             new_problem.set_initial_value(fluent(*fp), iv)
-                        elif default_value:
-                            new_problem.set_initial_value(fluent(*fp), default_value)
-                        else:
+                        elif default_value is None:
                             raise UPProblemDefinitionError(
                                 f"Initial value not set for fluent: {fluent(*fp)}"
                             )
+
                 else:
                     iv = problem.initial_value(fluent())
                     if iv:
