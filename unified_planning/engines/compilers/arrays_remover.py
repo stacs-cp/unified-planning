@@ -213,6 +213,8 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                 objects.append(problem.objects(s.type))
             fluent_parameters = list(product(*objects))
             print("fluent_parameters: ", fluent_parameters)
+            if fluent_parameters == [()]:
+                fluent_parameters = []
 
             if problem.fluents_defaults.get(fluent):
                 default_value = problem.fluents_defaults.get(fluent).constant_value()
