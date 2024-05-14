@@ -248,14 +248,14 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                         print("te parametres")
                         for fp in fluent_parameters:
                             print("fp", fp)
-                            print(problem.initial_values.fromkeys(new_fluent(*fp)))
-                            iv = problem.initial_value(new_fluent(*fp))
+                            print()
+                            iv = problem.initial_values.fromkeys(new_fluent(*fp))
 
                             print("iv: ", iv)
                             if iv:
                                 new_problem.set_initial_value(new_fluent(*fp), iv)
                     else:
-                        iv = problem.initial_value(new_fluent())
+                        iv = problem.initial_values.fromkeys(new_fluent())
                         print("iv: ", iv)
 
                         new_problem.set_initial_value(new_fluent(), iv)
