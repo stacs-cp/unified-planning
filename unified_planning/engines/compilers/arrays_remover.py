@@ -21,6 +21,7 @@ import unified_planning.engines as engines
 from unified_planning import model
 from unified_planning.engines.mixins.compiler import CompilationKind, CompilerMixin
 from unified_planning.engines.results import CompilerResult
+from unified_planning.exceptions import UPProblemDefinitionError
 from unified_planning.model import (
     Problem,
     Action,
@@ -208,6 +209,13 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
 
         for fluent in problem.fluents:
             print("fluent: ", fluent)
+            # guardar el default_initial_value
+            if problem.fluents_defaults.get(fluent):
+                default_value = problem.fluents_defaults.get(fluent).constant_value()
+            else:
+                # si no hi ha vol dir que tots els possibles valors (amb parametres) hauran d'estar inicialitzats
+                default_value = None
+
             objects = []
             for s in fluent.signature:
                 objects.append(problem.objects(s.type))
@@ -216,10 +224,6 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
             if fluent_parameters == [()]:
                 fluent_parameters = []
 
-            if problem.fluents_defaults.get(fluent):
-                default_value = problem.fluents_defaults.get(fluent).constant_value()
-            else:
-                default_value = None
             if fluent.type.is_array_type():
                 this_fluent = fluent.type
                 new_type = this_fluent.elements_type
@@ -265,10 +269,29 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                             new_problem.set_initial_value(new_fluent(), new_default_value)
             else:
                 new_problem.add_fluent(fluent, default_initial_value=default_value)
-                for fp in fluent_parameters:
-                    iv = problem.initial_value(fluent(*fp))
+                if fluent_parameters:
+                    for fp in fluent_parameters:
+                        iv = problem.initial_value(fluent(*fp))
+                        if iv:
+                            new_problem.set_initial_value(fluent(*fp), iv)
+                        elif default_value:
+                            new_problem.set_initial_value(fluent(*fp), default_value)
+                        else:
+                            raise UPProblemDefinitionError(
+                                f"Initial value not set for fluent: {fluent(*fp)}"
+                            )
+                else:
+                    iv = problem.initial_value(fluent())
                     if iv:
-                        new_problem.set_initial_value(fluent(*fp), iv)
+                        new_problem.set_initial_value(fluent(), iv)
+                    elif default_value:
+                        new_problem.set_initial_value(fluent(), default_value)
+                    else:
+                        raise UPProblemDefinitionError(
+                            f"Initial value not set for fluent: {fluent()}"
+                        )
+
+
 
         for action in problem.actions:
             new_action = action.clone()
