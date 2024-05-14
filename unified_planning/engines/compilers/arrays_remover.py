@@ -258,8 +258,11 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                         print(problem.initial_values)
                         iv = problem.initial_values.get(new_fluent())
                         print("iv: ", iv)
-
-                        new_problem.set_initial_value(new_fluent(), iv)
+                        if iv:
+                            new_problem.set_initial_value(new_fluent(), iv)
+                        # cal?
+                        elif new_default_value:
+                            new_problem.set_initial_value(new_fluent(), new_default_value)
             else:
                 new_problem.add_fluent(fluent, default_initial_value=default_value)
                 for fp in fluent_parameters:
