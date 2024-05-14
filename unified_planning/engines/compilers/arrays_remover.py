@@ -257,7 +257,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                 for fp in fluent_parameters:
                     iv = initial_values[fluent(*fp)]
                     if iv:
-                        new_problem.set_initial_value(fluent(*fluent_parameters), initial_values[fluent(*fp)])
+                        new_problem.set_initial_value(fluent(*fp), iv)
 
         for action in problem.actions:
             new_action = action.clone()
