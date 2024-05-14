@@ -232,7 +232,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                     domain.append(domain_in)
                     new_type = this_fluent.elements_type
                     this_fluent = this_fluent.elements_type
-
+                print("comb: ",list(product(*domain)))
                 for combination in list(product(*domain)):
                     new_fluent_name = get_fresh_name(new_problem, fluent.name, list(map(str, combination)))
                     new_fluent = model.Fluent(new_fluent_name, new_type, fluent.signature, fluent.environment)
@@ -242,6 +242,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                             new_default_value = new_default_value[i].constant_value()
                     new_problem.add_fluent(new_fluent, default_initial_value=new_default_value)
                     # canviar
+                    print(combination)
                     print("new_initial_values: ", initial_values)
 
                     new_initial_value = initial_values
