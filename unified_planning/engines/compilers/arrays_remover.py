@@ -216,9 +216,6 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                 # si no hi ha vol dir que tots els possibles valors (amb parametres) hauran d'estar inicialitzats
                 default_value = None
 
-            print("initial_values: ", new_problem.initial_values)
-            print("fluents_default: ", new_problem.fluents_defaults)
-
             objects = []
             for s in fluent.signature:
                 objects.append(problem.objects(s.type))
@@ -255,12 +252,14 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                         print("te parametres")
                         for fp in fluent_parameters:
                             print("fp", fp)
-                            print()
-                            iv = problem.initial_values.fromkeys(new_fluent(*fp))
-
+                            iv = problem.initial_value(new_fluent(*fp))
                             print("iv: ", iv)
-                            if iv:
-                                new_problem.set_initial_value(new_fluent(*fp), iv)
+                            if iv is None:
+                                raise UPProblemDefinitionError(
+                                    f"Initial value not set for fluent: {fluent(*fp)}"
+                                )
+                            elif iv != default_value:
+                                new_problem.set_initial_value(fluent(*fp), iv)
                     else:
                         print(problem.initial_values)
                         iv = problem.initial_values.get(new_fluent())
@@ -271,7 +270,6 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                         elif new_default_value:
                             new_problem.set_initial_value(new_fluent(), new_default_value)
             else:
-                print("add_fluent: ", fluent, default_value)
                 new_problem.add_fluent(fluent, default_initial_value=default_value)
                 if fluent_parameters:
                     for fp in fluent_parameters:
