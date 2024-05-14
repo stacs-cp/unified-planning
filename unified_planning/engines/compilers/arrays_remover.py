@@ -268,6 +268,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                         elif new_default_value:
                             new_problem.set_initial_value(new_fluent(), new_default_value)
             else:
+                print("add_fluent: ", fluent, default_value)
                 new_problem.add_fluent(fluent, default_initial_value=default_value)
                 if fluent_parameters:
                     for fp in fluent_parameters:
@@ -290,8 +291,6 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                         raise UPProblemDefinitionError(
                             f"Initial value not set for fluent: {fluent()}"
                         )
-
-
 
         for action in problem.actions:
             new_action = action.clone()
