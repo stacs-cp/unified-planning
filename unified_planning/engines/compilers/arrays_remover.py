@@ -280,8 +280,8 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                                 f"Initial value not set for fluent: {fluent(*fp)}"
                             )
                         elif iv != default_value:
+                            print("reescriure")
                             new_problem.set_initial_value(fluent(*fp), iv)
-
                 else:
                     iv = problem.initial_value(fluent())
                     if iv:
