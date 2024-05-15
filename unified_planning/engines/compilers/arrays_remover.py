@@ -262,24 +262,29 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                                 if str(k) == old_name + '(' + ','.join(str(i) for i in fp) + ')':
                                     iv = problem.initial_values.get(k)
                             print("iv: ", iv)
-                            if iv is None and new_default_value is None:
+
+                            if iv is not None:
+                                new_problem.set_initial_value(new_fluent(*fp), iv)
+                            elif new_default_value is not None:
+                                new_problem.set_initial_value(new_fluent(*fp), new_default_value)
+                            else:
                                 raise UPProblemDefinitionError(
                                     f"Initial value not set for fluent: {new_fluent(*fp)}"
                                 )
-                            elif iv != new_default_value:
-                                new_problem.set_initial_value(new_fluent(*fp), iv)
                     else:
                         iv = None
                         for k in keys:
                             if str(k) == old_name:
                                 iv = problem.initial_values.get(k)
                         print("iv: ", iv)
-                        if iv is None and new_default_value is None:
+                        if iv is not None:
+                            new_problem.set_initial_value(new_fluent(), iv)
+                        elif new_default_value is not None:
+                            new_problem.set_initial_value(new_fluent(), new_default_value)
+                        else:
                             raise UPProblemDefinitionError(
                                 f"Initial value not set for fluent: {new_fluent()}"
                             )
-                        elif iv != default_value:
-                            new_problem.set_initial_value(new_fluent(), iv)
             else:
                 new_problem.add_fluent(fluent, default_initial_value=default_value)
                 if fluent_parameters:
