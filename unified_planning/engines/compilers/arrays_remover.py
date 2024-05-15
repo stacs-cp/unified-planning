@@ -257,15 +257,16 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                     keys = problem.initial_values.keys()
                     if fluent_parameters:
                         for fp in fluent_parameters:
-                            new_initial_value = problem.initial_values.get(fluent.name(*fp))
-                            if new_initial_value is not None:
-                                for c in combination:
-                                    new_initial_value = new_initial_value.constant_value()[c]
-
                             iv = None
+                            new_initial_value = None
                             for k in keys:
                                 if str(k) == old_name + '(' + ','.join(str(i) for i in fp) + ')':
                                     iv = problem.initial_values.get(k)
+                                if str(k) == fluent.name + '(' + ','.join(str(i) for i in fp) + ')':
+                                    new_initial_value = problem.initial_values.get(k)
+                                    for c in combination:
+                                        new_initial_value = new_initial_value.constant_value()[c]
+
                             print("iv: ", iv)
 
                             if iv is not None:
