@@ -270,7 +270,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
 
                             if iv is not None:
                                 new_problem.set_initial_value(new_fluent(*fp), iv)
-                            if new_initial_value is not None:
+                            elif new_initial_value is not None:
                                 new_problem.set_initial_value(new_fluent(*fp), new_initial_value)
                             elif new_default_value is not None:
                                 new_problem.set_initial_value(new_fluent(*fp), new_default_value)
