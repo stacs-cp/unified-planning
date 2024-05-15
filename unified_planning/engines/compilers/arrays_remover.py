@@ -248,6 +248,11 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                     # canviar
                     print(combination)
                     print(new_fluent)
+                    # obtenir el nom del fluent creat quan accedir []
+                    old_name = fluent.name
+                    for c in combination:
+                        old_name += f"[{c}]"
+                    print(old_name)
 
                     if fluent_parameters:
                         print("te parametres")
@@ -263,7 +268,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                                 new_problem.set_initial_value(fluent(*fp), iv)
                     else:
                         print(problem.initial_values)
-                        iv = problem.initial_value(new_fluent())
+                        iv = problem.initial_value(problem.initial_value(problem.fluent(old_name)))
                         print("iv: ", iv)
                         if iv is None:
                             raise UPProblemDefinitionError(
