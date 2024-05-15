@@ -262,11 +262,11 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                                 if str(k) == old_name + '(' + ','.join(str(i) for i in fp) + ')':
                                     iv = problem.initial_values.get(k)
                             print("iv: ", iv)
-                            if iv is None:
+                            if iv is None and new_default_value is None:
                                 raise UPProblemDefinitionError(
                                     f"Initial value not set for fluent: {new_fluent(*fp)}"
                                 )
-                            elif iv != default_value:
+                            elif iv != new_default_value:
                                 new_problem.set_initial_value(new_fluent(*fp), iv)
                     else:
                         iv = None
@@ -274,7 +274,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                             if str(k) == old_name:
                                 iv = problem.initial_values.get(k)
                         print("iv: ", iv)
-                        if iv is None:
+                        if iv is None and new_default_value is None:
                             raise UPProblemDefinitionError(
                                 f"Initial value not set for fluent: {new_fluent()}"
                             )
