@@ -245,7 +245,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                         for i in combination:
                             new_default_value = new_default_value.constant_value()[i]
                     new_problem.add_fluent(new_fluent, default_initial_value=new_default_value)
-                    # canviar
+
                     print(combination)
                     print(new_fluent)
                     # obtenir el nom del fluent creat quan accedir []
@@ -258,8 +258,16 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                         print("te parametres")
                         for fp in fluent_parameters:
                             print("fp", fp)
-                            iv = problem.initial_value(new_fluent(*fp))
+                            keys = problem.initial_values.keys()
+                            print(keys)
+                            print(old_name in keys)
+                            iv = None
+                            for k in keys:
+                                if str(k) == old_name:
+                                    iv = problem.initial_values.get(k)
                             print("iv: ", iv)
+
+
                             if iv is None:
                                 raise UPProblemDefinitionError(
                                     f"Initial value not set for fluent: {fluent(*fp)}"
