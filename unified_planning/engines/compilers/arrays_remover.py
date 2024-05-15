@@ -263,7 +263,8 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                             print(old_name in keys)
                             iv = None
                             for k in keys:
-                                if str(k) == old_name:
+                                print(str(k),old_name+f'({fp})')
+                                if str(k) == old_name+f'({fp})':
                                     iv = problem.initial_values.get(k)
                             print("iv: ", iv)
 
