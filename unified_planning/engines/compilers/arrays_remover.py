@@ -268,7 +268,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                                 new_problem.set_initial_value(fluent(*fp), iv)
                     else:
                         print(problem.initial_values)
-                        iv = problem.initial_value(problem.initial_value(problem.fluent(old_name)))
+                        iv = problem.initial_values.get(old_name)
                         print("iv: ", iv)
                         if iv is None:
                             raise UPProblemDefinitionError(
