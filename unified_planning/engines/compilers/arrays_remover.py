@@ -208,19 +208,16 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
         new_problem.initial_values.clear()
 
         for fluent in problem.fluents:
-            print("fluent: ", fluent)
             # guardar el default_initial_value
             if problem.fluents_defaults.get(fluent):
                 default_value = problem.fluents_defaults.get(fluent)
             else:
                 # si no hi ha vol dir que tots els possibles valors (amb parametres) hauran d'estar inicialitzats
                 default_value = None
-
             objects = []
             for s in fluent.signature:
                 objects.append(problem.objects(s.type))
             fluent_parameters = list(product(*objects))
-            print("fluent_parameters: ", fluent_parameters)
             if fluent_parameters == [()]:
                 fluent_parameters = []
 
@@ -235,24 +232,19 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                     domain.append(domain_in)
                     new_type = this_fluent.elements_type
                     this_fluent = this_fluent.elements_type
-                print("comb: ", list(product(*domain)))
                 for combination in list(product(*domain)):
                     new_fluent_name = get_fresh_name(new_problem, fluent.name, list(map(str, combination)))
                     new_fluent = model.Fluent(new_fluent_name, new_type, fluent.signature, fluent.environment)
                     new_default_value = default_value
                     if new_default_value is not None:
-                        print("default_value", new_default_value)
                         for i in combination:
                             new_default_value = new_default_value.constant_value()[i]
                     new_problem.add_fluent(new_fluent, default_initial_value=new_default_value)
 
-                    print(combination)
-                    print(new_fluent)
                     # obtenir el nom del fluent creat quan accedir []
                     old_name = fluent.name
                     for c in combination:
                         old_name += f"[{c}]"
-                    print(old_name)
 
                     keys = problem.initial_values.keys()
                     if fluent_parameters:
@@ -266,9 +258,6 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                                     new_initial_value = problem.initial_values.get(k)
                                     for c in combination:
                                         new_initial_value = new_initial_value.constant_value()[c]
-
-                            print("iv: ", iv)
-
                             if iv is not None:
                                 new_problem.set_initial_value(new_fluent(*fp), iv)
                             elif new_initial_value is not None:
@@ -284,7 +273,6 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                         for k in keys:
                             if str(k) == old_name:
                                 iv = problem.initial_values.get(k)
-                        print("iv: ", iv)
                         if iv is not None:
                             new_problem.set_initial_value(new_fluent(), iv)
                         elif new_default_value is not None:
@@ -339,7 +327,6 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
             new_goals = self._get_new_fnodes(new_problem, g)
             for ng in new_goals:
                 new_problem.add_goal(ng)
-        print("fluents_default: ", new_problem.fluents_defaults)
         return CompilerResult(
             new_problem, partial(replace_action, map=new_to_old), self.name
         )
