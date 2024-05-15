@@ -254,38 +254,32 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                         old_name += f"[{c}]"
                     print(old_name)
 
+                    keys = problem.initial_values.keys()
                     if fluent_parameters:
-                        print("te parametres")
                         for fp in fluent_parameters:
-                            print("fp", fp)
-                            keys = problem.initial_values.keys()
-                            print(keys)
-                            print(old_name in keys)
                             iv = None
                             for k in keys:
-                                print(str(k))
-                                print(old_name + '(' + ','.join(str(i) for i in fp) + ')')
                                 if str(k) == old_name + '(' + ','.join(str(i) for i in fp) + ')':
                                     iv = problem.initial_values.get(k)
                             print("iv: ", iv)
-
-
                             if iv is None:
                                 raise UPProblemDefinitionError(
-                                    f"Initial value not set for fluent: {fluent(*fp)}"
+                                    f"Initial value not set for fluent: {new_fluent(*fp)}"
                                 )
                             elif iv != default_value:
-                                new_problem.set_initial_value(fluent(*fp), iv)
+                                new_problem.set_initial_value(new_fluent(*fp), iv)
                     else:
-                        print(problem.initial_values)
-                        iv = problem.initial_values.get(old_name)
+                        iv = None
+                        for k in keys:
+                            if str(k) == old_name:
+                                iv = problem.initial_values.get(k)
                         print("iv: ", iv)
                         if iv is None:
                             raise UPProblemDefinitionError(
-                                f"Initial value not set for fluent: {fluent()}"
+                                f"Initial value not set for fluent: {new_fluent()}"
                             )
                         elif iv != default_value:
-                            new_problem.set_initial_value(fluent(), iv)
+                            new_problem.set_initial_value(new_fluent(), iv)
             else:
                 new_problem.add_fluent(fluent, default_initial_value=default_value)
                 if fluent_parameters:
