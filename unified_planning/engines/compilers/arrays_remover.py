@@ -270,11 +270,21 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                                 )
                     else:
                         iv = None
+                        new_initial_value = None
+                        for k in keys:
+                            if str(k) == old_name:
+                                iv = problem.initial_values.get(k)
+                            if str(k) == fluent.name:
+                                new_initial_value = problem.initial_values.get(k)
+                                for c in combination:
+                                    new_initial_value = new_initial_value.constant_value()[c]
                         for k in keys:
                             if str(k) == old_name:
                                 iv = problem.initial_values.get(k)
                         if iv is not None:
                             new_problem.set_initial_value(new_fluent(), iv)
+                        elif new_initial_value is not None:
+                            new_problem.set_initial_value(new_fluent(), new_initial_value)
                         elif new_default_value is not None:
                             new_problem.set_initial_value(new_fluent(), new_default_value)
                         else:
