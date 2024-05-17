@@ -220,8 +220,9 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                     new_action.add_precondition(new_precondition)
                     # If a precondition is False, the action will never occur
                     print(new_precondition)
-                    if not new_precondition:
+                    if new_precondition.is_false():
                         remove_action = True
+                print("remove action", remove_action)
                 if not remove_action:
                     print("tractar efects...")
                     for effect in action.effects:
