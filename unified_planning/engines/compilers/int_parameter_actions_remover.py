@@ -214,30 +214,35 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                 else:
                     new_action = Action(new_action_name, new_parameters, action.environment)
 
+                remove_action = False
                 for precondition in action.preconditions:
-                    new_action.add_precondition(self._manage_node(em, precondition, int_parameters, c))
-
-                for effect in action.effects:
-                    new_fnode = self._manage_node(em, effect.fluent, int_parameters, c)
-                    new_value = self._manage_node(em, effect.value, int_parameters, c)
-                    new_condition = self._manage_node(em, effect.condition, int_parameters, c)
-                    if new_condition.is_bool_constant():
-                        if new_condition.is_true():
-                            if effect.is_increase():
-                                new_action.add_increase_effect(new_fnode, new_value, forall=effect.forall)
-                            elif effect.is_decrease():
-                                new_action.add_decrease_effect(new_fnode, new_value, forall=effect.forall)
-                            else:
-                                new_action.add_effect(new_fnode, new_value, forall=effect.forall)
-                    else:
-                        if effect.is_increase():
-                            new_action.add_increase_effect(new_fnode, new_value, new_condition, effect.forall)
-                        elif effect.is_decrease():
-                            new_action.add_decrease_effect(new_fnode, new_value, new_condition, effect.forall)
+                    new_precondition = self._manage_node(em, precondition, int_parameters, c)
+                    new_action.add_precondition(new_precondition)
+                    # If a precondition is False, the action will never occur
+                    if not new_precondition:
+                        remove_action = True
+                if not remove_action:
+                    for effect in action.effects:
+                        new_fnode = self._manage_node(em, effect.fluent, int_parameters, c)
+                        new_value = self._manage_node(em, effect.value, int_parameters, c)
+                        new_condition = self._manage_node(em, effect.condition, int_parameters, c)
+                        if new_condition.is_bool_constant():
+                            if new_condition.is_true():
+                                if effect.is_increase():
+                                    new_action.add_increase_effect(new_fnode, new_value, forall=effect.forall)
+                                elif effect.is_decrease():
+                                    new_action.add_decrease_effect(new_fnode, new_value, forall=effect.forall)
+                                else:
+                                    new_action.add_effect(new_fnode, new_value, forall=effect.forall)
                         else:
-                            new_action.add_effect(new_fnode, new_value, new_condition, effect.forall)
-                new_problem.add_action(new_action)
-                trace_back_map[new_action] = (action, c)
+                            if effect.is_increase():
+                                new_action.add_increase_effect(new_fnode, new_value, new_condition, effect.forall)
+                            elif effect.is_decrease():
+                                new_action.add_decrease_effect(new_fnode, new_value, new_condition, effect.forall)
+                            else:
+                                new_action.add_effect(new_fnode, new_value, new_condition, effect.forall)
+                    new_problem.add_action(new_action)
+                    trace_back_map[new_action] = (action, c)
 
         return CompilerResult(
             new_problem,
