@@ -213,15 +213,17 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                     new_action = DurativeAction(new_action_name, new_parameters, action.environment)
                 else:
                     new_action = Action(new_action_name, new_parameters, action.environment)
-
+                print("new_action: ", new_action.name)
                 remove_action = False
                 for precondition in action.preconditions:
                     new_precondition = self._manage_node(em, precondition, int_parameters, c)
                     new_action.add_precondition(new_precondition)
                     # If a precondition is False, the action will never occur
+                    print(new_precondition)
                     if not new_precondition:
                         remove_action = True
                 if not remove_action:
+                    print("tractar efects...")
                     for effect in action.effects:
                         new_fnode = self._manage_node(em, effect.fluent, int_parameters, c)
                         new_value = self._manage_node(em, effect.value, int_parameters, c)
