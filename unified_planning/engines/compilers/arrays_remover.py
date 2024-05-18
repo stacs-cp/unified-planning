@@ -34,7 +34,7 @@ from unified_planning.engines.compilers.utils import (
 )
 from typing import Dict, List, Optional
 from functools import partial
-from unified_planning.shortcuts import Int
+from unified_planning.shortcuts import Int, FALSE
 import re
 
 class ArraysRemover(engines.engine.Engine, CompilerMixin):
@@ -153,7 +153,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                 assert new_problem.fluent(new_fluent.name)(*node.fluent().signature)
             except Exception:
                 print(f"Fluent {new_fluent.name} out of range")
-                return [False]
+                return [FALSE()]
             return [new_fluent(*node.args)]
 
         elif node.is_parameter_exp() or node.is_constant():
