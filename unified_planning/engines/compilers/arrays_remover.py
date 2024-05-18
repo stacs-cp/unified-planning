@@ -153,7 +153,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                 assert new_problem.fluent(new_fluent.name)(*node.fluent().signature)
             except Exception:
                 print(f"Fluent {new_fluent.name} out of range")
-                return False
+                return [False]
             return [new_fluent(*node.args)]
 
         elif node.is_parameter_exp() or node.is_constant():
