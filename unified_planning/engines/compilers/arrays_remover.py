@@ -314,6 +314,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                         new_problem.set_initial_value(fluent(), iv)
 
         for action in problem.actions:
+            print("action: ", action.name)
             new_action = action.clone()
             new_action.name = get_fresh_name(new_problem, action.name)
             new_action.clear_preconditions()
@@ -326,6 +327,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                     if np.is_false():
                         remove_action = True
                     new_action.add_precondition(np)
+            print("remove action: ", remove_action)
             if not remove_action:
                 for effect in action.effects:
                     new_fnode = self._get_new_fnodes(new_problem, effect.fluent)
