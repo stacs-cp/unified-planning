@@ -243,7 +243,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                                 else:
                                     new_action.add_effect(new_fnode, new_value, new_condition, effect.forall)
                     except Exception as e:
-                        print(f"You were trying to assign an incompatible value type to the effect: {e}")
+                        continue
                     else:
                         new_problem.add_action(new_action)
                         trace_back_map[new_action] = (action, c)
