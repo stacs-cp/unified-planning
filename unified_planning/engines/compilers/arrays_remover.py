@@ -321,9 +321,12 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
             new_action.clear_effects()
             remove_action = False
             for precondition in action.preconditions:
+                print("precondition: ", precondition)
                 new_preconditions = self._get_new_fnodes(new_problem, precondition)
+                print("new_preconditions: ", new_preconditions)
                 for np in new_preconditions:
                     # si una precondicio es falsa -> accio mai passara -> no afegir accio
+                    print("np: ", np)
                     if np.is_false():
                         remove_action = True
                     new_action.add_precondition(np)
