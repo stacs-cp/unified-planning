@@ -177,7 +177,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                             try:
                                 new_arg = new_problem.fluent(new_name)(*arg.fluent().signature)
                             except Exception:
-                                return [FALSE()]
+                                new_arg = FALSE()
                         elif arg.constant_value():
                             new_arg = arg
                             for i in c:
@@ -185,7 +185,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                         else:
                             new_arg = arg
                         new_args.append(new_arg)
-                    new_fnodes.append(em.create_node(node.node_type, tuple(new_args)))
+                    new_fnodes.append(em.create_node(node.node_type, tuple(new_args)).simplify)
                 return new_fnodes
             else:
                 new_args = []
@@ -195,7 +195,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                         if nla.is_false():
                             return [FALSE()]
                         new_args.append(nla)
-                return [(em.create_node(node.node_type, tuple(new_args)))]
+                return [(em.create_node(node.node_type, tuple(new_args))).simplify()]
 
     def _compile(
         self,
@@ -332,18 +332,22 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                     # si una precondicio es falsa -> accio mai passara -> no afegir accio
                     new_action.add_precondition(np)
             if not remove_action:
-                for effect in action.effects:
-                    new_fnode = self._get_new_fnodes(new_problem, effect.fluent)
-                    new_value = self._get_new_fnodes(new_problem, effect.value)
-                    new_condition = self._get_new_fnodes(new_problem, effect.condition)
-                    if effect.is_increase():
-                        new_action.add_increase_effect(new_fnode, new_value, new_condition, effect.forall)
-                    elif effect.is_decrease():
-                        new_action.add_decrease_effect(new_fnode, new_value, new_condition, effect.forall)
-                    else:
-                        new_action.add_effect(new_fnode, new_value, new_condition, effect.forall)
-                new_problem.add_action(new_action)
-                new_to_old[new_action] = action
+                try:
+                    for effect in action.effects:
+                        new_fnode = self._get_new_fnodes(new_problem, effect.fluent)
+                        new_value = self._get_new_fnodes(new_problem, effect.value)
+                        new_condition = self._get_new_fnodes(new_problem, effect.condition)
+                        if effect.is_increase():
+                            new_action.add_increase_effect(new_fnode, new_value, new_condition, effect.forall)
+                        elif effect.is_decrease():
+                            new_action.add_decrease_effect(new_fnode, new_value, new_condition, effect.forall)
+                        else:
+                            new_action.add_effect(new_fnode, new_value, new_condition, effect.forall)
+                except Exception:
+                    continue
+                else:
+                    new_problem.add_action(new_action)
+                    new_to_old[new_action] = action
 
         for g in problem.goals:
             new_goals = self._get_new_fnodes(new_problem, g)
