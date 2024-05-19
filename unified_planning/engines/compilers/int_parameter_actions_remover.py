@@ -233,7 +233,6 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                                     elif effect.is_decrease():
                                         new_action.add_decrease_effect(new_fnode, new_value, forall=effect.forall)
                                     else:
-                                        print("new action: ", new_fnode, new_value)
                                         new_action.add_effect(new_fnode, new_value, forall=effect.forall)
                             else:
                                 if effect.is_increase():

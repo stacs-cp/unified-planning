@@ -192,8 +192,6 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                 for arg in node.args:
                     new_list_args = self._get_new_fnodes(new_problem, arg)
                     for nla in new_list_args:
-                        if nla.is_false():
-                            return [FALSE()]
                         new_args.append(nla)
                 return [(em.create_node(node.node_type, tuple(new_args))).simplify()]
 
