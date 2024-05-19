@@ -152,7 +152,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
             try:
                 assert new_problem.fluent(new_fluent.name)(*node.fluent().signature)
             except Exception:
-                return [FALSE()]
+                print(f"Fluent {new_fluent.name} out of range")
             return [new_fluent(*node.args)]
         elif node.is_parameter_exp() or node.is_constant():
             return [node]
@@ -189,10 +189,13 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                 return new_fnodes
             else:
                 new_args = []
-                for arg in node.args:
-                    new_list_args = self._get_new_fnodes(new_problem, arg)
-                    for nla in new_list_args:
-                        new_args.append(nla)
+                try:
+                    for arg in node.args:
+                        new_list_args = self._get_new_fnodes(new_problem, arg)
+                        for nla in new_list_args:
+                            new_args.append(nla)
+                except Exception:
+                    print(f"FNode out of range")
                 return [(em.create_node(node.node_type, tuple(new_args))).simplify()]
 
     def _compile(
@@ -319,17 +322,18 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
             new_action.name = get_fresh_name(new_problem, action.name)
             new_action.clear_preconditions()
             new_action.clear_effects()
-            remove_action = False
-            for precondition in action.preconditions:
-                print("old precondition: ", precondition)
-                new_preconditions = self._get_new_fnodes(new_problem, precondition)
-                print(new_preconditions)
-                for np in new_preconditions:
-                    if np.is_false():
-                        remove_action = True
-                    # si una precondicio es falsa -> accio mai passara -> no afegir accio
-                    new_action.add_precondition(np)
-            if not remove_action:
+            try:
+                for precondition in action.preconditions:
+                    print("old precondition: ", precondition)
+                    new_preconditions = self._get_new_fnodes(new_problem, precondition)
+                    for np in new_preconditions:
+                        if np.is_false():
+                            remove_action = True
+                        # si una precondicio es falsa -> accio mai passara -> no afegir accio
+                        new_action.add_precondition(np)
+            except Exception:
+                continue
+            else:
                 try:
                     for effect in action.effects:
                         new_fnode = self._get_new_fnodes(new_problem, effect.fluent)
