@@ -176,7 +176,11 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                         if arg.is_fluent_exp():
                             new_fluent = self._get_new_fluent(arg.fluent())
                             new_name = new_fluent.name + ''.join(f'_{str(i)}' for i in c)
-                            new_arg = new_problem.fluent(new_name)(*arg.fluent().signature)
+                            try:
+                                new_arg = new_problem.fluent(new_name)(*arg.fluent().signature)
+                            except Exception:
+                                print(f"Fluent {new_fluent.name} out of range")
+                                return [FALSE()]
                         elif arg.constant_value():
                             new_arg = arg
                             for i in c:
@@ -322,13 +326,10 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
             remove_action = False
             for precondition in action.preconditions:
                 print("precondition: ", precondition)
-                new_preconditions = self._get_new_fnodes(new_problem, precondition)
+                new_preconditions = self._get_new_fnodes(new_problem, precondition, remove_action)
                 print("new_preconditions: ", new_preconditions)
                 for np in new_preconditions:
                     # si una precondicio es falsa -> accio mai passara -> no afegir accio
-                    print("np: ", np)
-                    if np.is_false():
-                        remove_action = True
                     new_action.add_precondition(np)
             print("remove action: ", remove_action)
             if not remove_action:
