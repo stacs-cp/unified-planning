@@ -195,6 +195,8 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                     new_list_args = self._get_new_fnodes(new_problem, arg)
                     print("NEW_LIST_ARGS: ",new_list_args)
                     for nla in new_list_args:
+                        if nla.is_false():
+                            return [FALSE()]
                         new_args.append(nla)
                 return [(em.create_node(node.node_type, tuple(new_args)))]
 
@@ -329,6 +331,8 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                 new_preconditions = self._get_new_fnodes(new_problem, precondition)
                 print("new_preconditions: ", new_preconditions)
                 for np in new_preconditions:
+                    if np.is_false():
+                        remove_action = True
                     # si una precondicio es falsa -> accio mai passara -> no afegir accio
                     new_action.add_precondition(np)
             print("remove action: ", remove_action)
