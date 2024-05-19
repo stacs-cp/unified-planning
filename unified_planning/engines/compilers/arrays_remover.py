@@ -155,7 +155,6 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                 print(f"Fluent {new_fluent.name} out of range")
                 return [FALSE()]
             return [new_fluent(*node.args)]
-
         elif node.is_parameter_exp() or node.is_constant():
             return [node]
         else:
@@ -194,6 +193,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                 new_args = []
                 for arg in node.args:
                     new_list_args = self._get_new_fnodes(new_problem, arg)
+                    print("NEW_LIST_ARGS: ",new_list_args)
                     for nla in new_list_args:
                         new_args.append(nla)
                 return [(em.create_node(node.node_type, tuple(new_args)))]
