@@ -375,6 +375,7 @@ class ExpressionManager(object):
             left = [left]
         if type(right) is list:
             right = [right]
+        print(left, right)
         left, right = self.auto_promote(left, right)
         return self.create_node(node_type=OperatorKind.IFF, args=(left, right))
 
@@ -652,8 +653,10 @@ class ExpressionManager(object):
         :param value: The list that must be promoted to ``FNode``.
         :return: The ``FNode`` containing the given ``list`` as his payload.
         """
+        print("List:", value)
         # convert the list to tuple to resolve the hash problem
         adapted_value = tuple(self.auto_promote(value))
+        print(adapted_value)
         if not isinstance(value, List):
             raise UPTypeError("Expecting List, got %s" % type(value))
         return self.create_node(
