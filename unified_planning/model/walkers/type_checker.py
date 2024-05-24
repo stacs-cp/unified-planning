@@ -118,8 +118,10 @@ class TypeChecker(walkers.dag.DagWalker):
         assert expression is not None
         t = args[0]
         print("t: ", t)
+        print("args: ", args)
         if t.is_array_type():
             for x in args:
+                print("x: ", x)
                 if not x.is_array_type() or not x.elements_type == BOOL:
                     return None
                 if not t.is_compatible(x) and not x.is_compatible(t):
