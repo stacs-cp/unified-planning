@@ -370,6 +370,7 @@ class ExpressionManager(object):
         :param right: The ``right`` member of the ``Iff expression``.
         :return: The created ``Iff`` expression.
         """
+        print("iff: ", left, right)
         if type(left) is list:
             left = [left]
         if type(right) is list:
