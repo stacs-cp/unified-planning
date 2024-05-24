@@ -351,6 +351,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                 continue
 
         for g in problem.goals:
+            print("goal: ", g)
             new_goals = self._get_new_fnodes(new_problem, g)
             for ng in new_goals:
                 new_problem.add_goal(ng)
