@@ -84,7 +84,6 @@ class TypeChecker(walkers.dag.DagWalker):
         :param expression: The expression of which the `Type` must be retrieved.
         :return: The expression `Type`.
         """
-        print("get type", expression)
         res = self.walk(expression)
         if res is None:
             raise UPTypeError(
@@ -114,19 +113,13 @@ class TypeChecker(walkers.dag.DagWalker):
     def walk_iff(
         self, expression: FNode, args: List["unified_planning.model.types.Type"]
     ) -> Optional["unified_planning.model.types.Type"]:
-        print("walk if!!! ", expression)
         assert expression is not None
         t = args[0]
-        print("t: ", t)
-        print("args: ", args)
         if t.is_array_type():
             for x in args:
-                print("x: ", x)
                 if not x.is_array_type():
-                    print("ui")
                     return None
                 if not t.is_compatible(x) and not x.is_compatible(t):
-                    print("no compatibles")
                     return self.walk_iff(expression, args=[t.elements_type, x.elements_type])
         else:
             for x in args:
