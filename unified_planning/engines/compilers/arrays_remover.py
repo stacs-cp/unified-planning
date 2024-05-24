@@ -342,11 +342,13 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                         else:
                             new_action.add_effect(new_fnode, new_value, new_condition, effect.forall)
                 except Exception:
+                    print(f"Action {action.name} eliminated due to an access to a fluent out of range.")
                     continue
                 else:
                     new_problem.add_action(new_action)
                     new_to_old[new_action] = action
             except Exception:
+                print(f"Action {action.name} eliminated due to an access to a fluent out of range.")
                 continue
 
         for g in problem.goals:
