@@ -178,20 +178,15 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                             try:
                                 new_arg = new_problem.fluent(new_name)(*arg.fluent().signature)
                             except Exception:
-                                print("Fluent out of range")
+                                print(f"Fluent {new_name} out of range")
                                 return None
                         elif arg.constant_value():
-                            print(arg.constant_value())
-                            print(arg.node_type)
                             new_arg = arg
                             for i in c:
-                                print(new_arg.constant_value()[i])
-                                print(type(new_arg.constant_value()[i]))
                                 new_arg = new_arg.constant_value()[i]
                         else:
                             new_arg = arg
                         new_args.append(new_arg)
-                    print("new_args", new_args)
                     new_fnodes.append(em.create_node(node.node_type, tuple(new_args)))
                 return new_fnodes
             else:
@@ -202,7 +197,6 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                         for nla in new_list_args:
                             new_args.append(nla)
                 except Exception:
-                    print(f"FNode out of range")
                     return None
                 return [(em.create_node(node.node_type, tuple(new_args)))]
 
@@ -356,7 +350,6 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                 continue
 
         for g in problem.goals:
-            print("goal: ", g)
             new_goals = self._get_new_fnodes(new_problem, g)
             for ng in new_goals:
                 new_problem.add_goal(ng)
