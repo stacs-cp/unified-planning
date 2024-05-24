@@ -123,8 +123,10 @@ class TypeChecker(walkers.dag.DagWalker):
             for x in args:
                 print("x: ", x)
                 if not x.is_array_type() or not x.elements_type == BOOL:
+                    print("ui")
                     return None
                 if not t.is_compatible(x) and not x.is_compatible(t):
+                    print("no compatibles")
                     return self.walk_iff(expression, args=[t.elements_type, x.elements_type])
         else:
             for x in args:
