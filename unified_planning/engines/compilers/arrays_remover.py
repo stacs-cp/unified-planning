@@ -187,6 +187,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                         else:
                             new_arg = arg
                         new_args.append(new_arg)
+                    print("new_args", new_args)
                     new_fnodes.append(em.create_node(node.node_type, tuple(new_args)).simplify)
                 return new_fnodes
             else:
