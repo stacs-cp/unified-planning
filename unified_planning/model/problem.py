@@ -580,7 +580,6 @@ class Problem(  # type: ignore[misc]
 
         :param goal: The expression added to the `Problem` :func:`goals <unified_planning.model.Problem.goals>`.
         """
-        print(goal.fluent())
         print(goal.args)
         print(goal.node_type)
         assert (
