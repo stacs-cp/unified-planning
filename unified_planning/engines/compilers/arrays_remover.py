@@ -192,7 +192,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                             new_arg = arg
                         new_args.append(new_arg)
                     print("new_args", new_args)
-                    new_fnodes.append(em.create_node(node.node_type, tuple(new_args)).simplify)
+                    new_fnodes.append(em.create_node(node.node_type, tuple(new_args)))
                 return new_fnodes
             else:
                 new_args = []
@@ -204,7 +204,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                 except Exception:
                     print(f"FNode out of range")
                     return None
-                return [(em.create_node(node.node_type, tuple(new_args))).simplify()]
+                return [(em.create_node(node.node_type, tuple(new_args)))]
 
     def _compile(
         self,
