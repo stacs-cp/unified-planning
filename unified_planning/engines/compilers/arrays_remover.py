@@ -181,8 +181,12 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                                 print("Fluent out of range")
                                 return None
                         elif arg.constant_value():
+                            print(arg.constant_value())
+                            print(arg.node_type)
                             new_arg = arg
                             for i in c:
+                                print(new_arg.constant_value()[i])
+                                print(type(new_arg.constant_value()[i]))
                                 new_arg = new_arg.constant_value()[i]
                         else:
                             new_arg = arg

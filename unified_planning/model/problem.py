@@ -580,8 +580,7 @@ class Problem(  # type: ignore[misc]
 
         :param goal: The expression added to the `Problem` :func:`goals <unified_planning.model.Problem.goals>`.
         """
-        print(goal.args)
-        print(goal.node_type)
+        print(goal)
         assert (
             isinstance(goal, bool) or goal.environment == self._env
         ), "goal does not have the same environment of the problem"
