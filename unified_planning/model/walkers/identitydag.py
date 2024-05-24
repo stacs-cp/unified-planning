@@ -49,7 +49,6 @@ class IdentityDagWalker(walkers.dag.DagWalker):
         return self.manager.Implies(args[0], args[1])
 
     def walk_iff(self, expression: FNode, args: List[FNode], **kwargs):
-        print("walk_iff")
         return self.manager.Iff(args[0], args[1])
 
     def walk_exists(self, expression: FNode, args: List[FNode], **kwargs) -> FNode:

@@ -114,9 +114,10 @@ class TypeChecker(walkers.dag.DagWalker):
     def walk_iff(
         self, expression: FNode, args: List["unified_planning.model.types.Type"]
     ) -> Optional["unified_planning.model.types.Type"]:
-        print("walk if!!!")
+        print("walk if!!! ", expression)
         assert expression is not None
         t = args[0]
+        print("t: ", t)
         if t.is_array_type():
             for x in args:
                 if not x.is_array_type() or not x.elements_type == BOOL:
