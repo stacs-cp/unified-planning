@@ -296,20 +296,21 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                 print("count expressions: ", count_expressions)
                 if ca in count_expressions.values():
                     print("EXISTEIX")
-                n_count = len(count_expressions)
-                fluent_name = 'count_' + str(n_count)
-                count_expressions[fluent_name] = ca
-                initial_value = self.expression_value(new_problem, ca)
-                assert initial_value.is_bool_constant()
-                if initial_value.is_true():
-                    fluent_value = Int(1)
                 else:
-                    fluent_value = Int(0)
-                new_problem.add_fluent(fluent_name, tm.IntType())
-                new_problem.set_initial_value(new_problem.fluent(fluent_name), fluent_value)
-                new_fluent = new_problem.fluent(fluent_name)
-                new_ca_args.append(new_fluent())
-                n_count += 1
+                    n_count = len(count_expressions)
+                    fluent_name = 'count_' + str(n_count)
+                    count_expressions[fluent_name] = ca
+                    initial_value = self.expression_value(new_problem, ca)
+                    assert initial_value.is_bool_constant()
+                    if initial_value.is_true():
+                        fluent_value = Int(1)
+                    else:
+                        fluent_value = Int(0)
+                    new_problem.add_fluent(fluent_name, tm.IntType())
+                    new_problem.set_initial_value(new_problem.fluent(fluent_name), fluent_value)
+                    new_fluent = new_problem.fluent(fluent_name)
+                    new_ca_args.append(new_fluent())
+                    n_count += 1
             return em.create_node(OperatorKind.PLUS, tuple(new_ca_args))
         else:
             new_args = []
