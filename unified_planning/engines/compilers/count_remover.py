@@ -291,12 +291,8 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
         elif expression.is_count():
             new_ca_args = []
             for ca in expression.args:
-                # mirar si l'expressio ja l'hem guardada!!
-                print("expressio actual: ", ca)
-                print("count expressions: ", count_expressions)
                 existing_key = next((key for key, value in count_expressions.items() if value == ca), None)
                 if existing_key is not None:
-                    print("EXISTEIX")
                     existing_fluent = new_problem.fluent(existing_key)
                     new_ca_args.append(existing_fluent())
                 else:
