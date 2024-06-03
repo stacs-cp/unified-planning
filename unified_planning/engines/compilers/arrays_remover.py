@@ -219,14 +219,17 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                 return new_fnodes
             else:
                 new_args = []
-                try:
-                    for arg in node.args:
-                        new_list_args = self._get_new_fnodes(new_problem, arg)
-                        for nla in new_list_args:
-                            new_args.append(nla)
-                except Exception:
-                    return None
-                return [(em.create_node(node.node_type, tuple(new_args)))]
+                for arg in node.args:
+                    new_list_args = self._get_new_fnodes(new_problem, arg)
+                    for nla in new_list_args:
+                        new_args.append(nla)
+                if None in new_args:
+                    if node.type.is_bool_type():
+                        return FALSE()
+                    else:
+                        return None
+                else:
+                    return [(em.create_node(node.node_type, tuple(new_args)))]
 
     def _compile(
         self,
