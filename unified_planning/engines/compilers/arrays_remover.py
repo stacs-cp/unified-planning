@@ -153,14 +153,14 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
             if self.mode == 'strict':
                 try:
                     assert new_problem.fluent(new_fluent.name)(*node.fluent().signature)
-                except Exception:
+                except KeyError:
                     print(f"Fluent {new_fluent.name} out of range!")
                     exit(1)
             else:
                 try:
                     assert new_problem.fluent(new_fluent.name)(*node.fluent().signature)
-                except Exception:
-                    print(f"Fluent {new_fluent.name} out of range")
+                except KeyError:
+                    print(f"Fluent {new_fluent.name} out of range!")
                     if new_fluent.type.is_bool_type():
                         return FALSE()
                     else:
@@ -188,8 +188,8 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                             new_name = new_fluent.name + ''.join(f'_{str(i)}' for i in c)
                             try:
                                 new_arg = new_problem.fluent(new_name)(*arg.fluent().signature)
-                            except Exception:
-                                print(f"Fluent {new_fluent.name} out of range")
+                            except KeyError:
+                                print(f"Fluent {new_fluent.name} out of range!")
                                 if new_fluent.type.is_bool_type():
                                     new_arg = FALSE()
                                 else:
