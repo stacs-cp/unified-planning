@@ -221,8 +221,11 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                 new_args = []
                 for arg in node.args:
                     new_list_args = self._get_new_fnodes(new_problem, arg)
-                    for nla in new_list_args:
-                        new_args.append(nla)
+                    if new_list_args is list:
+                        for nla in new_list_args:
+                            new_args.append(nla)
+                    else:
+                        new_args.append(new_list_args)
                 if None in new_args:
                     if node.type.is_bool_type():
                         return FALSE()
