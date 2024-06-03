@@ -188,13 +188,13 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                             # controlar si es strict o no
                             if self.mode == 'strict':
                                 try:
-                                    new_arg = new_problem.fluent(new_fluent.name)(*node.fluent().signature)
+                                    new_arg = new_problem.fluent(new_name)(*node.fluent().signature)
                                 except KeyError:
                                     print(f"Fluent {new_fluent.name} out of range!")
                                     exit(1)
                             else:
                                 try:
-                                    new_arg = new_problem.fluent(new_fluent.name)(*node.fluent().signature)
+                                    new_arg = new_problem.fluent(new_name)(*node.fluent().signature)
                                 except Exception:
                                     if new_fluent.type.is_bool_type():
                                         new_arg = FALSE()
