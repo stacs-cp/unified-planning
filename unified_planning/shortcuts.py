@@ -664,6 +664,7 @@ def Compiler(
     *   | using ``problem_kind`` and ``compilation_kinds`` parameters.
         | e.g. ``Compiler(problem_kind=problem.kind, compilation_kinds=[QUANTIFIERS_REMOVING, GROUNDING])``
     """
+    print("compiler")
     return get_environment().factory.Compiler(
         name=name,
         names=names,

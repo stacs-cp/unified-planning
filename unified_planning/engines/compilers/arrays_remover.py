@@ -42,10 +42,10 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
     Arrays remover class: ...
     """
 
-    def __init__(self, strict: bool = False):
+    def __init__(self, mode: str = 'strict'):
         engines.engine.Engine.__init__(self)
         CompilerMixin.__init__(self, CompilationKind.ARRAYS_REMOVING)
-        self.strict = strict
+        self.mode = mode
 
     @property
     def name(self):
@@ -218,7 +218,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
         new_problem.clear_actions()
         new_problem.clear_goals()
         new_problem.initial_values.clear()
-        print("Mode: ", self.strict)
+        print("Mode: ", self.mode)
         for fluent in problem.fluents:
             # guardar el default_initial_value
             if problem.fluents_defaults.get(fluent):
