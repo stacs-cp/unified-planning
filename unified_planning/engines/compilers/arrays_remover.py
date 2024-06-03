@@ -232,6 +232,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                     else:
                         return None
                 else:
+                    print(new_args)
                     return [(em.create_node(node.node_type, tuple(new_args)))]
 
     def _compile(
