@@ -162,9 +162,9 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                 except Exception:
                     #print(f"Fluent {new_fluent.name} out of range")
                     if new_fluent.type.is_bool_type():
-                        return FALSE()
+                        return [FALSE()]
                     else:
-                        return None
+                        return [None]
             return [new_fluent(*node.args)]
         elif node.is_parameter_exp() or node.is_constant():
             return [node]
