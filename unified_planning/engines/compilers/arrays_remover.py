@@ -160,7 +160,6 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                 try:
                     assert new_problem.fluent(new_fluent.name)(*node.fluent().signature)
                 except Exception:
-                    #print(f"Fluent {new_fluent.name} out of range")
                     if new_fluent.type.is_bool_type():
                         return [FALSE()]
                     else:
@@ -197,7 +196,6 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                                 try:
                                     new_arg = new_problem.fluent(new_fluent.name)(*node.fluent().signature)
                                 except Exception:
-                                    # print(f"Fluent {new_fluent.name} out of range")
                                     if new_fluent.type.is_bool_type():
                                         new_arg = FALSE()
                                     else:
@@ -229,7 +227,6 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                     else:
                         return [None]
                 else:
-                    print(new_args)
                     return [(em.create_node(node.node_type, tuple(new_args)))]
 
     def _compile(
@@ -358,9 +355,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
             new_action.clear_effects()
 
             for precondition in action.preconditions:
-                print("old precondition: ", precondition)
                 new_preconditions = self._get_new_fnodes(new_problem, precondition)
-                print("new precondition: ", new_preconditions)
                 for np in new_preconditions:
                     # si una precondicio es falsa -> accio mai passara -> no afegir accio
                     new_action.add_precondition(np)
