@@ -331,6 +331,7 @@ class Simplifier(walkers.dag.DagWalker):
         return self.manager.Dot(expression.agent(), args[0])
 
     def walk_count(self, expression: FNode, args: List[FNode]) -> FNode:
+        print("walkkkk")
         new_args_count: List[FNode] = list()
         for a in args:
             if a.is_false():
