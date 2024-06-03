@@ -185,6 +185,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                         if arg.is_fluent_exp():
                             new_fluent = self._get_new_fluent(arg.fluent())
                             new_name = new_fluent.name + ''.join(f'_{str(i)}' for i in c)
+                            print(new_name)
                             # controlar si es strict o no
                             if self.mode == 'strict':
                                 try:
