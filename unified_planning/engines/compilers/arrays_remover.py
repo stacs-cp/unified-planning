@@ -159,8 +159,8 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
             else:
                 try:
                     assert new_problem.fluent(new_fluent.name)(*node.fluent().signature)
-                except KeyError:
-                    print(f"Fluent {new_fluent.name} out of range!")
+                except Exception:
+                    #print(f"Fluent {new_fluent.name} out of range")
                     if new_fluent.type.is_bool_type():
                         return FALSE()
                     else:
@@ -186,14 +186,22 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                         if arg.is_fluent_exp():
                             new_fluent = self._get_new_fluent(arg.fluent())
                             new_name = new_fluent.name + ''.join(f'_{str(i)}' for i in c)
-                            try:
-                                new_arg = new_problem.fluent(new_name)(*arg.fluent().signature)
-                            except KeyError:
-                                print(f"Fluent {new_fluent.name} out of range!")
-                                if new_fluent.type.is_bool_type():
-                                    new_arg = FALSE()
-                                else:
-                                    new_arg = None
+                            # controlar si es strict o no
+                            if self.mode == 'strict':
+                                try:
+                                    new_arg = new_problem.fluent(new_fluent.name)(*node.fluent().signature)
+                                except KeyError:
+                                    print(f"Fluent {new_fluent.name} out of range!")
+                                    exit(1)
+                            else:
+                                try:
+                                    new_arg = new_problem.fluent(new_fluent.name)(*node.fluent().signature)
+                                except Exception:
+                                    # print(f"Fluent {new_fluent.name} out of range")
+                                    if new_fluent.type.is_bool_type():
+                                        new_arg = FALSE()
+                                    else:
+                                        new_arg = None
                         elif arg.constant_value():
                             new_arg = arg
                             for i in c:
@@ -346,7 +354,9 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
             new_action.clear_effects()
 
             for precondition in action.preconditions:
+                print("old precondition: ", precondition)
                 new_preconditions = self._get_new_fnodes(new_problem, precondition)
+                print("new precondition: ", new_preconditions)
                 for np in new_preconditions:
                     # si una precondicio es falsa -> accio mai passara -> no afegir accio
                     new_action.add_precondition(np)
