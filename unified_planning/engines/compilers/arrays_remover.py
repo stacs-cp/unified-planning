@@ -150,11 +150,21 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
         em = env.expression_manager
         if node.is_fluent_exp():
             new_fluent = self._get_new_fluent(node.fluent())
-            try:
-                assert new_problem.fluent(new_fluent.name)(*node.fluent().signature)
-            except Exception:
-                print(f"Fluent {new_fluent.name} out of range")
-                return None
+            if self.mode == 'strict':
+                try:
+                    assert new_problem.fluent(new_fluent.name)(*node.fluent().signature)
+                except Exception:
+                    print(f"Fluent {new_fluent.name} out of range")
+                    exit(1)
+            else:
+                try:
+                    assert new_problem.fluent(new_fluent.name)(*node.fluent().signature)
+                except Exception:
+                    print(f"Fluent {new_fluent.name} out of range")
+                    if new_fluent.type.is_bool_type():
+                        return FALSE()
+                    else:
+                        return None
             return [new_fluent(*node.args)]
         elif node.is_parameter_exp() or node.is_constant():
             return [node]
@@ -179,8 +189,11 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                             try:
                                 new_arg = new_problem.fluent(new_name)(*arg.fluent().signature)
                             except Exception:
-                                print(f"Fluent {new_name} out of range")
-                                return None
+                                print(f"Fluent {new_fluent.name} out of range")
+                                if new_fluent.type.is_bool_type():
+                                    new_arg = FALSE()
+                                else:
+                                    new_arg = None
                         elif arg.constant_value():
                             new_arg = arg
                             for i in c:
@@ -188,7 +201,13 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                         else:
                             new_arg = arg
                         new_args.append(new_arg)
-                    new_fnodes.append(em.create_node(node.node_type, tuple(new_args)))
+                    if None in new_args:
+                        if node.type.is_bool_type():
+                            new_fnodes.append(FALSE())
+                        else:
+                            new_fnodes.append(None)
+                    else:
+                        new_fnodes.append(em.create_node(node.node_type, tuple(new_args)))
                 return new_fnodes
             else:
                 new_args = []
@@ -218,7 +237,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
         new_problem.clear_actions()
         new_problem.clear_goals()
         new_problem.initial_values.clear()
-        print("Mode: ", self.mode)
+        assert self.mode == 'strict' or self.mode == 'permissive'
         for fluent in problem.fluents:
             # guardar el default_initial_value
             if problem.fluents_defaults.get(fluent):
@@ -325,32 +344,29 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
             new_action.name = get_fresh_name(new_problem, action.name)
             new_action.clear_preconditions()
             new_action.clear_effects()
+
+            for precondition in action.preconditions:
+                new_preconditions = self._get_new_fnodes(new_problem, precondition)
+                for np in new_preconditions:
+                    # si una precondicio es falsa -> accio mai passara -> no afegir accio
+                    new_action.add_precondition(np)
             try:
-                for precondition in action.preconditions:
-                    new_preconditions = self._get_new_fnodes(new_problem, precondition)
-                    for np in new_preconditions:
-                        # si una precondicio es falsa -> accio mai passara -> no afegir accio
-                        new_action.add_precondition(np)
-                try:
-                    for effect in action.effects:
-                        new_fnode = self._get_new_fnodes(new_problem, effect.fluent)
-                        new_value = self._get_new_fnodes(new_problem, effect.value)
-                        new_condition = self._get_new_fnodes(new_problem, effect.condition)
-                        if effect.is_increase():
-                            new_action.add_increase_effect(new_fnode, new_value, new_condition, effect.forall)
-                        elif effect.is_decrease():
-                            new_action.add_decrease_effect(new_fnode, new_value, new_condition, effect.forall)
-                        else:
-                            new_action.add_effect(new_fnode, new_value, new_condition, effect.forall)
-                except Exception:
-                    print(f"Action {action.name} eliminated due to an access to a fluent out of range.")
-                    continue
-                else:
-                    new_problem.add_action(new_action)
-                    new_to_old[new_action] = action
+                for effect in action.effects:
+                    new_fnode = self._get_new_fnodes(new_problem, effect.fluent)
+                    new_value = self._get_new_fnodes(new_problem, effect.value)
+                    new_condition = self._get_new_fnodes(new_problem, effect.condition)
+                    if effect.is_increase():
+                        new_action.add_increase_effect(new_fnode, new_value, new_condition, effect.forall)
+                    elif effect.is_decrease():
+                        new_action.add_decrease_effect(new_fnode, new_value, new_condition, effect.forall)
+                    else:
+                        new_action.add_effect(new_fnode, new_value, new_condition, effect.forall)
             except Exception:
                 print(f"Action {action.name} eliminated due to an access to a fluent out of range.")
                 continue
+            else:
+                new_problem.add_action(new_action)
+                new_to_old[new_action] = action
 
         for g in problem.goals:
             new_goals = self._get_new_fnodes(new_problem, g)
