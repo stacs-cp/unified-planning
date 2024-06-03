@@ -16,6 +16,9 @@
 
 
 from itertools import product
+
+from unified_planning.model.walkers import simplifier
+
 import unified_planning as up
 import unified_planning.engines as engines
 from unified_planning import model
@@ -291,25 +294,30 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
         elif expression.is_count():
             new_ca_args = []
             for ca in expression.args:
-                existing_key = next((key for key, value in count_expressions.items() if value == ca), None)
-                if existing_key is not None:
-                    existing_fluent = new_problem.fluent(existing_key)
-                    new_ca_args.append(existing_fluent())
+                if ca.is_false():
+                    pass
+                elif ca.is_true():
+                    new_ca_args.append(Int(1))
                 else:
-                    n_count = len(count_expressions)
-                    fluent_name = 'count_' + str(n_count)
-                    count_expressions[fluent_name] = ca
-                    initial_value = self.expression_value(new_problem, ca)
-                    assert initial_value.is_bool_constant()
-                    if initial_value.is_true():
-                        fluent_value = Int(1)
+                    existing_key = next((key for key, value in count_expressions.items() if value == ca), None)
+                    if existing_key is not None:
+                        existing_fluent = new_problem.fluent(existing_key)
+                        new_ca_args.append(existing_fluent())
                     else:
-                        fluent_value = Int(0)
-                    new_problem.add_fluent(fluent_name, tm.IntType())
-                    new_problem.set_initial_value(new_problem.fluent(fluent_name), fluent_value)
-                    new_fluent = new_problem.fluent(fluent_name)
-                    new_ca_args.append(new_fluent())
-                    n_count += 1
+                        n_count = len(count_expressions)
+                        fluent_name = 'count_' + str(n_count)
+                        count_expressions[fluent_name] = ca
+                        initial_value = self.expression_value(new_problem, ca)
+                        assert initial_value.is_bool_constant()
+                        if initial_value.is_true():
+                            fluent_value = Int(1)
+                        else:
+                            fluent_value = Int(0)
+                        new_problem.add_fluent(fluent_name, tm.IntType())
+                        new_problem.set_initial_value(new_problem.fluent(fluent_name), fluent_value)
+                        new_fluent = new_problem.fluent(fluent_name)
+                        new_ca_args.append(new_fluent())
+                        n_count += 1
             return em.create_node(OperatorKind.PLUS, tuple(new_ca_args))
         else:
             new_args = []
