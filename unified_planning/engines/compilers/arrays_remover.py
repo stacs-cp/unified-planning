@@ -207,6 +207,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                                 new_arg = new_arg.constant_value()[i]
                         else:
                             new_arg = arg
+                        print(new_arg)
                         new_args.append(new_arg)
                     if None in new_args:
                         if node.type.is_bool_type():
@@ -218,11 +219,14 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                 return new_fnodes
             else:
                 new_args = []
+                print("else: ", node.args)
                 for arg in node.args:
                     new_list_args = self._get_new_fnodes(new_problem, arg)
+                    print("new_list_args: ", new_list_args)
                     for nla in new_list_args:
                         new_args.append(nla)
                 if None in new_args:
+                    print("none..")
                     if node.type.is_bool_type():
                         return [FALSE()]
                     else:
