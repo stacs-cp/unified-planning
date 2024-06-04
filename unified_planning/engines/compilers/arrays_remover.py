@@ -182,12 +182,9 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                 for c in combinations:
                     new_args = []
                     for arg in node.args:
-                        print("arg: ", arg)
                         if arg.is_fluent_exp():
                             new_fluent = self._get_new_fluent(arg.fluent())
                             new_name = new_fluent.name + ''.join(f'_{str(i)}' for i in c)
-                            print(new_name)
-                            # controlar si es strict o no
                             if self.mode == 'strict':
                                 try:
                                     new_arg = new_problem.fluent(new_name)(*arg.fluent().signature)
@@ -197,10 +194,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                             else:
                                 try:
                                     new_arg = new_problem.fluent(new_name)(*arg.fluent().signature)
-                                    print("new_arg: ", new_arg)
-                                    print("fluents: ", new_problem.fluents)
                                 except Exception:
-                                    print("exception!!")
                                     if new_fluent.type.is_bool_type():
                                         new_arg = FALSE()
                                     else:
@@ -211,7 +205,6 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                                 new_arg = new_arg.constant_value()[i]
                         else:
                             new_arg = arg
-                        print(new_arg)
                         new_args.append(new_arg)
                     if None in new_args:
                         if node.type.is_bool_type():
@@ -223,14 +216,11 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                 return new_fnodes
             else:
                 new_args = []
-                print("else: ", node.args)
                 for arg in node.args:
                     new_list_args = self._get_new_fnodes(new_problem, arg)
-                    print("new_list_args: ", new_list_args)
                     for nla in new_list_args:
                         new_args.append(nla)
                 if None in new_args:
-                    print("none..")
                     if node.type.is_bool_type():
                         return [FALSE()]
                     else:
@@ -380,7 +370,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                     else:
                         new_action.add_effect(new_fnode, new_value, new_condition, effect.forall)
             except Exception:
-                print(f"Action {action.name} eliminated due to an access to a fluent out of range.")
+                print(f"Action {action.name} eliminated due to an access to a fluent out of range in the effects.")
                 continue
             else:
                 new_problem.add_action(new_action)
