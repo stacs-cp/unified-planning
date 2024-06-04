@@ -196,7 +196,9 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                             else:
                                 try:
                                     new_arg = new_problem.fluent(new_name)(*node.fluent().signature)
+                                    print("new_arg: ", new_arg)
                                 except Exception:
+                                    print("exception!!")
                                     if new_fluent.type.is_bool_type():
                                         new_arg = FALSE()
                                     else:
