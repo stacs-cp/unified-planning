@@ -182,6 +182,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                 for c in combinations:
                     new_args = []
                     for arg in node.args:
+                        print("arg: ", arg)
                         if arg.is_fluent_exp():
                             new_fluent = self._get_new_fluent(arg.fluent())
                             new_name = new_fluent.name + ''.join(f'_{str(i)}' for i in c)
@@ -189,13 +190,13 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                             # controlar si es strict o no
                             if self.mode == 'strict':
                                 try:
-                                    new_arg = new_problem.fluent(new_name)(*node.fluent().signature)
+                                    new_arg = new_problem.fluent(new_name)(*arg.fluent().signature)
                                 except KeyError:
                                     print(f"Fluent {new_fluent.name} out of range!")
                                     exit(1)
                             else:
                                 try:
-                                    new_arg = new_problem.fluent(new_name)(*node.fluent().signature)
+                                    new_arg = new_problem.fluent(new_name)(*arg.fluent().signature)
                                     print("new_arg: ", new_arg)
                                     print("fluents: ", new_problem.fluents)
                                 except Exception:
