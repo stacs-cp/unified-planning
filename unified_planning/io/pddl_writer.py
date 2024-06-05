@@ -337,10 +337,12 @@ class ConverterToPDDLString(walkers.DagWalker):
 class PDDLWriter:
     """
     This class can be used to write a :class:`~unified_planning.model.Problem` in `PDDL`.
-    The constructor of this class takes the problem to write and 2 flags:
+    The constructor of this class takes the problem to write and 3 flags:
     needs_requirements determines if the printed problem must have the :requirements,
     rewrite_bool_assignments determines if this writer will write
     non constant boolean assignment as conditional effects.
+    empty_preconditions determines if this writer will write ':precondition ()' in case of an instantenuous
+    action without preconditions instead of writing nothing or similar with conditions in durative actions.
     """
 
     def __init__(
@@ -348,11 +350,13 @@ class PDDLWriter:
         problem: "up.model.Problem",
         needs_requirements: bool = True,
         rewrite_bool_assignments: bool = False,
+        empty_preconditions: bool = False,
     ):
         self.problem = problem
         self.problem_kind = self.problem.kind
         self.needs_requirements = needs_requirements
         self.rewrite_bool_assignments = rewrite_bool_assignments
+        self.empty_preconditions = empty_preconditions
         # otn represents the old to new renamings
         self.otn_renamings: Dict[
             WithName,
@@ -580,6 +584,8 @@ class PDDLWriter:
                             else:
                                 precond_str.append(converter.convert(p))
                     out.write(f'\n  :precondition (and {" ".join(precond_str)})')
+                elif len(m.preconditions) == 0 and self.empty_preconditions:
+                    out.write(f"\n  :precondition ()")
                 self._write_task_network(m, out, converter)
                 out.write(")\n")
 
@@ -606,6 +612,8 @@ class PDDLWriter:
                             else:
                                 precond_str.append(converter.convert(p))
                     out.write(f'\n  :precondition (and {" ".join(precond_str)})')
+                elif len(a.preconditions) == 0 and self.empty_preconditions:
+                    out.write(f"\n  :precondition ()")
                 if len(a.effects) > 0:
                     out.write("\n  :effect (and")
                     for e in a.effects:
@@ -671,6 +679,8 @@ class PDDLWriter:
                                 if not interval.is_right_open():
                                     out.write(f"(at end {converter.convert(c)})")
                     out.write(")")
+                elif len(a.conditions) == 0 and self.empty_preconditions:
+                    out.write(f"\n  :condition (and )")
                 if len(a.effects) > 0:
                     out.write("\n  :effect (and")
                     for t, el in a.effects.items():
@@ -798,8 +808,8 @@ class PDDLWriter:
         def _format_action_instance(action_instance: ActionInstance) -> str:
             param_str = ""
             if action_instance.actual_parameters:
-                param_str = f" {' '.join((p.object().name for p in action_instance.actual_parameters))}"
-            return f"({action_instance.action.name}{param_str})"
+                param_str = f" {' '.join((self._get_mangled_name(p.object()) for p in action_instance.actual_parameters))}"
+            return f"({self._get_mangled_name(action_instance.action)}{param_str})"
 
         if isinstance(plan, SequentialPlan):
             for ai in plan.actions:
@@ -918,14 +928,7 @@ class PDDLWriter:
 
     def get_pddl_name(
         self,
-        item: Union[
-            "up.model.Type",
-            "up.model.Action",
-            "up.model.Fluent",
-            "up.model.Object",
-            "up.model.Parameter",
-            "up.model.Variable",
-        ],
+        item: WithName,
     ) -> str:
         """
         This method takes an item in the :class:`~unified_planning.model.Problem` and returns the chosen name for the same item in the `PDDL` problem
@@ -1099,6 +1102,17 @@ def _write_effect(
         positive_cond = (simplified_cond & effect.value).simplify()
         if not positive_cond.is_false():
             out.write(forall_str)
+            if not positive_cond.is_true():
+                out.write(" (when ")
+                if timing is not None:
+                    if timing.is_from_start():
+                        out.write(f" (at start")
+                    else:
+                        out.write(f" (at end")
+                out.write(f"{converter.convert(positive_cond)}")
+                if timing is not None:
+                    out.write(")")
+                out.write(f" {converter.convert(effect.fluent)})")
             if timing is not None:
                 if timing.is_from_start():
                     out.write(f" (at start")
@@ -1106,10 +1120,6 @@ def _write_effect(
                     out.write(f" (at end")
             if positive_cond.is_true():
                 out.write(f" {converter.convert(effect.fluent)}")
-            else:
-                out.write(
-                    f" (when {converter.convert(positive_cond)} {converter.convert(effect.fluent)})"
-                )
             if timing is not None:
                 out.write(")")
             if effect.is_forall():
@@ -1117,6 +1127,18 @@ def _write_effect(
         negative_cond = (simplified_cond & effect.value.Not()).simplify()
         if not negative_cond.is_false():
             out.write(forall_str)
+            if not negative_cond.is_true():
+                out.write(" (when")
+                if timing is not None:
+                    if timing.is_from_start():
+                        out.write(f" (at start")
+                    else:
+                        out.write(f" (at end")
+                    out.write(f" (at start")
+                out.write(f" {converter.convert(negative_cond)}")
+                if timing is not None:
+                    out.write(")")
+                out.write(f" (not {converter.convert(effect.fluent)}))")
             if timing is not None:
                 if timing.is_from_start():
                     out.write(f" (at start")
@@ -1124,10 +1146,6 @@ def _write_effect(
                     out.write(f" (at end")
             if negative_cond.is_true():
                 out.write(f" {converter.convert(effect.fluent)}")
-            else:
-                out.write(
-                    f" (when {converter.convert(negative_cond)} (not {converter.convert(effect.fluent)}))"
-                )
             if timing is not None:
                 out.write(")")
             if effect.is_forall():
@@ -1137,13 +1155,21 @@ def _write_effect(
     if simplified_cond.is_false():
         return
     out.write(forall_str)
+    if not simplified_cond.is_true():
+        out.write(f" (when")
+        if timing is not None:
+            if timing.is_from_start():
+                out.write(f" (at start")
+            else:
+                out.write(f" (at end")
+        out.write(f" {converter.convert(effect.condition)}")
+        if timing is not None:
+            out.write(")")
     if timing is not None:
         if timing.is_from_start():
             out.write(f" (at start")
         else:
             out.write(f" (at end")
-    if not simplified_cond.is_true():
-        out.write(f" (when {converter.convert(effect.condition)}")
     simplified_value = effect.value.simplify()
     fluent = converter.convert(effect.fluent)
     if simplified_value.is_true():

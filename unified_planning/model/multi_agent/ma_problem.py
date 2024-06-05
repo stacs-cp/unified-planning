@@ -367,7 +367,7 @@ class MultiAgentProblem(  # type: ignore[misc]
             self._kind.set_conditions_kind("EQUALITIES")
         if OperatorKind.NOT in ops:
             self._kind.set_conditions_kind("NEGATIVE_CONDITIONS")
-        if OperatorKind.OR in ops:
+        if OperatorKind.OR in ops or OperatorKind.IMPLIES in ops:
             self._kind.set_conditions_kind("DISJUNCTIVE_CONDITIONS")
         if OperatorKind.EXISTS in ops:
             self._kind.set_conditions_kind("EXISTENTIAL_CONDITIONS")
@@ -395,10 +395,10 @@ class MultiAgentProblem(  # type: ignore[misc]
             ):
                 self._kind.set_numbers("BOUNDED_TYPES")
             if fluent.type.is_int_type():
-                self.kind.set_fluents_type("INT_FLUENTS")
+                self._kind.set_fluents_type("INT_FLUENTS")
             else:
                 assert fluent.type.is_real_type()
-                self.kind.set_fluents_type("REAL_FLUENTS")
+                self._kind.set_fluents_type("REAL_FLUENTS")
         elif fluent.type.is_user_type():
             self._kind.set_fluents_type("OBJECT_FLUENTS")
         elif fluent.type.is_array_type():

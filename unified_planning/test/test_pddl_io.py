@@ -26,8 +26,9 @@ from unified_planning.test import (
 from unified_planning.io import PDDLWriter, PDDLReader
 from unified_planning.test.examples import get_example_problems
 from unified_planning.exceptions import UPProblemDefinitionError
-from unified_planning.model.problem_kind import simple_numeric_kind
 from unified_planning.model.metrics import MinimizeSequentialPlanLength
+from unified_planning.plans import SequentialPlan
+from unified_planning.model.problem_kind import simple_numeric_kind
 from unified_planning.model.types import _UserType
 
 
@@ -343,6 +344,27 @@ class TestPddlIO(unittest_TestCase):
             pddl_domain,
         )
 
+    def test_renamings(self):
+        problem = self.problems["hierarchical_blocks_world"].problem
+        problem = problem.clone()
+        move = problem.action("move")
+        move.name = "move-move"
+
+        Block = problem.user_type("Block")
+        block_4 = Object("block-4", Block)
+        problem.add_object(block_4)
+
+        w = PDDLWriter(problem)
+        plan = SequentialPlan(
+            [move(block_4, problem.object("block_3"), problem.object("block_2"))]
+        )
+        plan_str = w.get_plan(plan)
+
+        r = PDDLReader()
+        test_plan = r.parse_plan_string(problem, plan_str, w.get_item_named)
+
+        self.assertEqual(plan, test_plan)
+
     def test_depot_reader(self):
         reader = PDDLReader()
 
@@ -418,6 +440,33 @@ class TestPddlIO(unittest_TestCase):
         self.assertEqual(len(problem.actions), 2)
         self.assertEqual(len(list(problem.objects(problem.user_type("match")))), 3)
         self.assertEqual(len(list(problem.objects(problem.user_type("fuse")))), 3)
+
+        with open(domain_filename, "r", encoding="utf-8") as file:
+            domain_str = file.read()
+        with open(problem_filename, "r", encoding="utf-8") as file:
+            problem_str = file.read()
+
+        problem_2 = reader.parse_problem_string(domain_str, problem_str)
+        self.assertEqual(problem, problem_2)
+
+    def test_parking_reader(self):
+        reader = PDDLReader()
+
+        domain_filename = os.path.join(
+            PDDL_DOMAINS_PATH, "parking_action_cost", "domain.pddl"
+        )
+        problem_filename = os.path.join(
+            PDDL_DOMAINS_PATH, "parking_action_cost", "problem.pddl"
+        )
+        problem = reader.parse_problem(domain_filename, problem_filename)
+
+        self.assertIsNotNone(problem)
+        self.assertEqual(len(problem.fluents), 5)
+        self.assertEqual(len(problem.actions), 4)
+        self.assertEqual(len(list(problem.objects(problem.user_type("car")))), 2)
+        self.assertEqual(len(list(problem.objects(problem.user_type("curb")))), 4)
+        self.assertEqual(len(problem.quality_metrics), 1)
+        self.assertTrue(problem.quality_metrics[0].is_minimize_action_costs())
 
         with open(domain_filename, "r", encoding="utf-8") as file:
             domain_str = file.read()

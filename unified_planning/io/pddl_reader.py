@@ -760,6 +760,67 @@ class PDDLReader:
             if op == "and":
                 for i in range(1, len(eff)):
                     to_add.append((eff[i], forall_variables))
+            elif op == "when":
+                if (
+                    len(eff) == 3
+                    and eff[1][0].value == "at"
+                    and eff[1][1].value == "start"
+                ):
+                    cond = self._parse_exp(
+                        problem,
+                        act,
+                        types_map,
+                        forall_variables,
+                        eff[1][2],
+                        complete_str,
+                    )
+                    if len(eff[2]) == 3 and eff[2][1].value == "start":
+                        self._add_effect(
+                            problem,
+                            act,
+                            types_map,
+                            eff[2][2],
+                            complete_str,
+                            cond,
+                            timing=up.model.StartTiming(),
+                            forall_variables=forall_variables,
+                        )
+                    else:
+                        raise UPUnsupportedProblemTypeError(
+                            "Conditional effects with different timing are not supported."
+                        )
+                elif (
+                    len(eff) == 3
+                    and eff[1][0].value == "at"
+                    and eff[1][1].value == "end"
+                ):
+                    cond = self._parse_exp(
+                        problem,
+                        act,
+                        types_map,
+                        forall_variables,
+                        eff[1][2],
+                        complete_str,
+                    )
+                    if len(eff[2]) == 3 and eff[2][1].value == "end":
+                        self._add_effect(
+                            problem,
+                            act,
+                            types_map,
+                            eff[2][2],
+                            complete_str,
+                            cond,
+                            timing=up.model.EndTiming(),
+                            forall_variables=forall_variables,
+                        )
+                    else:
+                        raise UPUnsupportedProblemTypeError(
+                            "Conditional effects with different timing are not supported."
+                        )
+                else:
+                    raise UPUnsupportedProblemTypeError(
+                        "Conditional durative effects syntax is not correct."
+                    )
             elif len(eff) == 3 and op == "at" and eff[1].value == "start":
                 self._add_effect(
                     problem,
@@ -802,7 +863,7 @@ class PDDLReader:
                     complete_str
                 )
                 raise SyntaxError(
-                    f"Not able to handle: {eff}, from line: {start_line}, col {start_col} to line: {end_line}, col {end_col}"
+                    f"Not able to handle: {eff.value}, from line: {start_line}, col {start_col} to line: {end_line}, col {end_col}"
                 )
 
     def _parse_subtask(
@@ -913,13 +974,16 @@ class PDDLReader:
             for c in cl:
                 if self._totalcost in self._fve.get(c):
                     return False
+        cost_found = False
         for _, el in dur_act.effects.items():
             for e in el:
-                if (
-                    self._totalcost in self._fve.get(e.fluent)
-                    or self._totalcost in self._fve.get(e.value)
-                    or self._totalcost in self._fve.get(e.condition)
-                ):
+                if self._totalcost in self._fve.get(e.fluent):
+                    if cost_found:
+                        return False
+                    cost_found = True
+                if self._totalcost in self._fve.get(
+                    e.value
+                ) or self._totalcost in self._fve.get(e.condition):
                     return False
         return True
 
@@ -942,10 +1006,12 @@ class PDDLReader:
         return True
 
     def _problem_has_actions_cost(self, problem: up.model.Problem):
-        if (
-            self._totalcost is None
-            or not problem.initial_value(self._totalcost).constant_value() == 0
-        ):
+        if self._totalcost is None:
+            return False
+        initial_value = problem.initial_value(self._totalcost)
+        if initial_value is None:
+            return False
+        if initial_value.constant_value() != 0:
             return False
         for _, el in problem.timed_effects.items():
             for e in el:
@@ -1579,24 +1645,48 @@ class PDDLReader:
                         and optimization == "minimize"
                         and metric_exp == self._totalcost
                     ):
-                        costs = {}
+                        costs: Dict[up.model.Action, up.model.Expression] = {}
                         problem._fluents.remove(self._totalcost.fluent())
                         if self._totalcost in problem._initial_value:
                             problem._initial_value.pop(self._totalcost)
-                        use_plan_length = all(False for _ in problem.durative_actions)
-                        for a in problem.instantaneous_actions:
-                            cost = None
-                            for e in a.effects:
-                                if e.fluent == self._totalcost:
-                                    cost = e
-                                    break
-                            if cost is not None:
-                                costs[a] = cost.value
-                                a._effects.remove(cost)
-                                if cost.value != 1:
+                        start_timing, end_timing = (
+                            up.model.StartTiming(),
+                            up.model.EndTiming(),
+                        )
+                        for a in problem.actions:
+                            if isinstance(a, up.model.InstantaneousAction):
+                                cost = None
+                                for e in a.effects:
+                                    if e.fluent == self._totalcost:
+                                        cost = e
+                                        break
+                                if cost is not None:
+                                    costs[a] = cost.value
+                                    a._effects.remove(cost)
+                                    if cost.value != 1:
+                                        use_plan_length = False
+                                else:
                                     use_plan_length = False
                             else:
+                                assert isinstance(a, up.model.DurativeAction)
                                 use_plan_length = False
+                                cost, effects_list = None, None
+                                for timing, el in a.effects.items():
+                                    if timing in (start_timing, end_timing):
+                                        for e in el:
+                                            if e.fluent == self._totalcost:
+                                                if cost is not None:
+                                                    raise UPUnsupportedProblemTypeError(
+                                                        f"Action {a.name} has more than one effect modifying it's cost"
+                                                    )
+                                                cost, effects_list = e, el
+                                                break
+                                if cost is not None:
+                                    assert effects_list is not None
+                                    costs[a] = cost.value
+                                    effects_list.remove(cost)
+                                else:
+                                    use_plan_length = False
                         if use_plan_length:
                             problem.add_quality_metric(
                                 up.model.metrics.MinimizeSequentialPlanLength()
@@ -1684,15 +1774,7 @@ class PDDLReader:
         get_item_named: typing.Optional[
             Callable[
                 [str],
-                Union[
-                    "up.model.Type",
-                    "up.model.Action",
-                    "up.model.Fluent",
-                    "up.model.Object",
-                    "up.model.Parameter",
-                    "up.model.Variable",
-                    "up.model.multi_agent.Agent",
-                ],
+                "up.io.pddl_writer.WithName",
             ]
         ] = None,
     ) -> "up.plans.Plan":
