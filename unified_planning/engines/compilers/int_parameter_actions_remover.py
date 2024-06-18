@@ -59,6 +59,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
     def supported_kind() -> ProblemKind:
         supported_kind = ProblemKind(version=LATEST_PROBLEM_KIND_VERSION)
         supported_kind.set_problem_class("ACTION_BASED")
+        supported_kind.set_problem_class("HIERARCHICAL")
         supported_kind.set_typing("FLAT_TYPING")
         supported_kind.set_typing("HIERARCHICAL_TYPING")
         supported_kind.set_parameters("BOOL_FLUENT_PARAMETERS")
