@@ -317,7 +317,6 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                 elif iv != default_value:
                     new_problem.set_initial_value(fluent(), iv)
 
-
         # canviar numeros en precondicions i efectes d'accions
         for action in problem.actions:
             new_action = action.clone()
