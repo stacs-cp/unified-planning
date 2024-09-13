@@ -139,10 +139,12 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
     ) -> up.model.fnode.FNode:
         env = new_problem.environment
         em = env.expression_manager
+        tm = env.type_manager
         print("args of node: ", node.args)
         if node.is_int_constant():
             print("int: ", node.int_constant_value())
-            new_number = model.Object('n'+str(node.int_constant_value()), _UserType('Number'))
+            number_user_type = tm.UserType('Number')
+            new_number = model.Object('n'+str(node.int_constant_value()), number_user_type)
             return em.create_node(OperatorKind.OBJECT_EXP, new_number)
         elif node.is_parameter_exp() or node.is_constant() or node.is_fluent_exp() or node.is_variable_exp() or node.is_object_exp():
             return node
@@ -186,7 +188,7 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                 print("new fluent: ", new_fluent)
                 print("new user types: ", new_problem.user_types)
                 if default_value is not None:
-                    new_default_value = model.Object('n'+str(default_value), _UserType('Number'))
+                    new_default_value = model.Object('n'+str(default_value), number_user_type)
                     # afegir objecte si no hi es
                     print(new_default_value)
                 else:
