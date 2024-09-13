@@ -207,7 +207,7 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                         elif iv != default_value:
                             new_initial_value = model.Object('n' + str(iv), number_user_type)
                             # afegir objecte si no hi es
-                            new_problem.set_initial_value(fluent(*fp), new_initial_value)
+                            new_problem.set_initial_value(new_fluent(*fp), new_initial_value)
                 else:
                     iv = problem.initial_value(fluent())
                     if iv is None:
@@ -216,7 +216,7 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                         )
                     elif iv != default_value:
                         new_initial_value = model.Object('n' + str(iv), number_user_type)
-                        new_problem.set_initial_value(fluent(), new_initial_value)
+                        new_problem.set_initial_value(new_fluent(), new_initial_value)
 
                 print("INITIAL VALUES: ", new_problem.initial_values)
 
