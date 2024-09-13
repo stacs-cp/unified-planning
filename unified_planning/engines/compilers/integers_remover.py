@@ -129,105 +129,6 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
     ) -> ProblemKind:
         return problem_kind.clone()
 
-    def _get_new_fluent(
-        self,
-        fluent: "up.model.fluent.Fluent"
-    ) -> "up.model.fluent.Fluent":
-        new_name = fluent.name
-        pattern = r'\[(.*?)\]'
-        this_ints = re.findall(pattern, new_name)
-        if this_ints:
-            new_name = new_name.split('[')[0] + '_' + '_'.join(map(str, this_ints))
-        new_fluent = up.model.fluent.Fluent(new_name, fluent.type, fluent.signature, fluent.environment)
-        return new_fluent
-
-    def _get_new_fnodes(
-        self,
-        new_problem: "up.model.AbstractProblem",
-        node: "up.model.fnode.FNode",
-    ) -> List["up.model.fnode.FNode"]:
-        env = new_problem.environment
-        em = env.expression_manager
-        if node.is_fluent_exp():
-            new_fluent = self._get_new_fluent(node.fluent())
-            if self.mode == 'strict':
-                try:
-                    assert new_problem.fluent(new_fluent.name)(*node.fluent().signature)
-                except KeyError:
-                    print(f"Fluent {new_fluent.name} out of range!")
-                    exit(1)
-            else:
-                try:
-                    assert new_problem.fluent(new_fluent.name)(*node.fluent().signature)
-                except Exception:
-                    if new_fluent.type.is_bool_type():
-                        return [FALSE()]
-                    else:
-                        return [None]
-            return [new_fluent(*node.args)]
-        elif node.is_parameter_exp() or node.is_constant():
-            return [node]
-        else:
-            if node.arg(0).type.is_array_type():
-                new_type = node.arg(0).type
-                domain = []
-                while new_type.is_array_type():
-                    domain_in = []
-                    for i in range(0, new_type.size):
-                        domain_in.append(i)
-                    domain.append(domain_in)
-                    new_type = new_type.elements_type
-                combinations = list(product(*domain))
-                new_fnodes = []
-                for c in combinations:
-                    new_args = []
-                    for arg in node.args:
-                        if arg.is_fluent_exp():
-                            new_fluent = self._get_new_fluent(arg.fluent())
-                            new_name = new_fluent.name + ''.join(f'_{str(i)}' for i in c)
-                            if self.mode == 'strict':
-                                try:
-                                    new_arg = new_problem.fluent(new_name)(*arg.fluent().signature)
-                                except KeyError:
-                                    print(f"Fluent {new_fluent.name} out of range!")
-                                    exit(1)
-                            else:
-                                try:
-                                    new_arg = new_problem.fluent(new_name)(*arg.fluent().signature)
-                                except Exception:
-                                    if new_fluent.type.is_bool_type():
-                                        new_arg = FALSE()
-                                    else:
-                                        new_arg = None
-                        elif arg.constant_value():
-                            new_arg = arg
-                            for i in c:
-                                new_arg = new_arg.constant_value()[i]
-                        else:
-                            new_arg = arg
-                        new_args.append(new_arg)
-                    if None in new_args:
-                        if node.type.is_bool_type():
-                            new_fnodes.append(FALSE())
-                        else:
-                            new_fnodes.append(None)
-                    else:
-                        new_fnodes.append(em.create_node(node.node_type, tuple(new_args)))
-                return new_fnodes
-            else:
-                new_args = []
-                for arg in node.args:
-                    new_list_args = self._get_new_fnodes(new_problem, arg)
-                    for nla in new_list_args:
-                        new_args.append(nla)
-                if None in new_args:
-                    if node.type.is_bool_type():
-                        return [FALSE()]
-                    else:
-                        return [None]
-                else:
-                    return [(em.create_node(node.node_type, tuple(new_args)))]
-
     def _compile(
         self,
         problem: "up.model.AbstractProblem",
@@ -251,8 +152,9 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
             default_value = problem.fluents_defaults.get(fluent)
             print("fluent: ", fluent)
             print("default_value: ", default_value)
+            print("env ", fluent.environment)
             if fluent.type.is_int_type():
-                new_fluent = model.Fluent(fluent.name, _UserType('Number'), fluent.signature, fluent.environment)
+                new_fluent = model.Fluent(fluent.name, _UserType('Number'), fluent.signature)
                 if default_value is not None:
                     new_default_value = model.Object('n'+str(default_value), _UserType('Number'))
                     print(new_default_value)
