@@ -146,8 +146,8 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
             number_user_type = tm.UserType('Number')
             new_number = model.Object('n'+str(node.int_constant_value()), number_user_type)
             print("new_number: ", new_number, new_number.type)
-            return em.create_node(OperatorKind.OBJECT_EXP, new_number)
-        elif node.is_parameter_exp() or node.is_constant() or node.is_fluent_exp() or node.is_variable_exp() or node.is_object_exp():
+            return em.ObjectExp(new_number)
+        elif node.args == ():
             return node
         else:
             new_args = []
