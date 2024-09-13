@@ -154,8 +154,16 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
             print("default_value: ", default_value)
             print("env ", fluent.environment)
             print("sign ", fluent.signature)
+
+            print("old user types:", problem.user_types)
             if fluent.type.is_int_type():
-                new_fluent = model.Fluent(fluent.name, _UserType('Number'), fluent.signature)
+                new_user_type = _UserType('Number')
+                n0 = model.Object('n0', new_user_type)
+                new_problem.add_object(n0)
+                print("new user types:", new_problem.user_types)
+
+                new_fluent = model.Fluent(fluent.name, new_user_type, fluent.signature)
+                print("new user types:", new_problem.user_types)
                 if default_value is not None:
                     new_default_value = model.Object('n'+str(default_value), _UserType('Number'))
                     print(new_default_value)
