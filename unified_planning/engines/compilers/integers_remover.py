@@ -161,7 +161,7 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
             print("old user types:", problem.user_types)
             if fluent.type.is_int_type():
                 new_user_type = tm.UserType('Number')
-                n0 = tm.Object('n0', new_user_type)
+                n0 = model.Object('n0', new_user_type)
                 new_problem.add_object(n0)
                 print("new user types:", new_problem.user_types)
 
