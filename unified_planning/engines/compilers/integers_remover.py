@@ -16,6 +16,9 @@
 
 
 from itertools import product
+
+from unified_planning.model.operators import OperatorKind
+
 import unified_planning as up
 import unified_planning.engines as engines
 from unified_planning import model
@@ -129,6 +132,20 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
     ) -> ProblemKind:
         return problem_kind.clone()
 
+    def _get_new_fnode(
+        self,
+        new_problem: "up.model.AbstractProblem",
+        node: "up.model.fnode.FNode",
+    ) -> up.model.fnode.FNode:
+        env = new_problem.environment
+        em = env.expression_manager
+        if node.is_int_constant():
+            print("int: ", node.int_constant_value())
+            new_number = model.Object('n'+str(node.int_constant_value()), _UserType('Number'))
+            return em.create_node(OperatorKind.OBJECT_EXP, new_number)
+        else:
+            return node
+
     def _compile(
         self,
         problem: "up.model.AbstractProblem",
@@ -195,15 +212,13 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                             f"Initial value not set for fluent: {fluent()}"
                         )
                     elif iv != default_value:
-                        new_problem.set_initial_value(fluent(), iv)
+                        new_initial_value = model.Object('n' + str(iv), number_user_type)
+                        new_problem.set_initial_value(fluent(), new_initial_value)
 
-                print("INITIAL VALUES: ",new_problem.initial_values)
+                print("INITIAL VALUES: ", new_problem.initial_values)
 
             else:
                 new_problem.add_fluent(fluent, default_initial_value=default_value)
-                # no se si es guarda be l'initial value
-                # aixo de signature..
-                # en l'initial value (si no n'hi ha) es mostra el default!
                 iv = problem.initial_value(fluent(fluent.signature))
                 if iv is None:
                     raise UPProblemDefinitionError(
@@ -221,30 +236,11 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
             new_action.clear_effects()
 
             for precondition in action.preconditions:
-                new_preconditions = self._get_new_fnodes(new_problem, precondition)
-                for np in new_preconditions:
-                    # si una precondicio es falsa -> accio mai passara -> no afegir accio
-                    new_action.add_precondition(np)
-            try:
-                for effect in action.effects:
-                    new_fnode = self._get_new_fnodes(new_problem, effect.fluent)
-                    new_value = self._get_new_fnodes(new_problem, effect.value)
-                    new_condition = self._get_new_fnodes(new_problem, effect.condition)
-                    if effect.is_increase():
-                        new_action.add_increase_effect(new_fnode, new_value, new_condition, effect.forall)
-                    elif effect.is_decrease():
-                        new_action.add_decrease_effect(new_fnode, new_value, new_condition, effect.forall)
-                    else:
-                        new_action.add_effect(new_fnode, new_value, new_condition, effect.forall)
-            except Exception:
-                print(f"Action {action.name} eliminated due to an access to a fluent out of range in the effects.")
-                continue
-            else:
-                new_problem.add_action(new_action)
-                new_to_old[new_action] = action
+                new_preconditions = self._get_new_fnode(new_problem, precondition)
+                print("new preconditions: ", new_preconditions)
 
         for g in problem.goals:
-            new_goals = self._get_new_fnodes(new_problem, g)
+            new_goals = self._get_new_fnode(new_problem, g)
             for ng in new_goals:
                 new_problem.add_goal(ng)
         return CompilerResult(
