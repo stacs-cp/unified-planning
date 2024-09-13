@@ -139,18 +139,18 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
     ) -> up.model.fnode.FNode:
         env = new_problem.environment
         em = env.expression_manager
+        print("args of node: ", node.args)
         if node.is_int_constant():
             print("int: ", node.int_constant_value())
             new_number = model.Object('n'+str(node.int_constant_value()), _UserType('Number'))
             return em.create_node(OperatorKind.OBJECT_EXP, new_number)
+        elif node.is_parameter_exp() or node.is_constant() or node.is_fluent_exp() or node.is_variable_exp() or node.is_object_exp():
+            return node
         else:
             new_args = []
             for arg in node.args:
                 new_args.append(self._get_new_fnode(new_problem, arg))
-            if None in new_args:
-                return None
-            else:
-                return em.create_node(node.node_type, tuple(new_args))
+            return em.create_node(node.node_type, tuple(new_args))
 
     def _compile(
         self,
