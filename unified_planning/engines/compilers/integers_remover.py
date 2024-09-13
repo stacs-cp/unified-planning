@@ -146,6 +146,9 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
         new_problem.clear_actions()
         new_problem.clear_goals()
         new_problem.initial_values.clear()
+        env = new_problem.environment
+        em = env.expression_manager
+        tm = env.type_manager
         assert self.mode == 'strict' or self.mode == 'permissive'
         # canviar fluents
         for fluent in problem.fluents:
@@ -158,11 +161,11 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
             print("old user types:", problem.user_types)
             if fluent.type.is_int_type():
                 new_user_type = _UserType('Number')
-                n0 = model.Object('n0', new_user_type)
+                n0 = tm.Object('n0', new_user_type)
                 new_problem.add_object(n0)
                 print("new user types:", new_problem.user_types)
 
-                new_fluent = model.Fluent(fluent.name, new_user_type, fluent.signature)
+                new_fluent = model.Fluent(fluent.name, new_user_type, fluent.signature, env)
                 print("new user types:", new_problem.user_types)
                 if default_value is not None:
                     new_default_value = model.Object('n'+str(default_value), _UserType('Number'))
