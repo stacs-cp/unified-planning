@@ -153,6 +153,7 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
             print("fluent: ", fluent)
             print("default_value: ", default_value)
             print("env ", fluent.environment)
+            print("sign ", fluent.signature)
             if fluent.type.is_int_type():
                 new_fluent = model.Fluent(fluent.name, _UserType('Number'), fluent.signature)
                 if default_value is not None:
