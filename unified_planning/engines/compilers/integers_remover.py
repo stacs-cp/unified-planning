@@ -158,15 +158,13 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
 
             print("old user types:", problem.user_types)
             if fluent.type.is_int_type():
-                new_user_type = tm.UserType('Number')
-                #n0 = model.Object('n0', new_user_type)
-                #new_problem.add_object(n0)
-                #print("new user types:", new_problem.user_types)
-                new_fluent = model.Fluent(fluent.name, new_user_type, fluent.signature, env)
+                number_user_type = tm.UserType('Number')
+                new_fluent = model.Fluent(fluent.name, number_user_type, fluent.signature, env)
                 print("new fluent: ", new_fluent)
                 print("new user types: ", new_problem.user_types)
                 if default_value is not None:
                     new_default_value = model.Object('n'+str(default_value), _UserType('Number'))
+                    # afegir objecte si no hi es
                     print(new_default_value)
                 else:
                     new_default_value = None
@@ -187,7 +185,9 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                                 f"Initial value not set for fluent: {fluent(*fp)}"
                             )
                         elif iv != default_value:
-                            new_problem.set_initial_value(fluent(*fp), iv)
+                            new_initial_value = model.Object('n' + str(iv), number_user_type)
+                            # afegir objecte si no hi es
+                            new_problem.set_initial_value(fluent(*fp), new_initial_value)
                 else:
                     iv = problem.initial_value(fluent())
                     if iv is None:
@@ -212,40 +212,6 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                 elif iv != default_value:
                     new_problem.set_initial_value(fluent(fluent.signature), iv)
 
-
-            #
-
-
-            if problem.fluents_defaults.get(fluent):
-                default_value = problem.fluents_defaults.get(fluent)
-            else:
-                # si no hi ha vol dir que tots els possibles valors (amb parametres) hauran d'estar inicialitzats
-                default_value = None
-            objects = []
-            for s in fluent.signature:
-                objects.append(problem.objects(s.type))
-            fluent_parameters = list(product(*objects))
-            if fluent_parameters == [()]:
-                fluent_parameters = []
-
-            new_problem.add_fluent(fluent, default_initial_value=default_value)
-            if fluent_parameters:
-                for fp in fluent_parameters:
-                    iv = problem.initial_value(fluent(*fp))
-                    if iv is None:
-                        raise UPProblemDefinitionError(
-                            f"Initial value not set for fluent: {fluent(*fp)}"
-                        )
-                    elif iv != default_value:
-                        new_problem.set_initial_value(fluent(*fp), iv)
-            else:
-                iv = problem.initial_value(fluent())
-                if iv is None:
-                    raise UPProblemDefinitionError(
-                        f"Initial value not set for fluent: {fluent()}"
-                    )
-                elif iv != default_value:
-                    new_problem.set_initial_value(fluent(), iv)
 
         # canviar numeros en precondicions i efectes d'accions
         for action in problem.actions:
