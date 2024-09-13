@@ -145,6 +145,7 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
             print("int: ", node.int_constant_value())
             number_user_type = tm.UserType('Number')
             new_number = model.Object('n'+str(node.int_constant_value()), number_user_type)
+            print("new_number: ", new_number, new_number.type)
             return em.create_node(OperatorKind.OBJECT_EXP, new_number)
         elif node.is_parameter_exp() or node.is_constant() or node.is_fluent_exp() or node.is_variable_exp() or node.is_object_exp():
             return node
@@ -152,6 +153,7 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
             new_args = []
             for arg in node.args:
                 new_args.append(self._get_new_fnode(new_problem, arg))
+            print("new args: ", new_args)
             return em.create_node(node.node_type, tuple(new_args))
 
     def _compile(
