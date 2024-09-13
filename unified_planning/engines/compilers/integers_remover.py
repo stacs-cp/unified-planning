@@ -155,18 +155,16 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
             default_value = problem.fluents_defaults.get(fluent)
             print("fluent: ", fluent)
             print("default_value: ", default_value)
-            print("env ", fluent.environment)
-            print("sign ", fluent.signature)
 
             print("old user types:", problem.user_types)
             if fluent.type.is_int_type():
                 new_user_type = tm.UserType('Number')
-                n0 = model.Object('n0', new_user_type)
-                new_problem.add_object(n0)
-                print("new user types:", new_problem.user_types)
-
+                #n0 = model.Object('n0', new_user_type)
+                #new_problem.add_object(n0)
+                #print("new user types:", new_problem.user_types)
                 new_fluent = model.Fluent(fluent.name, new_user_type, fluent.signature, env)
-                print("new user types:", new_problem.user_types)
+                print("new fluent: ", new_fluent)
+                print("new user types: ", new_problem.user_types)
                 if default_value is not None:
                     new_default_value = model.Object('n'+str(default_value), _UserType('Number'))
                     print(new_default_value)
@@ -174,14 +172,32 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                     new_default_value = None
                 new_problem.add_fluent(new_fluent, default_initial_value=new_default_value)
                 # aixo de signature crec que no anira be
-                iv = problem.initial_value(fluent(fluent.signature))
-                if iv is None:
-                    raise UPProblemDefinitionError(
-                        f"Initial value not set for fluent: {fluent(fluent.signature)}"
-                    )
-                elif iv != default_value:
-                    new_initial_value = model.Object('n'+str(iv), _UserType('Number'))
-                    new_problem.set_initial_value(fluent(fluent.signature), new_initial_value)
+                objects = []
+                for s in fluent.signature:
+                    objects.append(problem.objects(s.type))
+                fluent_parameters = list(product(*objects))
+                if fluent_parameters == [()]:
+                    fluent_parameters = []
+
+                if fluent_parameters:
+                    for fp in fluent_parameters:
+                        iv = problem.initial_value(fluent(*fp))
+                        if iv is None:
+                            raise UPProblemDefinitionError(
+                                f"Initial value not set for fluent: {fluent(*fp)}"
+                            )
+                        elif iv != default_value:
+                            new_problem.set_initial_value(fluent(*fp), iv)
+                else:
+                    iv = problem.initial_value(fluent())
+                    if iv is None:
+                        raise UPProblemDefinitionError(
+                            f"Initial value not set for fluent: {fluent()}"
+                        )
+                    elif iv != default_value:
+                        new_problem.set_initial_value(fluent(), iv)
+
+                print("INITIAL VALUES: ",new_problem.initial_values)
 
             else:
                 new_problem.add_fluent(fluent, default_initial_value=default_value)
