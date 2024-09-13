@@ -144,7 +144,10 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
             new_number = model.Object('n'+str(node.int_constant_value()), _UserType('Number'))
             return em.create_node(OperatorKind.OBJECT_EXP, new_number)
         else:
-            return node
+            new_args = []
+            for arg in node.args:
+                new_args.append(self._get_new_fnode(new_problem, arg))
+            return em.create_node(node.node_type, tuple(new_args))
 
     def _compile(
         self,
