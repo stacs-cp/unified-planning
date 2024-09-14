@@ -35,7 +35,7 @@ from unified_planning.engines.compilers.utils import (
     get_fresh_name,
     replace_action,
 )
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, OrderedDict
 from functools import partial
 from unified_planning.model.types import _UserType
 from unified_planning.shortcuts import Int, FALSE
@@ -151,6 +151,12 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
             print("accedint a new fluent.. ", node.fluent().name, *node.fluent().signature)
             return new_problem.fluent(node.fluent().name)(*node.fluent().signature)
         elif node.args == ():
+            #if node.node_type == OperatorKind.PLUS:
+            #elif node.node_type == OperatorKind.MINUS:
+            #elif node.node_type == OperatorKind.DIV:
+            #elif node.node_type == OperatorKind.LE:
+            #elif node.node_type == OperatorKind.LT:
+            #elif node.node_type == OperatorKind.:
             return node
         else:
             new_args = []
@@ -182,7 +188,9 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
         em = env.expression_manager
         tm = env.type_manager
         assert self.mode == 'strict' or self.mode == 'permissive'
-        # canviar fluents
+        # rang dels objectes enters
+        ub = 0
+        number_ut = tm.UserType('Number')
         for fluent in problem.fluents:
             default_value = problem.fluents_defaults.get(fluent)
             print("fluent: ", fluent)
@@ -190,12 +198,22 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
 
             print("old user types:", problem.user_types)
             if fluent.type.is_int_type():
-                number_user_type = tm.UserType('Number')
-                new_fluent = model.Fluent(fluent.name, number_user_type, fluent.signature, env)
+                print(fluent.type.upper_bound)
+                if fluent.type.upper_bound > ub:
+                    for i in range(0, fluent.type.upper_bound):
+                        print(i)
+                        for j in range(ub+1, fluent.type.upper_bound):
+                            new_number = model.Object('n' + str(j), number_ut)
+                            existing_number = new_problem.object(i)
+                            # gt(existing_number, new_number)
+
+                        ub = fluent.type.upper_bound
+
+                new_fluent = model.Fluent(fluent.name, number_ut, fluent.signature, env)
                 print("new fluent: ", new_fluent)
                 print("new user types: ", new_problem.user_types)
                 if default_value is not None:
-                    new_default_value = model.Object('n'+str(default_value), number_user_type)
+                    new_default_value = model.Object('n'+str(default_value), number_ut)
                     # afegir objecte si no hi es
                     print(new_default_value)
                 else:
@@ -217,7 +235,7 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                                 f"Initial value not set for fluent: {fluent(*fp)}"
                             )
                         elif iv != default_value:
-                            new_initial_value = model.Object('n' + str(iv), number_user_type)
+                            new_initial_value = model.Object('n' + str(iv), number_ut)
                             # afegir objecte si no hi es
                             new_problem.set_initial_value(new_fluent(*fp), new_initial_value)
                 else:
@@ -227,10 +245,16 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                             f"Initial value not set for fluent: {fluent()}"
                         )
                     elif iv != default_value:
-                        new_initial_value = model.Object('n' + str(iv), number_user_type)
+                        new_initial_value = model.Object('n' + str(iv), number_ut)
                         new_problem.set_initial_value(new_fluent(), new_initial_value)
 
                 print("INITIAL VALUES: ", new_problem.initial_values)
+                params = OrderedDict()
+                params['n1'] = number_ut
+                params['n2'] = number_ut
+                print(params)
+                lt = model.Fluent('lt', _signature=params, environment=env)
+
 
             else:
                 new_problem.add_fluent(fluent, default_initial_value=default_value)
