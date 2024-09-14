@@ -201,7 +201,6 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                 else:
                     new_default_value = None
                 new_problem.add_fluent(new_fluent, default_initial_value=new_default_value)
-                new_problem.fluent()
                 # aixo de signature crec que no anira be
                 objects = []
                 for s in fluent.signature:
