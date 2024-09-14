@@ -147,6 +147,9 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
             new_number = model.Object('n'+str(node.int_constant_value()), number_user_type)
             print("new_number: ", new_number, new_number.type)
             return em.ObjectExp(new_number)
+        elif node.is_fluent_exp() and node.fluent().type.is_int_type():
+            print("accedint a new fluent.. ", node.fluent().name, *node.fluent().signature)
+            return new_problem.fluent(node.fluent().name)(*node.fluent().signature)
         elif node.args == ():
             return node
         else:
@@ -198,6 +201,7 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                 else:
                     new_default_value = None
                 new_problem.add_fluent(new_fluent, default_initial_value=new_default_value)
+                new_problem.fluent()
                 # aixo de signature crec que no anira be
                 objects = []
                 for s in fluent.signature:
