@@ -155,7 +155,7 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                 new = self._get_new_fnode(new_problem, arg)
                 print(new.type)
                 new_args.append(new)
-            print("new args: ", new_args)
+                print("new_args: ", new, new.type)
             return em.create_node(node.node_type, tuple(new_args))
 
     def _compile(
