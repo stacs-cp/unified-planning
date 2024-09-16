@@ -150,8 +150,10 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
         elif node.is_fluent_exp() and node.fluent().type.is_int_type():
             print("accedint a new fluent.. ", node.fluent().name, *node.fluent().signature)
             return new_problem.fluent(node.fluent().name)(*node.fluent().signature)
-        elif node.args == ():
+        elif node.args != ():
+            print("entra")
             if node.node_type == OperatorKind.PLUS:
+                print("es plus")
                 return new_problem.fluent('plus')(node.args)
             # elif node.node_type == OperatorKind.MINUS:
             # elif node.node_type == OperatorKind.DIV:
