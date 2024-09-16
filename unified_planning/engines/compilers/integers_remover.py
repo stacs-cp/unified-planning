@@ -34,7 +34,7 @@ from unified_planning.engines.compilers.utils import (
     get_fresh_name,
     replace_action,
 )
-from typing import Dict, List, Optional, OrderedDict
+from typing import Dict, List, Optional, OrderedDict, Union
 from functools import partial
 from unified_planning.model.types import _UserType
 from unified_planning.shortcuts import Int, FALSE
@@ -171,22 +171,24 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
             self,
             new_problem: "up.model.AbstractProblem",
             lower_bound: int,
-            mid_bound: int,
+            mid_low_bound: Union[int, None],
+            mid_up_bound: Union[int, None],
             upper_bound: int,
     ):
         eq = new_problem.fluent("eq")
         lt = new_problem.fluent("lt")
         for i in range(lower_bound, upper_bound + 1):
-            for j in range(i, upper_bound + 1):
-                if (0 < mid_bound <= j) or mid_bound == 0:
-                    if i == j:
-                        new_problem.set_initial_value(
-                            eq(new_problem.object('n' + str(i)), new_problem.object('n' + str(j))), True
-                        )
-                    if i < j:
-                        new_problem.set_initial_value(
-                            lt(new_problem.object('n' + str(i)), new_problem.object('n' + str(j))), True
-                        )
+            if mid_low_bound is None or i < mid_low_bound:
+                for j in range(i, upper_bound + 1):
+                    if mid_up_bound is None or j >= mid_up_bound:
+                        if i == j:
+                            new_problem.set_initial_value(
+                                eq(new_problem.object('n' + str(i)), new_problem.object('n' + str(j))), True
+                            )
+                        if i < j:
+                            new_problem.set_initial_value(
+                                lt(new_problem.object('n' + str(i)), new_problem.object('n' + str(j))), True
+                            )
 
     def _compile(
             self,
@@ -227,6 +229,7 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                 # crear nou fluent objecte
                 tlb = fluent.type.lower_bound
                 tub = fluent.type.upper_bound
+                print("this int: ", tlb, tub)
                 new_fluent = model.Fluent(fluent.name, ut_number, fluent.signature, env)
                 print("new fluent: ", new_fluent)
 
@@ -235,7 +238,7 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                     for i in range(tlb, tub + 1):
                         new_number = model.Object('n' + str(i), ut_number)
                         new_problem.add_object(new_number)
-                    self._add_relationships(new_problem, tlb, 0, tub)
+                    self._add_relationships(new_problem, tlb, None, None, tub)
                     ub = tub
                     lb = tlb
                 # si aquest fluent te rang amb numeros superiors a l'anterior, afegir-los
@@ -245,7 +248,7 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                         for i in range(ub + 1, tub + 1):
                             new_number = model.Object('n' + str(i), ut_number)
                             new_problem.add_object(new_number)
-                        self._add_relationships(new_problem, lb, ub+1, tub)
+                        self._add_relationships(new_problem, lb, None, ub+1, tub)
                         ub = tub
                     if tlb < lb:
                         # FALTA AQUESTES RELACIONS
@@ -253,6 +256,7 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                             print(i)
                             new_number = model.Object('n' + str(i), ut_number)
                             new_problem.add_object(new_number)
+                        self._add_relationships(new_problem, tlb, lb, None, tub)
                         lb = tlb
 
                 # default value
