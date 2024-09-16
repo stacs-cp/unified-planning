@@ -243,7 +243,8 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                 params = OrderedDict()
                 params['n1'] = ut_number
                 params['n2'] = ut_number
-                # LT
+
+                # new fluents
                 lt = model.Fluent('lt', _signature=params, environment=env)
                 eq = model.Fluent('eq', _signature=params, environment=env)
                 new_problem.add_fluent(lt, default_initial_value=False)
@@ -252,11 +253,11 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                 print("eq: ", eq)
 
                 for i in range(tlb, tub+1):
-                    for j in (i, tub+1):
-                        print(i,j)
+                    for j in range(i, tub+1):
+                        print(i, j)
                         if i == j:
                             new_problem.set_initial_value(
-                                eq(new_problem.object('n'+str(i)), new_problem.object('n'+str(j))), True
+                                eq(new_problem.object('n' + str(i)), new_problem.object('n' + str(j))), True
                             )
                         if i < j:
                             new_problem.set_initial_value(
