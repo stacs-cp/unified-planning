@@ -240,6 +240,7 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                     lb = tlb
                 # si aquest fluent te rang amb numeros superiors a l'anterior, afegir-los
                 elif tub > ub or tlb < lb:
+                    print("hey")
                     if tub > ub:
                         for i in range(ub + 1, tub + 1):
                             new_number = model.Object('n' + str(i), ut_number)
