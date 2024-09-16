@@ -185,39 +185,30 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
         new_problem.clear_goals()
         new_problem.initial_values.clear()
         env = new_problem.environment
-        em = env.expression_manager
         tm = env.type_manager
         assert self.mode == 'strict' or self.mode == 'permissive'
-        # rang dels objectes enters !
-        ub = 0
+
         ut_number = tm.UserType('Number')
         for fluent in problem.fluents:
             default_value = problem.fluents_defaults.get(fluent)
-            print("fluent: ", fluent)
-            print("default_value: ", default_value)
-            print("old user types:", problem.user_types)
             # si el fluent es integer
             if fluent.type.is_int_type():
                 # crear nou fluent objecte
+                tlb = fluent.type.lower_bound
+                tub = fluent.type.upper_bound
                 new_fluent = model.Fluent(fluent.name, ut_number, fluent.signature, env)
                 print("new fluent: ", new_fluent)
-                print("new user types: ", new_problem.user_types)
-
                 # crear objectes del rang
-                print(fluent.type.upper_bound)
-                print(fluent.type.lower_bound)
-                for i in range(fluent.type.lower_bound, fluent.type.upper_bound):
+                for i in range(tlb, tub+1):
                     print(i)
                     new_number = model.Object('n' + str(i), ut_number)
                     new_problem.add_object(new_number)
 
                 # default value
                 if default_value is not None:
-                    new_default_value = new_problem.object('n'+str(default_value))
-                    print("ndv: ",new_default_value)
+                    new_problem.add_fluent(new_fluent, default_initial_value=new_problem.object('n'+str(default_value)))
                 else:
-                    new_default_value = None
-                new_problem.add_fluent(new_fluent, default_initial_value=new_default_value)
+                    new_problem.add_fluent(new_fluent)
 
                 # initial value
                 objects = []
@@ -248,27 +239,29 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                         new_initial_value = model.Object('n' + str(iv), ut_number)
                         new_problem.set_initial_value(new_fluent(), new_initial_value)
 
-                print("INITIAL VALUES: ", new_problem.initial_values)
-
-                # rang enters
-                print("objects: ", new_problem.all_objects)
-                if fluent.type.upper_bound > ub:
-                    for i in range(0, fluent.type.upper_bound):
-                        print(i)
-                        for j in range(ub+1, fluent.type.upper_bound):
-                            new_number = model.Object('n' + str(j), ut_number)
-                            new_problem.add_object(new_number)
-                            existing_number = new_problem.object('n'+str(i))
-                            # gt(existing_number, new_number)
-
-                        ub = fluent.type.upper_bound
-
+                # crear relacions entre objectes
                 params = OrderedDict()
                 params['n1'] = ut_number
                 params['n2'] = ut_number
-                print(params)
+                # LT
                 lt = model.Fluent('lt', _signature=params, environment=env)
+                eq = model.Fluent('eq', _signature=params, environment=env)
+                new_problem.add_fluent(lt, default_initial_value=False)
+                new_problem.add_fluent(eq, default_initial_value=False)
+                print("lt: ", lt)
+                print("eq: ", eq)
 
+                for i in range(tlb, tub+1):
+                    for j in (i, tub+1):
+                        print(i,j)
+                        if i == j:
+                            new_problem.set_initial_value(
+                                eq(new_problem.object('n'+str(i)), new_problem.object('n'+str(j))), True
+                            )
+                        if i < j:
+                            new_problem.set_initial_value(
+                                lt(new_problem.object('n' + str(i)), new_problem.object('n' + str(j))), True
+                            )
 
             else:
                 new_problem.add_fluent(fluent, default_initial_value=default_value)
@@ -280,6 +273,7 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                 elif iv != default_value:
                     new_problem.set_initial_value(fluent(fluent.signature), iv)
 
+        print("INITIAL VALUES: ", new_problem.initial_values)
 
         # canviar numeros en precondicions i efectes d'accions
         for action in problem.actions:
