@@ -152,14 +152,7 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
             return new_problem.fluent(node.fluent().name)(*node.fluent().signature)
         elif node.args != ():
             print("entra")
-            if node.node_type == OperatorKind.PLUS:
-                print("es plus")
-                return new_problem.fluent('plus')(node.args)
-            # elif node.node_type == OperatorKind.MINUS:
-            # elif node.node_type == OperatorKind.DIV:
-            # elif node.node_type == OperatorKind.LE:
-            # elif node.node_type == OperatorKind.LT:
-            # elif node.node_type == OperatorKind.:
+
             return node
         else:
             new_args = []
@@ -168,7 +161,16 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                 print(new.type)
                 new_args.append(new)
                 print("new_args: ", new, new.type)
-            return em.create_node(node.node_type, tuple(new_args))
+            if node.node_type == OperatorKind.PLUS:
+                print("es plus")
+                return new_problem.fluent('plus')(new_args)
+            # elif node.node_type == OperatorKind.MINUS:
+            # elif node.node_type == OperatorKind.DIV:
+            # elif node.node_type == OperatorKind.LE:
+            # elif node.node_type == OperatorKind.LT:
+            # elif node.node_type == OperatorKind.:
+            else:
+                return em.create_node(node.node_type, tuple(new_args))
 
     def _add_object_numbers(
             self,
