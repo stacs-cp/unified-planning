@@ -268,14 +268,13 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                     new_problem.add_fluent(new_fluent)
 
                 # initial value
-                objects = []
-                for s in fluent.signature:
-                    objects.append(problem.objects(s.type))
-                fluent_parameters = list(product(*objects))
-                if fluent_parameters == [()]:
-                    fluent_parameters = []
 
-                if fluent_parameters:
+                print("signa: ", fluent.signature)
+                if fluent.signature:
+                    objects = []
+                    for s in fluent.signature:
+                        objects.append(problem.objects(s.type))
+                    fluent_parameters = list(product(*objects))
                     for fp in fluent_parameters:
                         iv = problem.initial_value(fluent(*fp))
                         if iv is None:
