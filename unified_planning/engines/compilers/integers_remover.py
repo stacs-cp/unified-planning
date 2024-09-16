@@ -161,12 +161,13 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                 print("new_args: ", new, new.type)
             if node.node_type == OperatorKind.PLUS:
                 print("es plus")
-                return new_problem.fluent('plus')(new_args)
+                print(new_args)
+                return new_problem.fluent('plus')(*new_args)
             # elif node.node_type == OperatorKind.MINUS:
             # elif node.node_type == OperatorKind.DIV:
             # elif node.node_type == OperatorKind.LE:
             # elif node.node_type == OperatorKind.LT:
-            # elif node.node_type == OperatorKind.:
+            # elif node.node_type == OperatorKind.TIMES:
             else:
                 return em.create_node(node.node_type, tuple(new_args))
 
