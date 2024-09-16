@@ -241,8 +241,8 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
         params['n2'] = ut_number
         lt = model.Fluent('lt', _signature=params, environment=env)
         eq = model.Fluent('eq', _signature=params, environment=env)
-        plus = model.Fluent('plus', tm.IntType(), _signature=params, environment=env)
-        minus = model.Fluent('minus', tm.IntType(), _signature=params, environment=env)
+        plus = model.Fluent('plus', ut_number, _signature=params, environment=env)
+        minus = model.Fluent('minus', ut_number, _signature=params, environment=env)
         new_problem.add_fluent(lt, default_initial_value=False)
         new_problem.add_fluent(eq, default_initial_value=False)
         new_problem.add_fluent(plus)
@@ -343,8 +343,10 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                 new_fnode = self._get_new_fnode(new_problem, effect.fluent)
                 new_value = self._get_new_fnode(new_problem, effect.value)
                 new_condition = self._get_new_fnode(new_problem, effect.condition)
+                # OJU
                 if effect.is_increase():
                     new_action.add_increase_effect(new_fnode, new_value, new_condition, effect.forall)
+                # OJU
                 elif effect.is_decrease():
                     new_action.add_decrease_effect(new_fnode, new_value, new_condition, effect.forall)
                 else:
