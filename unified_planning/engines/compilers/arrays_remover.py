@@ -246,9 +246,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
         new_problem.clear_goals()
         new_problem.initial_values.clear()
         assert self.mode == 'strict' or self.mode == 'permissive'
-        print("FLUENTS:", problem.fluents)
         for fluent in problem.fluents:
-            print("fluent: ",fluent, fluent.type)
             # guardar el default_initial_value
             if problem.fluents_defaults.get(fluent):
                 default_value = problem.fluents_defaults.get(fluent)
@@ -263,19 +261,16 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                 fluent_parameters = []
 
             if fluent.type.is_array_type():
-                print("es array")
                 this_fluent = fluent.type
                 new_type = this_fluent.elements_type
                 domain = []
                 while this_fluent.is_array_type():
-                    print("while")
                     domain_in = []
                     for i in range(0, this_fluent.size):
                         domain_in.append(i)
                     domain.append(domain_in)
                     new_type = this_fluent.elements_type
                     this_fluent = this_fluent.elements_type
-                print("combinations: ", list(product(*domain)))
                 for combination in list(product(*domain)):
                     new_fluent_name = get_fresh_name(new_problem, fluent.name, list(map(str, combination)))
                     new_fluent = model.Fluent(new_fluent_name, new_type, fluent.signature, fluent.environment)
@@ -283,7 +278,6 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                     if new_default_value is not None:
                         for i in combination:
                             new_default_value = new_default_value.constant_value()[i]
-                    print("adding new fluent... ", new_fluent)
                     new_problem.add_fluent(new_fluent, default_initial_value=new_default_value)
 
                     # obtenir el nom del fluent creat quan accedir []
