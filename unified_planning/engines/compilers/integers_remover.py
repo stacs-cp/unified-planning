@@ -151,7 +151,8 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
             print("accedint a new fluent.. ", node.fluent().name, *node.fluent().signature)
             return new_problem.fluent(node.fluent().name)(*node.fluent().signature)
         elif node.args == ():
-            # if node.node_type == OperatorKind.PLUS:
+            if node.node_type == OperatorKind.PLUS:
+                return new_problem.fluent('plus')(node.args)
             # elif node.node_type == OperatorKind.MINUS:
             # elif node.node_type == OperatorKind.DIV:
             # elif node.node_type == OperatorKind.LE:
@@ -195,22 +196,25 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                     if mid_up_bound is None or j >= mid_up_bound:
                         ni = new_problem.object('n' + str(i))
                         nj = new_problem.object('n' + str(j))
+                        # Equals
                         if i == j:
                             new_problem.set_initial_value(eq(ni, nj), True)
+                        # Less Than
                         if i < j:
                             new_problem.set_initial_value(lt(ni, nj), True)
+                        # Plus
                         try:
                             plus_i_j = new_problem.object('n' + str(i+j))
                             if plus_i_j:
                                 new_problem.set_initial_value(plus(ni, nj), plus_i_j)
                         except UPValueError:
-                            print("Access to an integer out of range")
+                            pass
                         try:
                             minus_i_j = new_problem.object('n' + str(i-j))
                             if minus_i_j:
                                 new_problem.set_initial_value(minus(ni, nj), minus_i_j)
                         except UPValueError:
-                            print("Access to an integer out of range")
+                            pass
 
     def _compile(
             self,
