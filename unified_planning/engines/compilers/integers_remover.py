@@ -322,7 +322,7 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
 
             for precondition in action.preconditions:
                 new_precondition = self._get_new_fnode(new_problem, precondition)
-                new_action.add_preconditions(new_precondition)
+                new_action.add_precondition(new_precondition)
             for effect in action.effects:
                 new_fnode = self._get_new_fnode(new_problem, effect.fluent)
                 new_value = self._get_new_fnode(new_problem, effect.value)
