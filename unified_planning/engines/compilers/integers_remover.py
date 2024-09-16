@@ -167,6 +167,26 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                 print("new_args: ", new, new.type)
             return em.create_node(node.node_type, tuple(new_args))
 
+    def _add_relationships(
+        self,
+        new_problem: "up.model.AbstractProblem",
+        lower_bound: int,
+        upper_bound: int,
+    ):
+        eq = new_problem.fluent("eq")
+        lt = new_problem.fluent("lt")
+        for i in range(lower_bound, upper_bound + 1):
+            for j in range(i, upper_bound + 1):
+                print(i, j)
+                if i == j:
+                    new_problem.set_initial_value(
+                        eq(new_problem.object('n' + str(i)), new_problem.object('n' + str(j))), True
+                    )
+                if i < j:
+                    new_problem.set_initial_value(
+                        lt(new_problem.object('n' + str(i)), new_problem.object('n' + str(j))), True
+                    )
+
     def _compile(
         self,
         problem: "up.model.AbstractProblem",
@@ -187,8 +207,18 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
         env = new_problem.environment
         tm = env.type_manager
         assert self.mode == 'strict' or self.mode == 'permissive'
-
+        lb = None
+        ub = None
         ut_number = tm.UserType('Number')
+        # Relationships between objects
+        params = OrderedDict()
+        params['n1'] = ut_number
+        params['n2'] = ut_number
+        lt = model.Fluent('lt', _signature=params, environment=env)
+        eq = model.Fluent('eq', _signature=params, environment=env)
+        new_problem.add_fluent(lt, default_initial_value=False)
+        new_problem.add_fluent(eq, default_initial_value=False)
+
         for fluent in problem.fluents:
             default_value = problem.fluents_defaults.get(fluent)
             # si el fluent es integer
@@ -198,11 +228,33 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                 tub = fluent.type.upper_bound
                 new_fluent = model.Fluent(fluent.name, ut_number, fluent.signature, env)
                 print("new fluent: ", new_fluent)
-                # crear objectes del rang
-                for i in range(tlb, tub+1):
-                    print(i)
-                    new_number = model.Object('n' + str(i), ut_number)
-                    new_problem.add_object(new_number)
+
+                # First integer fluent! - control of ranges
+                if lb is None and ub is None:
+                    for i in range(tlb, tub+1):
+                        print(i)
+                        new_number = model.Object('n' + str(i), ut_number)
+                        new_problem.add_object(new_number)
+                    self._add_relationships(new_problem, tlb, tub)
+                    ub = tub
+                    lb = tlb
+                # si aquest fluent te rang amb numeros superiors a l'anterior, afegir-los
+                elif tub > ub or tlb < lb:
+                    if tub > ub:
+                        for i in range(ub+1, tub + 1):
+                            print(i)
+                            new_number = model.Object('n' + str(i), ut_number)
+                            new_problem.add_object(new_number)
+                        self._add_relationships(new_problem, lb, tub)
+                        ub = tub
+                    if tlb < lb:
+                        # FALTA AQUESTES RELACIONS
+                        for i in range(tlb, lb):
+                            print(i)
+                            new_number = model.Object('n' + str(i), ut_number)
+                            new_problem.add_object(new_number)
+                        lb = tlb
+
 
                 # default value
                 if default_value is not None:
@@ -238,31 +290,6 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                     elif iv != default_value:
                         new_initial_value = model.Object('n' + str(iv), ut_number)
                         new_problem.set_initial_value(new_fluent(), new_initial_value)
-
-                # crear relacions entre objectes
-                params = OrderedDict()
-                params['n1'] = ut_number
-                params['n2'] = ut_number
-
-                # new fluents
-                lt = model.Fluent('lt', _signature=params, environment=env)
-                eq = model.Fluent('eq', _signature=params, environment=env)
-                new_problem.add_fluent(lt, default_initial_value=False)
-                new_problem.add_fluent(eq, default_initial_value=False)
-                print("lt: ", lt)
-                print("eq: ", eq)
-
-                for i in range(tlb, tub+1):
-                    for j in range(i, tub+1):
-                        print(i, j)
-                        if i == j:
-                            new_problem.set_initial_value(
-                                eq(new_problem.object('n' + str(i)), new_problem.object('n' + str(j))), True
-                            )
-                        if i < j:
-                            new_problem.set_initial_value(
-                                lt(new_problem.object('n' + str(i)), new_problem.object('n' + str(j))), True
-                            )
 
             else:
                 new_problem.add_fluent(fluent, default_initial_value=default_value)
