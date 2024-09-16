@@ -140,6 +140,7 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
         env = new_problem.environment
         em = env.expression_manager
         tm = env.type_manager
+        print(node, node.args)
         if node.is_int_constant():
             number_user_type = tm.UserType('Number')
             new_number = model.Object('n' + str(node.int_constant_value()), number_user_type)
