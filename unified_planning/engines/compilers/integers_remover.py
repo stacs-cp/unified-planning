@@ -202,11 +202,19 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                 new_fluent = model.Fluent(fluent.name, ut_number, fluent.signature, env)
                 print("new fluent: ", new_fluent)
                 print("new user types: ", new_problem.user_types)
+
+                # crear objectes del rang
+                print(fluent.type.upper_bound)
+                print(fluent.type.lower_bound)
+                for i in range(fluent.type.lower_bound, fluent.type.upper_bound):
+                    print(i)
+                    new_number = model.Object('n' + str(i), ut_number)
+                    new_problem.add_object(new_number)
+
                 # default value
                 if default_value is not None:
-                    new_default_value = model.Object('n' + str(default_value), ut_number)
-                    # afegir objecte si no hi es
-                    print(new_default_value)
+                    new_default_value = new_problem.object('n'+str(default_value))
+                    print("ndv: ",new_default_value)
                 else:
                     new_default_value = None
                 new_problem.add_fluent(new_fluent, default_initial_value=new_default_value)
@@ -243,7 +251,7 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                 print("INITIAL VALUES: ", new_problem.initial_values)
 
                 # rang enters
-                print(fluent.type.upper_bound)
+                print("objects: ", new_problem.all_objects)
                 if fluent.type.upper_bound > ub:
                     for i in range(0, fluent.type.upper_bound):
                         print(i)
