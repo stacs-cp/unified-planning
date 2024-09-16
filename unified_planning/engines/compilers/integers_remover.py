@@ -167,6 +167,16 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                 print("new_args: ", new, new.type)
             return em.create_node(node.node_type, tuple(new_args))
 
+    def _add_object_numbers(
+            self,
+            new_problem: "up.model.AbstractProblem",
+            lower_bound: int,
+            upper_bound: int,
+    ):
+        for i in range(lower_bound, upper_bound):
+            new_number = model.Object('n' + str(i), new_problem.user_type('Number'))
+            new_problem.add_object(new_number)
+
     def _add_relationships(
             self,
             new_problem: "up.model.AbstractProblem",
@@ -235,27 +245,18 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
 
                 # First integer fluent! - control of ranges
                 if lb is None and ub is None:
-                    for i in range(tlb, tub + 1):
-                        new_number = model.Object('n' + str(i), ut_number)
-                        new_problem.add_object(new_number)
+                    self._add_object_numbers(new_problem, tlb, tub + 1)
                     self._add_relationships(new_problem, tlb, None, None, tub)
                     ub = tub
                     lb = tlb
                 # si aquest fluent te rang amb numeros superiors a l'anterior, afegir-los
                 elif tub > ub or tlb < lb:
-                    print("hey")
                     if tub > ub:
-                        for i in range(ub + 1, tub + 1):
-                            new_number = model.Object('n' + str(i), ut_number)
-                            new_problem.add_object(new_number)
+                        self._add_object_numbers(new_problem, ub + 1, tub + 1)
                         self._add_relationships(new_problem, lb, None, ub+1, tub)
                         ub = tub
                     if tlb < lb:
-                        # FALTA AQUESTES RELACIONS
-                        for i in range(tlb, lb):
-                            print(i)
-                            new_number = model.Object('n' + str(i), ut_number)
-                            new_problem.add_object(new_number)
+                        self._add_object_numbers(new_problem, tlb, lb)
                         self._add_relationships(new_problem, tlb, lb, None, tub)
                         lb = tlb
 
