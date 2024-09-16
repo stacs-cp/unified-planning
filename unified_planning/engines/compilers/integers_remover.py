@@ -186,7 +186,6 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
             mid_up_bound: Union[int, None],
             upper_bound: int,
     ):
-        eq = new_problem.fluent("eq")
         lt = new_problem.fluent("lt")
         plus = new_problem.fluent("plus")
         minus = new_problem.fluent("minus")
@@ -198,9 +197,6 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                     if mid_up_bound is None or j >= mid_up_bound:
                         ni = new_problem.object('n' + str(i))
                         nj = new_problem.object('n' + str(j))
-                        # Equals
-                        if i == j:
-                            new_problem.set_initial_value(eq(ni, nj), True)
                         # Less Than
                         if i < j:
                             new_problem.set_initial_value(lt(ni, nj), True)
@@ -282,13 +278,11 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
         params['n1'] = ut_number
         params['n2'] = ut_number
         lt = model.Fluent('lt', _signature=params, environment=env)
-        eq = model.Fluent('eq', _signature=params, environment=env)
         plus = model.Fluent('plus', ut_number, _signature=params, environment=env)
         minus = model.Fluent('minus', ut_number, _signature=params, environment=env)
         div = model.Fluent('div', ut_number, _signature=params, environment=env)
         mult = model.Fluent('mult', ut_number, _signature=params, environment=env)
         new_problem.add_fluent(lt, default_initial_value=False)
-        new_problem.add_fluent(eq, default_initial_value=False)
         new_problem.add_fluents([plus, minus, div, mult])
 
         for fluent in problem.fluents:
