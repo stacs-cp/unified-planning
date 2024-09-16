@@ -23,7 +23,7 @@ import unified_planning.engines as engines
 from unified_planning import model
 from unified_planning.engines.mixins.compiler import CompilationKind, CompilerMixin
 from unified_planning.engines.results import CompilerResult
-from unified_planning.exceptions import UPProblemDefinitionError
+from unified_planning.exceptions import UPProblemDefinitionError, UPValueError
 from unified_planning.model import (
     Problem,
     Action,
@@ -187,18 +187,30 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
     ):
         eq = new_problem.fluent("eq")
         lt = new_problem.fluent("lt")
+        plus = new_problem.fluent("plus")
+        minus = new_problem.fluent("minus")
         for i in range(lower_bound, upper_bound + 1):
             if mid_low_bound is None or i < mid_low_bound:
                 for j in range(i, upper_bound + 1):
                     if mid_up_bound is None or j >= mid_up_bound:
+                        ni = new_problem.object('n' + str(i))
+                        nj = new_problem.object('n' + str(j))
                         if i == j:
-                            new_problem.set_initial_value(
-                                eq(new_problem.object('n' + str(i)), new_problem.object('n' + str(j))), True
-                            )
+                            new_problem.set_initial_value(eq(ni, nj), True)
                         if i < j:
-                            new_problem.set_initial_value(
-                                lt(new_problem.object('n' + str(i)), new_problem.object('n' + str(j))), True
-                            )
+                            new_problem.set_initial_value(lt(ni, nj), True)
+                        try:
+                            plus_i_j = new_problem.object('n' + str(i+j))
+                            if plus_i_j:
+                                new_problem.set_initial_value(plus(ni, nj), plus_i_j)
+                        except UPValueError:
+                            print("Access to an integer out of range")
+                        try:
+                            minus_i_j = new_problem.object('n' + str(i-j))
+                            if minus_i_j:
+                                new_problem.set_initial_value(minus(ni, nj), minus_i_j)
+                        except UPValueError:
+                            print("Access to an integer out of range")
 
     def _compile(
             self,
@@ -229,8 +241,12 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
         params['n2'] = ut_number
         lt = model.Fluent('lt', _signature=params, environment=env)
         eq = model.Fluent('eq', _signature=params, environment=env)
+        plus = model.Fluent('plus', tm.IntType(), _signature=params, environment=env)
+        minus = model.Fluent('minus', tm.IntType(), _signature=params, environment=env)
         new_problem.add_fluent(lt, default_initial_value=False)
         new_problem.add_fluent(eq, default_initial_value=False)
+        new_problem.add_fluent(plus)
+        new_problem.add_fluent(minus)
 
         for fluent in problem.fluents:
             default_value = problem.fluents_defaults.get(fluent)
