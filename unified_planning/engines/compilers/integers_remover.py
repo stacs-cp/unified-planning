@@ -150,9 +150,7 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
         elif node.is_fluent_exp() and node.fluent().type.is_int_type():
             print("accedint a new fluent.. ", node.fluent().name, *node.fluent().signature)
             return new_problem.fluent(node.fluent().name)(*node.fluent().signature)
-        elif node.args != ():
-            print("entra")
-
+        elif node.args == ():
             return node
         else:
             new_args = []
