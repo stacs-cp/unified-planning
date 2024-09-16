@@ -239,10 +239,7 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                 # crear nou fluent objecte
                 tlb = fluent.type.lower_bound
                 tub = fluent.type.upper_bound
-                print("this int: ", tlb, tub)
                 new_fluent = model.Fluent(fluent.name, ut_number, fluent.signature, env)
-                print("new fluent: ", new_fluent)
-
                 # First integer fluent! - control of ranges
                 if lb is None and ub is None:
                     self._add_object_numbers(new_problem, tlb, tub + 1)
@@ -266,7 +263,6 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                                            default_initial_value=new_problem.object('n' + str(default_value)))
                 else:
                     new_problem.add_fluent(new_fluent)
-
                 # Initial values
                 if fluent.signature:
                     objects = []
@@ -292,8 +288,9 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                         new_initial_value = model.Object('n' + str(iv), ut_number)
                         new_problem.set_initial_value(new_fluent(), new_initial_value)
             else:
-                # Default initial values and Initial values
+                # Default initial values
                 new_problem.add_fluent(fluent, default_initial_value=default_value)
+                # Initial values
                 if fluent.signature:
                     objects = []
                     for s in fluent.signature:
@@ -316,9 +313,7 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                     elif iv != default_value:
                         new_problem.set_initial_value(fluent(), iv)
 
-        print("INITIAL VALUES: ", new_problem.initial_values)
-
-        # canviar numeros en precondicions i efectes d'accions
+        # Actions
         for action in problem.actions:
             new_action = action.clone()
             new_action.name = get_fresh_name(new_problem, action.name)
@@ -326,8 +321,20 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
             new_action.clear_effects()
 
             for precondition in action.preconditions:
-                new_preconditions = self._get_new_fnode(new_problem, precondition)
-                print("new preconditions: ", new_preconditions)
+                new_precondition = self._get_new_fnode(new_problem, precondition)
+                new_action.add_preconditions(new_precondition)
+            for effect in action.effects:
+                new_fnode = self._get_new_fnode(new_problem, effect.fluent)
+                new_value = self._get_new_fnode(new_problem, effect.value)
+                new_condition = self._get_new_fnode(new_problem, effect.condition)
+                if effect.is_increase():
+                    new_action.add_increase_effect(new_fnode, new_value, new_condition, effect.forall)
+                elif effect.is_decrease():
+                    new_action.add_decrease_effect(new_fnode, new_value, new_condition, effect.forall)
+                else:
+                    new_action.add_effect(new_fnode, new_value, new_condition, effect.forall)
+            new_problem.add_action(new_action)
+            new_to_old[new_action] = action
 
         return CompilerResult(
             new_problem, partial(replace_action, map=new_to_old), self.name
