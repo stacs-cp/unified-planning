@@ -140,15 +140,11 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
         env = new_problem.environment
         em = env.expression_manager
         tm = env.type_manager
-        print("args of node: ", node.args)
         if node.is_int_constant():
-            print("int: ", node.int_constant_value())
             number_user_type = tm.UserType('Number')
             new_number = model.Object('n' + str(node.int_constant_value()), number_user_type)
-            print("new_number: ", new_number, new_number.type)
             return em.ObjectExp(new_number)
         elif node.is_fluent_exp() and node.fluent().type.is_int_type():
-            print("accedint a new fluent.. ", node.fluent().name, *node.fluent().signature)
             return new_problem.fluent(node.fluent().name)(*node.fluent().signature)
         elif node.args == ():
             return node
@@ -156,18 +152,19 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
             new_args = []
             for arg in node.args:
                 new = self._get_new_fnode(new_problem, arg)
-                print(new.type)
                 new_args.append(new)
-                print("new_args: ", new, new.type)
             if node.node_type == OperatorKind.PLUS:
-                print("es plus")
-                print(new_args)
                 return new_problem.fluent('plus')(*new_args)
-            # elif node.node_type == OperatorKind.MINUS:
-            # elif node.node_type == OperatorKind.DIV:
-            # elif node.node_type == OperatorKind.LE:
-            # elif node.node_type == OperatorKind.LT:
-            # elif node.node_type == OperatorKind.TIMES:
+            elif node.node_type == OperatorKind.MINUS:
+                return new_problem.fluent('minus')(*new_args)
+            elif node.node_type == OperatorKind.DIV:
+                return new_problem.fluent('div')(*new_args)
+            elif node.node_type == OperatorKind.TIMES:
+                return new_problem.fluent('mult')(*new_args)
+            elif node.node_type == OperatorKind.LE:
+                return em.Or(new_problem.fluent('lt')(*new_args), em.Equals(*new_args))
+            elif node.node_type == OperatorKind.LT:
+                return new_problem.fluent('lt')(*new_args)
             else:
                 return em.create_node(node.node_type, tuple(new_args))
 
@@ -193,6 +190,8 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
         lt = new_problem.fluent("lt")
         plus = new_problem.fluent("plus")
         minus = new_problem.fluent("minus")
+        div = new_problem.fluent("div")
+        mult = new_problem.fluent("mult")
         for i in range(lower_bound, upper_bound + 1):
             if mid_low_bound is None or i < mid_low_bound:
                 for j in range(i, upper_bound + 1):
@@ -210,12 +209,46 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                             plus_i_j = new_problem.object('n' + str(i+j))
                             if plus_i_j:
                                 new_problem.set_initial_value(plus(ni, nj), plus_i_j)
+                                new_problem.set_initial_value(plus(nj, ni), plus_i_j)
                         except UPValueError:
                             pass
+                        # Minus
                         try:
                             minus_i_j = new_problem.object('n' + str(i-j))
                             if minus_i_j:
                                 new_problem.set_initial_value(minus(ni, nj), minus_i_j)
+                        except UPValueError:
+                            pass
+                        try:
+                            minus_j_i = new_problem.object('n' + str(j-i))
+                            if minus_j_i:
+                                new_problem.set_initial_value(minus(nj, ni), minus_j_i)
+                        except UPValueError:
+                            pass
+                        # Div
+                        try:
+                            div_i_j = new_problem.object('n' + str(i/j))
+                            if div_i_j:
+                                new_problem.set_initial_value(div(ni, nj), div_i_j)
+                        except UPValueError:
+                            pass
+                        try:
+                            div_j_i = new_problem.object('n' + str(j/i))
+                            if div_j_i:
+                                new_problem.set_initial_value(div(nj, ni), div_j_i)
+                        except UPValueError:
+                            pass
+                        # Mult
+                        try:
+                            mult_i_j = new_problem.object('n' + str(i*j))
+                            if mult_i_j:
+                                new_problem.set_initial_value(mult(ni, nj), mult_i_j)
+                        except UPValueError:
+                            pass
+                        try:
+                            mult_j_i = new_problem.object('n' + str(j*i))
+                            if mult_j_i:
+                                new_problem.set_initial_value(mult(nj, ni), mult_j_i)
                         except UPValueError:
                             pass
 
@@ -250,10 +283,11 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
         eq = model.Fluent('eq', _signature=params, environment=env)
         plus = model.Fluent('plus', ut_number, _signature=params, environment=env)
         minus = model.Fluent('minus', ut_number, _signature=params, environment=env)
+        div = model.Fluent('div', ut_number, _signature=params, environment=env)
+        mult = model.Fluent('mult', ut_number, _signature=params, environment=env)
         new_problem.add_fluent(lt, default_initial_value=False)
         new_problem.add_fluent(eq, default_initial_value=False)
-        new_problem.add_fluent(plus)
-        new_problem.add_fluent(minus)
+        new_problem.add_fluents(plus, minus, div, mult)
 
         for fluent in problem.fluents:
             default_value = problem.fluents_defaults.get(fluent)
