@@ -14,7 +14,6 @@
 #
 """This module defines the quantifiers remover class."""
 
-
 from itertools import product
 
 from unified_planning.model.operators import OperatorKind
@@ -40,6 +39,7 @@ from functools import partial
 from unified_planning.model.types import _UserType
 from unified_planning.shortcuts import Int, FALSE
 import re
+
 
 class IntegersRemover(engines.engine.Engine, CompilerMixin):
     """
@@ -128,14 +128,14 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
 
     @staticmethod
     def resulting_problem_kind(
-        problem_kind: ProblemKind, compilation_kind: Optional[CompilationKind] = None
+            problem_kind: ProblemKind, compilation_kind: Optional[CompilationKind] = None
     ) -> ProblemKind:
         return problem_kind.clone()
 
     def _get_new_fnode(
-        self,
-        new_problem: "up.model.AbstractProblem",
-        node: "up.model.fnode.FNode",
+            self,
+            new_problem: "up.model.AbstractProblem",
+            node: "up.model.fnode.FNode",
     ) -> up.model.fnode.FNode:
         env = new_problem.environment
         em = env.expression_manager
@@ -144,19 +144,19 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
         if node.is_int_constant():
             print("int: ", node.int_constant_value())
             number_user_type = tm.UserType('Number')
-            new_number = model.Object('n'+str(node.int_constant_value()), number_user_type)
+            new_number = model.Object('n' + str(node.int_constant_value()), number_user_type)
             print("new_number: ", new_number, new_number.type)
             return em.ObjectExp(new_number)
         elif node.is_fluent_exp() and node.fluent().type.is_int_type():
             print("accedint a new fluent.. ", node.fluent().name, *node.fluent().signature)
             return new_problem.fluent(node.fluent().name)(*node.fluent().signature)
         elif node.args == ():
-            #if node.node_type == OperatorKind.PLUS:
-            #elif node.node_type == OperatorKind.MINUS:
-            #elif node.node_type == OperatorKind.DIV:
-            #elif node.node_type == OperatorKind.LE:
-            #elif node.node_type == OperatorKind.LT:
-            #elif node.node_type == OperatorKind.:
+            # if node.node_type == OperatorKind.PLUS:
+            # elif node.node_type == OperatorKind.MINUS:
+            # elif node.node_type == OperatorKind.DIV:
+            # elif node.node_type == OperatorKind.LE:
+            # elif node.node_type == OperatorKind.LT:
+            # elif node.node_type == OperatorKind.:
             return node
         else:
             new_args = []
@@ -168,29 +168,30 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
             return em.create_node(node.node_type, tuple(new_args))
 
     def _add_relationships(
-        self,
-        new_problem: "up.model.AbstractProblem",
-        lower_bound: int,
-        upper_bound: int,
+            self,
+            new_problem: "up.model.AbstractProblem",
+            lower_bound: int,
+            mid_bound: int,
+            upper_bound: int,
     ):
         eq = new_problem.fluent("eq")
         lt = new_problem.fluent("lt")
         for i in range(lower_bound, upper_bound + 1):
             for j in range(i, upper_bound + 1):
-                print(i, j)
-                if i == j:
-                    new_problem.set_initial_value(
-                        eq(new_problem.object('n' + str(i)), new_problem.object('n' + str(j))), True
-                    )
-                if i < j:
-                    new_problem.set_initial_value(
-                        lt(new_problem.object('n' + str(i)), new_problem.object('n' + str(j))), True
-                    )
+                if (0 < mid_bound <= j) or mid_bound == 0:
+                    if i == j:
+                        new_problem.set_initial_value(
+                            eq(new_problem.object('n' + str(i)), new_problem.object('n' + str(j))), True
+                        )
+                    if i < j:
+                        new_problem.set_initial_value(
+                            lt(new_problem.object('n' + str(i)), new_problem.object('n' + str(j))), True
+                        )
 
     def _compile(
-        self,
-        problem: "up.model.AbstractProblem",
-        compilation_kind: "up.engines.CompilationKind",
+            self,
+            problem: "up.model.AbstractProblem",
+            compilation_kind: "up.engines.CompilationKind",
     ) -> CompilerResult:
         """
         """
@@ -231,21 +232,19 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
 
                 # First integer fluent! - control of ranges
                 if lb is None and ub is None:
-                    for i in range(tlb, tub+1):
-                        print(i)
+                    for i in range(tlb, tub + 1):
                         new_number = model.Object('n' + str(i), ut_number)
                         new_problem.add_object(new_number)
-                    self._add_relationships(new_problem, tlb, tub)
+                    self._add_relationships(new_problem, tlb, 0, tub)
                     ub = tub
                     lb = tlb
                 # si aquest fluent te rang amb numeros superiors a l'anterior, afegir-los
                 elif tub > ub or tlb < lb:
                     if tub > ub:
-                        for i in range(ub+1, tub + 1):
-                            print(i)
+                        for i in range(ub + 1, tub + 1):
                             new_number = model.Object('n' + str(i), ut_number)
                             new_problem.add_object(new_number)
-                        self._add_relationships(new_problem, lb, tub)
+                        self._add_relationships(new_problem, lb, ub+1, tub)
                         ub = tub
                     if tlb < lb:
                         # FALTA AQUESTES RELACIONS
@@ -255,10 +254,10 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                             new_problem.add_object(new_number)
                         lb = tlb
 
-
                 # default value
                 if default_value is not None:
-                    new_problem.add_fluent(new_fluent, default_initial_value=new_problem.object('n'+str(default_value)))
+                    new_problem.add_fluent(new_fluent,
+                                           default_initial_value=new_problem.object('n' + str(default_value)))
                 else:
                     new_problem.add_fluent(new_fluent)
 
@@ -314,10 +313,6 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                 new_preconditions = self._get_new_fnode(new_problem, precondition)
                 print("new preconditions: ", new_preconditions)
 
-        for g in problem.goals:
-            new_goals = self._get_new_fnode(new_problem, g)
-            for ng in new_goals:
-                new_problem.add_goal(ng)
         return CompilerResult(
             new_problem, partial(replace_action, map=new_to_old), self.name
         )
