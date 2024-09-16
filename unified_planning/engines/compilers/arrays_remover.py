@@ -278,6 +278,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                     if new_default_value is not None:
                         for i in combination:
                             new_default_value = new_default_value.constant_value()[i]
+                    print("adding new fluent... ", new_fluent)
                     new_problem.add_fluent(new_fluent, default_initial_value=new_default_value)
 
                     # obtenir el nom del fluent creat quan accedir []
