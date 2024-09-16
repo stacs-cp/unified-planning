@@ -167,7 +167,7 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
             elif node.node_type == OperatorKind.LT:
                 return new_problem.fluent('lt')(*new_args)
             else:
-                return em.create_node(node.node_type, tuple(new_args))
+                return em.create_node(node.node_type, *tuple(new_args))
 
     def _add_object_numbers(
             self,
