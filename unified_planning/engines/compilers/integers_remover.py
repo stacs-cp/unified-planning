@@ -227,15 +227,17 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                             pass
                         # Div
                         try:
-                            div_i_j = new_problem.object('n' + str(i/j))
-                            if div_i_j:
-                                new_problem.set_initial_value(div(ni, nj), div_i_j)
+                            if j > 0:
+                                div_i_j = new_problem.object('n' + str(i/j))
+                                if div_i_j:
+                                    new_problem.set_initial_value(div(ni, nj), div_i_j)
                         except UPValueError:
                             pass
                         try:
-                            div_j_i = new_problem.object('n' + str(j/i))
-                            if div_j_i:
-                                new_problem.set_initial_value(div(nj, ni), div_j_i)
+                            if i > 0:
+                                div_j_i = new_problem.object('n' + str(j/i))
+                                if div_j_i:
+                                    new_problem.set_initial_value(div(nj, ni), div_j_i)
                         except UPValueError:
                             pass
                         # Mult
