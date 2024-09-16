@@ -147,8 +147,6 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
             return em.ObjectExp(new_number)
         elif node.is_fluent_exp() and node.fluent().type.is_int_type():
             return new_problem.fluent(node.fluent().name)(*node.fluent().signature)
-        elif node.args == ():
-            return node
         else:
             new_args = []
             for arg in node.args:
@@ -167,7 +165,7 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
             elif node.node_type == OperatorKind.LT:
                 return new_problem.fluent('lt')(*new_args)
             else:
-                return em.create_node(node.node_type, *tuple(new_args))
+                return em.create_node(node.node_type, tuple(*new_args))
 
     def _add_object_numbers(
             self,
