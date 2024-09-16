@@ -246,6 +246,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
         new_problem.clear_goals()
         new_problem.initial_values.clear()
         assert self.mode == 'strict' or self.mode == 'permissive'
+        print("FLUENTS:", problem.fluents)
         for fluent in problem.fluents:
             print("fluent: ",fluent, fluent.type)
             # guardar el default_initial_value
@@ -365,11 +366,9 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                     new_action.add_precondition(np)
             try:
                 for effect in action.effects:
-                    print("old effect: ", effect)
                     new_fnode = self._get_new_fnodes(new_problem, effect.fluent)
                     new_value = self._get_new_fnodes(new_problem, effect.value)
                     new_condition = self._get_new_fnodes(new_problem, effect.condition)
-                    print("new: ", new_fnode,"|", new_value, "|", new_condition)
                     if effect.is_increase():
                         new_action.add_increase_effect(new_fnode, new_value, new_condition, effect.forall)
                     elif effect.is_decrease():
