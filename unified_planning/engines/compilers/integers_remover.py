@@ -147,6 +147,8 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
             return em.ObjectExp(new_number)
         elif node.is_fluent_exp() and node.fluent().type.is_int_type():
             return new_problem.fluent(node.fluent().name)(*node.fluent().signature)
+        elif node.is_parameter_exp() or node.is_object_exp() or node.is_fluent_exp() or node.is_constant() or node.is_variable_exp():
+            return node
         else:
             new_args = []
             for arg in node.args:
