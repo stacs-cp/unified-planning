@@ -154,25 +154,32 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                 new = self._get_new_fnode(new_problem, arg)
                 new_args.append(new)
             if node.node_type == OperatorKind.PLUS:
+                operation = 'plus'
+            elif node.node_type == OperatorKind.MINUS:
+                operation = 'minus'
+            elif node.node_type == OperatorKind.DIV:
+                operation = 'div'
+            elif node.node_type == OperatorKind.TIMES:
+                operation = 'mult'
+            elif node.node_type == OperatorKind.LT:
+                operation = 'lt'
+            elif node.node_type == OperatorKind.LE:
                 if len(new_args) > 2:
-                    result = new_problem.fluent('plus')(new_args[0], new_args[1])
+                    result = em.Or(new_problem.fluent('lt')(new_args[0], new_args[1]), em.Equals(new_args[0], new_args[1]))
                     for arg in new_args[2:]:
-                        result = new_problem.fluent('plus')(result, arg)
+                        em.Or(new_problem.fluent('lt')(result, arg), em.Equals(result, arg))
                     return result
                 else:
-                    return new_problem.fluent('plus')(*new_args)
-            elif node.node_type == OperatorKind.MINUS:
-                return new_problem.fluent('minus')(*new_args)
-            elif node.node_type == OperatorKind.DIV:
-                return new_problem.fluent('div')(*new_args)
-            elif node.node_type == OperatorKind.TIMES:
-                return new_problem.fluent('mult')(*new_args)
-            elif node.node_type == OperatorKind.LE:
-                return em.Or(new_problem.fluent('lt')(*new_args), em.Equals(*new_args))
-            elif node.node_type == OperatorKind.LT:
-                return new_problem.fluent('lt')(*new_args)
+                    return em.Or(new_problem.fluent('lt')(*new_args), em.Equals(*new_args))
             else:
                 return em.create_node(node.node_type, tuple(new_args))
+            if len(new_args) > 2:
+                result = new_problem.fluent(operation)(new_args[0], new_args[1])
+                for arg in new_args[2:]:
+                    result = new_problem.fluent(operation)(result, arg)
+                return result
+            else:
+                return new_problem.fluent(operation)(*new_args)
 
     def _add_object_numbers(
             self,
