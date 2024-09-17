@@ -285,7 +285,7 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
         div = model.Fluent('div', ut_number, _signature=params, environment=env)
         mult = model.Fluent('mult', ut_number, _signature=params, environment=env)
         new_problem.add_fluent(lt, default_initial_value=False)
-        new_problem.add_fluent(plus, default_initial_value)
+        new_problem.add_fluent(plus, default_initial_value=null)
         new_problem.add_fluent(minus, default_initial_value=null)
         new_problem.add_fluent(div, default_initial_value=null)
         new_problem.add_fluent(mult, default_initial_value=null)
