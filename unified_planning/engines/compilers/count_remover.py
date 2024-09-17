@@ -313,7 +313,7 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                             fluent_value = Int(1)
                         else:
                             fluent_value = Int(0)
-                        new_problem.add_fluent(fluent_name, tm.IntType())
+                        new_problem.add_fluent(fluent_name, tm.IntType(0, len(expression.args)))
                         new_problem.set_initial_value(new_problem.fluent(fluent_name), fluent_value)
                         new_fluent = new_problem.fluent(fluent_name)
                         new_ca_args.append(new_fluent())
