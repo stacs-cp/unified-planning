@@ -154,7 +154,13 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                 new = self._get_new_fnode(new_problem, arg)
                 new_args.append(new)
             if node.node_type == OperatorKind.PLUS:
-                return new_problem.fluent('plus')(*new_args)
+                if len(new_args) > 2:
+                    result = new_problem.fluent('plus')(new_args[0], new_args[1])
+                    for arg in new_args[2:]:
+                        result = new_problem.fluent('plus')(result, arg)
+                    return result
+                else:
+                    return new_problem.fluent('plus')(*new_args)
             elif node.node_type == OperatorKind.MINUS:
                 return new_problem.fluent('minus')(*new_args)
             elif node.node_type == OperatorKind.DIV:
