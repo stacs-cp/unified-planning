@@ -140,7 +140,6 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
         env = new_problem.environment
         em = env.expression_manager
         tm = env.type_manager
-        print(node, node.args)
         if node.is_int_constant():
             number_user_type = tm.UserType('Number')
             new_number = model.Object('n' + str(node.int_constant_value()), number_user_type)
@@ -286,7 +285,7 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
         div = model.Fluent('div', ut_number, _signature=params, environment=env)
         mult = model.Fluent('mult', ut_number, _signature=params, environment=env)
         new_problem.add_fluent(lt, default_initial_value=False)
-        new_problem.add_fluent(plus, default_initial_value=null)
+        new_problem.add_fluent(plus, default_initial_value)
         new_problem.add_fluent(minus, default_initial_value=null)
         new_problem.add_fluent(div, default_initial_value=null)
         new_problem.add_fluent(mult, default_initial_value=null)
