@@ -288,9 +288,7 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
 
         for fluent in problem.fluents:
             default_value = problem.fluents_defaults.get(fluent)
-            # si el fluent es integer
             if fluent.type.is_int_type():
-                # crear nou fluent objecte
                 tlb = fluent.type.lower_bound
                 tub = fluent.type.upper_bound
                 new_fluent = model.Fluent(fluent.name, ut_number, fluent.signature, env)
@@ -300,7 +298,7 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                     self._add_relationships(new_problem, tlb, None, None, tub)
                     ub = tub
                     lb = tlb
-                # si aquest fluent te rang amb numeros superiors a l'anterior, afegir-los
+                # if another fluent has lower or upper range, add them
                 elif tub > ub or tlb < lb:
                     if tub > ub:
                         self._add_object_numbers(new_problem, ub + 1, tub + 1)
@@ -310,7 +308,6 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                         self._add_object_numbers(new_problem, tlb, lb)
                         self._add_relationships(new_problem, tlb, lb, None, tub)
                         lb = tlb
-
                 # Default initial values
                 if default_value is not None:
                     new_problem.add_fluent(new_fluent,
@@ -373,11 +370,8 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
             new_action.name = get_fresh_name(new_problem, action.name)
             new_action.clear_preconditions()
             new_action.clear_effects()
-
             for precondition in action.preconditions:
-                print("precondition: ", precondition)
                 new_precondition = self._get_new_fnode(new_problem, precondition)
-                print("new_precondition: ", new_precondition)
                 new_action.add_precondition(new_precondition)
             for effect in action.effects:
                 new_fnode = self._get_new_fnode(new_problem, effect.fluent)
@@ -393,6 +387,9 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                     new_action.add_effect(new_fnode, new_value, new_condition, effect.forall)
             new_problem.add_action(new_action)
             new_to_old[new_action] = action
+
+        for goal in problem.goals:
+            new_problem.add_goal(self._get_new_fnode(new_problem, goal))
 
         return CompilerResult(
             new_problem, partial(replace_action, map=new_to_old), self.name
