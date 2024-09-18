@@ -317,7 +317,7 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                     self._add_relationships(new_problem, tlb, None, None, tub)
                     ub = tub
                     lb = tlb
-                # if another fluent has lower or upper range, add them
+                # if another fluent has lower or upper range add them
                 elif tub > ub or tlb < lb:
                     if tub > ub:
                         self._add_object_numbers(new_problem, ub + 1, tub + 1)
