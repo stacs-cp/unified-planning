@@ -131,13 +131,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
     def resulting_problem_kind(
         problem_kind: ProblemKind, compilation_kind: Optional[CompilationKind] = None
     ) -> ProblemKind:
-        new_kind = problem_kind.clone()
-        new_kind.unset_conditions_kind("EXISTENTIAL_CONDITIONS")
-        new_kind.unset_conditions_kind("UNIVERSAL_CONDITIONS")
-        new_kind.unset_effects_kind("FORALL_EFFECTS")
-        if problem_kind.has_existential_conditions():
-            new_kind.set_conditions("DISJUNCTIVE_CONDITIONS")
-        return new_kind
+        return problem_kind.clone()
 
     def _manage_node(
             self,

@@ -127,7 +127,9 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
     def resulting_problem_kind(
         problem_kind: ProblemKind, compilation_kind: Optional[CompilationKind] = None
     ) -> ProblemKind:
-        return problem_kind.clone()
+        new_kind = problem_kind.clone()
+        new_kind.unset_fluents_type("ARRAY_FLUENTS")
+        return new_kind
 
     def _get_new_fluent(
         self,
