@@ -31,7 +31,7 @@ for i, char in enumerate(grid):
         rush_hour_problem.set_initial_value(occupied[r][c], obj)
 
 # ----------------------- Move Horizontal Car ----------------------------
-move_horizontal_car = unified_planning.model.InstantaneousAction('move_horizontal_car', v=Vehicle, r=IntType(0,rows-1), c=IntType(0,columns-2), m=IntType(-(columns-2), columns-2))
+move_horizontal_car = InstantaneousAction('move_horizontal_car', v=Vehicle, r=IntType(0,rows-1), c=IntType(0,columns-2), m=IntType(-(columns-2), columns-2))
 v = move_horizontal_car.parameter('v')
 r = move_horizontal_car.parameter('r')
 c = move_horizontal_car.parameter('c')
@@ -56,7 +56,7 @@ move_horizontal_car.add_effect(occupied[r][c], none, Not(Equals(m, -1)))
 move_horizontal_car.add_effect(occupied[r][c+1], none, Not(Equals(m, 1)))
 
 # ----------------------- Move Horizontal Truck ----------------------------
-move_horizontal_truck = unified_planning.model.InstantaneousAction('move_horizontal_truck', v=Vehicle, r=IntType(0,rows-1), c=IntType(0,columns-3), m=IntType(-(columns-3), columns-3))
+move_horizontal_truck = InstantaneousAction('move_horizontal_truck', v=Vehicle, r=IntType(0,rows-1), c=IntType(0,columns-3), m=IntType(-(columns-3), columns-3))
 v = move_horizontal_truck.parameter('v')
 r = move_horizontal_truck.parameter('r')
 c = move_horizontal_truck.parameter('c')
@@ -83,7 +83,7 @@ move_horizontal_truck.add_effect(occupied[r][c+1], none, Or(LT(m, -1), GT(m, 1))
 move_horizontal_truck.add_effect(occupied[r][c+2], none, Or(LT(m, 0), GT(m, 2)))
 
 # ----------------------- Move Vertical Car ----------------------------
-move_vertical_car = unified_planning.model.InstantaneousAction('move_vertical_car', v=Vehicle, r=IntType(0,rows-2), c=IntType(0,columns-1), m=IntType(-(rows-2), rows-2))
+move_vertical_car = InstantaneousAction('move_vertical_car', v=Vehicle, r=IntType(0,rows-2), c=IntType(0,columns-1), m=IntType(-(rows-2), rows-2))
 v = move_vertical_car.parameter('v')
 r = move_vertical_car.parameter('r')
 c = move_vertical_car.parameter('c')
@@ -108,7 +108,7 @@ move_vertical_car.add_effect(occupied[r][c], none, Not(Equals(m, -1)))
 move_vertical_car.add_effect(occupied[r+1][c], none, Not(Equals(m, 1)))
 
 # ----------------------- Move Vertical Truck ----------------------------
-move_vertical_truck = unified_planning.model.InstantaneousAction('move_vertical_truck', v=Vehicle, r=IntType(0,rows-3), c=IntType(0,columns-1), m=IntType(-(rows-3), rows-3))
+move_vertical_truck = InstantaneousAction('move_vertical_truck', v=Vehicle, r=IntType(0,rows-3), c=IntType(0,columns-1), m=IntType(-(rows-3), rows-3))
 v = move_vertical_truck.parameter('v')
 r = move_vertical_truck.parameter('r')
 c = move_vertical_truck.parameter('c')

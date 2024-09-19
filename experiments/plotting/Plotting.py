@@ -3,7 +3,7 @@ import time
 
 start = time.time()
 
-plotting_problem = unified_planning.model.Problem('plotting_problem')
+plotting_problem = Problem('plotting_problem')
 Colour = UserType('Colour')
 R = Object('R', Colour)
 B = Object('B', Colour)
@@ -33,7 +33,7 @@ plotting_problem.set_initial_value(blocks, initial_blocks)
 ################################################################################
 
 ################################ SHOOT PARTIAL ROW #####################################
-shoot_partial_row = unified_planning.model.InstantaneousAction('shoot_partial_row', p=Colour, r=IntType(0, rows-1), l=IntType(0, columns-2))
+shoot_partial_row = InstantaneousAction('shoot_partial_row', p=Colour, r=IntType(0, rows-1), l=IntType(0, columns-2))
 # p: colour of the blocks that we want to eliminate
 # r: row
 # l: last column affected (cannot be the last one) - next block is different than p and not none
@@ -72,7 +72,7 @@ plotting_problem.add_action(shoot_partial_row)
 
 ############################### SHOOT FULL ROW #################################
 # shoot complete row and then going down until the next is not p and not none
-shoot_full_row = unified_planning.model.InstantaneousAction('shoot_full_row', p=Colour, r=IntType(0, rows-2), l=IntType(0, rows-2))
+shoot_full_row = InstantaneousAction('shoot_full_row', p=Colour, r=IntType(0, rows-2), l=IntType(0, rows-2))
 # p: colour of the blocks that we want to eliminate
 # r: complete row affected
 # l: last row of the last column affected (can't be the last one) next block is different than p and not none
@@ -122,7 +122,7 @@ plotting_problem.add_action(shoot_full_row)
 
 ########################### SHOOT FULL ROW FULL COLUMN #########################
 # shoot complete row and then going down until a=the next is not p and not none
-shoot_full_row_full_column = unified_planning.model.InstantaneousAction('shoot_full_row_full_column', p=Colour, r=IntType(0, rows-1))
+shoot_full_row_full_column = InstantaneousAction('shoot_full_row_full_column', p=Colour, r=IntType(0, rows-1))
 # p: colour of the blocks that we want to eliminate
 # r: row
 p = shoot_full_row_full_column.parameter('p')
@@ -164,7 +164,7 @@ plotting_problem.add_action(shoot_full_row_full_column)
 
 
 ############################### SHOOT PARTIAL COLUMN ###################################
-shoot_partial_column = unified_planning.model.InstantaneousAction('shoot_partial_column', p=Colour, c=IntType(0, columns-1), l=IntType(0, rows-2))
+shoot_partial_column = InstantaneousAction('shoot_partial_column', p=Colour, c=IntType(0, columns-1), l=IntType(0, rows-2))
 # p: colour of the blocks that we want to eliminate
 # c: column
 # l: last row affected - next block is different than p and not none
@@ -200,7 +200,7 @@ plotting_problem.add_action(shoot_partial_column)
 
 
 ############################# SHOOT FULL COLUMN ################################
-shoot_full_column = unified_planning.model.InstantaneousAction('shoot_full_column', p=Colour, c=IntType(0, columns-1))
+shoot_full_column = InstantaneousAction('shoot_full_column', p=Colour, c=IntType(0, columns-1))
 # p: colour of the blocks that we want to eliminate
 # c: column
 p = shoot_full_column.parameter('p')

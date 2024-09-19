@@ -14,14 +14,16 @@
 #
 """This module defines the quantifiers remover class."""
 
-
 from itertools import product
+
+from unified_planning.model.operators import OperatorKind
+
 import unified_planning as up
 import unified_planning.engines as engines
 from unified_planning import model
 from unified_planning.engines.mixins.compiler import CompilationKind, CompilerMixin
 from unified_planning.engines.results import CompilerResult
-from unified_planning.exceptions import UPProblemDefinitionError
+from unified_planning.exceptions import UPProblemDefinitionError, UPValueError
 from unified_planning.model import (
     Problem,
     Action,
@@ -32,11 +34,12 @@ from unified_planning.engines.compilers.utils import (
     get_fresh_name,
     replace_action,
 )
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, OrderedDict, Union
 from functools import partial
 from unified_planning.model.types import _UserType
 from unified_planning.shortcuts import Int, FALSE
 import re
+
 
 class IntegersRemover(engines.engine.Engine, CompilerMixin):
     """
@@ -125,113 +128,147 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
 
     @staticmethod
     def resulting_problem_kind(
-        problem_kind: ProblemKind, compilation_kind: Optional[CompilationKind] = None
+            problem_kind: ProblemKind, compilation_kind: Optional[CompilationKind] = None
     ) -> ProblemKind:
-        return problem_kind.clone()
+        new_kind = problem_kind.clone()
+        new_kind.unset_conditions_kind("INT_FLUENTS")
+        return new_kind
 
-    def _get_new_fluent(
-        self,
-        fluent: "up.model.fluent.Fluent"
-    ) -> "up.model.fluent.Fluent":
-        new_name = fluent.name
-        pattern = r'\[(.*?)\]'
-        this_ints = re.findall(pattern, new_name)
-        if this_ints:
-            new_name = new_name.split('[')[0] + '_' + '_'.join(map(str, this_ints))
-        new_fluent = up.model.fluent.Fluent(new_name, fluent.type, fluent.signature, fluent.environment)
-        return new_fluent
-
-    def _get_new_fnodes(
-        self,
-        new_problem: "up.model.AbstractProblem",
-        node: "up.model.fnode.FNode",
-    ) -> List["up.model.fnode.FNode"]:
+    def _get_new_fnode(
+            self,
+            new_problem: "up.model.AbstractProblem",
+            node: "up.model.fnode.FNode",
+    ) -> up.model.fnode.FNode:
         env = new_problem.environment
         em = env.expression_manager
-        if node.is_fluent_exp():
-            new_fluent = self._get_new_fluent(node.fluent())
-            if self.mode == 'strict':
-                try:
-                    assert new_problem.fluent(new_fluent.name)(*node.fluent().signature)
-                except KeyError:
-                    print(f"Fluent {new_fluent.name} out of range!")
-                    exit(1)
-            else:
-                try:
-                    assert new_problem.fluent(new_fluent.name)(*node.fluent().signature)
-                except Exception:
-                    if new_fluent.type.is_bool_type():
-                        return [FALSE()]
-                    else:
-                        return [None]
-            return [new_fluent(*node.args)]
-        elif node.is_parameter_exp() or node.is_constant():
-            return [node]
+        tm = env.type_manager
+        if node.is_int_constant():
+            number_user_type = tm.UserType('Number')
+            new_number = model.Object('n' + str(node.int_constant_value()), number_user_type)
+            return em.ObjectExp(new_number)
+        elif node.is_fluent_exp() and node.fluent().type.is_int_type():
+            return new_problem.fluent(node.fluent().name)(*node.fluent().signature)
+        elif node.is_parameter_exp() or node.is_object_exp() or node.is_fluent_exp() or node.is_constant() or node.is_variable_exp():
+            return node
         else:
-            if node.arg(0).type.is_array_type():
-                new_type = node.arg(0).type
-                domain = []
-                while new_type.is_array_type():
-                    domain_in = []
-                    for i in range(0, new_type.size):
-                        domain_in.append(i)
-                    domain.append(domain_in)
-                    new_type = new_type.elements_type
-                combinations = list(product(*domain))
-                new_fnodes = []
-                for c in combinations:
-                    new_args = []
-                    for arg in node.args:
-                        if arg.is_fluent_exp():
-                            new_fluent = self._get_new_fluent(arg.fluent())
-                            new_name = new_fluent.name + ''.join(f'_{str(i)}' for i in c)
-                            if self.mode == 'strict':
-                                try:
-                                    new_arg = new_problem.fluent(new_name)(*arg.fluent().signature)
-                                except KeyError:
-                                    print(f"Fluent {new_fluent.name} out of range!")
-                                    exit(1)
-                            else:
-                                try:
-                                    new_arg = new_problem.fluent(new_name)(*arg.fluent().signature)
-                                except Exception:
-                                    if new_fluent.type.is_bool_type():
-                                        new_arg = FALSE()
-                                    else:
-                                        new_arg = None
-                        elif arg.constant_value():
-                            new_arg = arg
-                            for i in c:
-                                new_arg = new_arg.constant_value()[i]
-                        else:
-                            new_arg = arg
-                        new_args.append(new_arg)
-                    if None in new_args:
-                        if node.type.is_bool_type():
-                            new_fnodes.append(FALSE())
-                        else:
-                            new_fnodes.append(None)
-                    else:
-                        new_fnodes.append(em.create_node(node.node_type, tuple(new_args)))
-                return new_fnodes
-            else:
-                new_args = []
-                for arg in node.args:
-                    new_list_args = self._get_new_fnodes(new_problem, arg)
-                    for nla in new_list_args:
-                        new_args.append(nla)
-                if None in new_args:
-                    if node.type.is_bool_type():
-                        return [FALSE()]
-                    else:
-                        return [None]
+            new_args = []
+            for arg in node.args:
+                new = self._get_new_fnode(new_problem, arg)
+                new_args.append(new)
+            if node.node_type == OperatorKind.PLUS:
+                operation = 'plus'
+            elif node.node_type == OperatorKind.MINUS:
+                operation = 'minus'
+            elif node.node_type == OperatorKind.DIV:
+                operation = 'div'
+            elif node.node_type == OperatorKind.TIMES:
+                operation = 'mult'
+            elif node.node_type == OperatorKind.LT:
+                operation = 'lt'
+            elif node.node_type == OperatorKind.LE:
+                if len(new_args) > 2:
+                    result = em.Or(new_problem.fluent('lt')(new_args[0], new_args[1]), em.Equals(new_args[0], new_args[1]))
+                    for arg in new_args[2:]:
+                        em.Or(new_problem.fluent('lt')(result, arg), em.Equals(result, arg))
+                    return result
                 else:
-                    return [(em.create_node(node.node_type, tuple(new_args)))]
+                    return em.Or(new_problem.fluent('lt')(*new_args), em.Equals(*new_args))
+            else:
+                return em.create_node(node.node_type, tuple(new_args))
+            if len(new_args) > 2:
+                result = new_problem.fluent(operation)(new_args[0], new_args[1])
+                for arg in new_args[2:]:
+                    result = new_problem.fluent(operation)(result, arg)
+                return result
+            else:
+                return new_problem.fluent(operation)(*new_args)
+
+    def _add_object_numbers(
+            self,
+            new_problem: "up.model.AbstractProblem",
+            lower_bound: int,
+            upper_bound: int,
+    ):
+        for i in range(lower_bound, upper_bound):
+            new_number = model.Object('n' + str(i), new_problem.user_type('Number'))
+            new_problem.add_object(new_number)
+
+    def _add_relationships(
+            self,
+            new_problem: "up.model.AbstractProblem",
+            lower_bound: int,
+            mid_low_bound: Union[int, None],
+            mid_up_bound: Union[int, None],
+            upper_bound: int,
+    ):
+        lt = new_problem.fluent("lt")
+        plus = new_problem.fluent("plus")
+        minus = new_problem.fluent("minus")
+        div = new_problem.fluent("div")
+        mult = new_problem.fluent("mult")
+        for i in range(lower_bound, upper_bound + 1):
+            if mid_low_bound is None or i < mid_low_bound:
+                for j in range(i, upper_bound + 1):
+                    if mid_up_bound is None or j >= mid_up_bound:
+                        ni = new_problem.object('n' + str(i))
+                        nj = new_problem.object('n' + str(j))
+                        # Less Than
+                        if i < j:
+                            new_problem.set_initial_value(lt(ni, nj), True)
+                        # Plus
+                        try:
+                            plus_i_j = new_problem.object('n' + str(i+j))
+                            if plus_i_j:
+                                new_problem.set_initial_value(plus(ni, nj), plus_i_j)
+                                new_problem.set_initial_value(plus(nj, ni), plus_i_j)
+                        except UPValueError:
+                            pass
+                        # Minus
+                        try:
+                            minus_i_j = new_problem.object('n' + str(i-j))
+                            if minus_i_j:
+                                new_problem.set_initial_value(minus(ni, nj), minus_i_j)
+                        except UPValueError:
+                            pass
+                        try:
+                            minus_j_i = new_problem.object('n' + str(j-i))
+                            if minus_j_i:
+                                new_problem.set_initial_value(minus(nj, ni), minus_j_i)
+                        except UPValueError:
+                            pass
+                        # Div
+                        try:
+                            if j > 0:
+                                div_i_j = new_problem.object('n' + str(i/j))
+                                if div_i_j:
+                                    new_problem.set_initial_value(div(ni, nj), div_i_j)
+                        except UPValueError:
+                            pass
+                        try:
+                            if i > 0:
+                                div_j_i = new_problem.object('n' + str(j/i))
+                                if div_j_i:
+                                    new_problem.set_initial_value(div(nj, ni), div_j_i)
+                        except UPValueError:
+                            pass
+                        # Mult
+                        try:
+                            mult_i_j = new_problem.object('n' + str(i*j))
+                            if mult_i_j:
+                                new_problem.set_initial_value(mult(ni, nj), mult_i_j)
+                        except UPValueError:
+                            pass
+                        try:
+                            mult_j_i = new_problem.object('n' + str(j*i))
+                            if mult_j_i:
+                                new_problem.set_initial_value(mult(nj, ni), mult_j_i)
+                        except UPValueError:
+                            pass
 
     def _compile(
-        self,
-        problem: "up.model.AbstractProblem",
-        compilation_kind: "up.engines.CompilationKind",
+            self,
+            problem: "up.model.AbstractProblem",
+            compilation_kind: "up.engines.CompilationKind",
     ) -> CompilerResult:
         """
         """
@@ -245,113 +282,135 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
         new_problem.clear_actions()
         new_problem.clear_goals()
         new_problem.initial_values.clear()
+        env = new_problem.environment
+        tm = env.type_manager
         assert self.mode == 'strict' or self.mode == 'permissive'
-        # canviar fluents
+        lb = None
+        ub = None
+        ut_number = tm.UserType('Number')
+        null = model.Object('null', ut_number)
+        new_problem.add_object(null)
+        # Relationships between objects
+        params = OrderedDict()
+        params['n1'] = ut_number
+        params['n2'] = ut_number
+        lt = model.Fluent('lt', _signature=params, environment=env)
+        plus = model.Fluent('plus', ut_number, _signature=params, environment=env)
+        minus = model.Fluent('minus', ut_number, _signature=params, environment=env)
+        div = model.Fluent('div', ut_number, _signature=params, environment=env)
+        mult = model.Fluent('mult', ut_number, _signature=params, environment=env)
+        new_problem.add_fluent(lt, default_initial_value=False)
+        new_problem.add_fluent(plus, default_initial_value=null)
+        new_problem.add_fluent(minus, default_initial_value=null)
+        new_problem.add_fluent(div, default_initial_value=null)
+        new_problem.add_fluent(mult, default_initial_value=null)
+
         for fluent in problem.fluents:
             default_value = problem.fluents_defaults.get(fluent)
-            print("fluent: ", fluent)
-            print("default_value: ", default_value)
             if fluent.type.is_int_type():
-                new_fluent = model.Fluent(fluent.name, _UserType('Number'), fluent.signature, fluent.environment)
+                tlb = fluent.type.lower_bound
+                tub = fluent.type.upper_bound
+                new_fluent = model.Fluent(fluent.name, ut_number, fluent.signature, env)
+                # First integer fluent! - control of ranges
+                if lb is None and ub is None:
+                    self._add_object_numbers(new_problem, tlb, tub + 1)
+                    self._add_relationships(new_problem, tlb, None, None, tub)
+                    ub = tub
+                    lb = tlb
+                # if another fluent has lower or upper range add them
+                elif tub > ub or tlb < lb:
+                    if tub > ub:
+                        self._add_object_numbers(new_problem, ub + 1, tub + 1)
+                        self._add_relationships(new_problem, lb, None, ub+1, tub)
+                        ub = tub
+                    if tlb < lb:
+                        self._add_object_numbers(new_problem, tlb, lb)
+                        self._add_relationships(new_problem, tlb, lb, None, tub)
+                        lb = tlb
+                # Default initial values
                 if default_value is not None:
-                    new_default_value = model.Object('n'+str(default_value), _UserType('Number'))
-                    print(new_default_value)
+                    new_problem.add_fluent(new_fluent,
+                                           default_initial_value=new_problem.object('n' + str(default_value)))
                 else:
-                    new_default_value = None
-                new_problem.add_fluent(new_fluent, default_initial_value=new_default_value)
-                # aixo de signature crec que no anira be
-                iv = problem.initial_value(fluent(fluent.signature))
-                if iv is None:
-                    raise UPProblemDefinitionError(
-                        f"Initial value not set for fluent: {fluent(fluent.signature)}"
-                    )
-                elif iv != default_value:
-                    new_initial_value = model.Object('n'+str(iv), _UserType('Number'))
-                    new_problem.set_initial_value(fluent(fluent.signature), new_initial_value)
-
-            else:
-                new_problem.add_fluent(fluent, default_initial_value=default_value)
-                # no se si es guarda be l'initial value
-                # aixo de signature..
-                # en l'initial value (si no n'hi ha) es mostra el default!
-                iv = problem.initial_value(fluent(fluent.signature))
-                if iv is None:
-                    raise UPProblemDefinitionError(
-                        f"Initial value not set for fluent: {fluent(fluent.signature)}"
-                    )
-                elif iv != default_value:
-                    new_problem.set_initial_value(fluent(fluent.signature), iv)
-
-
-            #
-
-
-            if problem.fluents_defaults.get(fluent):
-                default_value = problem.fluents_defaults.get(fluent)
-            else:
-                # si no hi ha vol dir que tots els possibles valors (amb parametres) hauran d'estar inicialitzats
-                default_value = None
-            objects = []
-            for s in fluent.signature:
-                objects.append(problem.objects(s.type))
-            fluent_parameters = list(product(*objects))
-            if fluent_parameters == [()]:
-                fluent_parameters = []
-
-            new_problem.add_fluent(fluent, default_initial_value=default_value)
-            if fluent_parameters:
-                for fp in fluent_parameters:
-                    iv = problem.initial_value(fluent(*fp))
+                    new_problem.add_fluent(new_fluent)
+                # Initial values
+                if fluent.signature:
+                    objects = []
+                    for s in fluent.signature:
+                        objects.append(problem.objects(s.type))
+                    fluent_parameters = list(product(*objects))
+                    for fp in fluent_parameters:
+                        iv = problem.initial_value(fluent(*fp))
+                        if iv is None:
+                            raise UPProblemDefinitionError(
+                                f"Initial value not set for fluent: {fluent(*fp)}"
+                            )
+                        elif iv != default_value:
+                            new_initial_value = model.Object('n' + str(iv), ut_number)
+                            new_problem.set_initial_value(new_fluent(*fp), new_initial_value)
+                else:
+                    iv = problem.initial_value(fluent())
                     if iv is None:
                         raise UPProblemDefinitionError(
-                            f"Initial value not set for fluent: {fluent(*fp)}"
+                            f"Initial value not set for fluent: {fluent()}"
                         )
                     elif iv != default_value:
-                        new_problem.set_initial_value(fluent(*fp), iv)
+                        new_initial_value = model.Object('n' + str(iv), ut_number)
+                        new_problem.set_initial_value(new_fluent(), new_initial_value)
             else:
-                iv = problem.initial_value(fluent())
-                if iv is None:
-                    raise UPProblemDefinitionError(
-                        f"Initial value not set for fluent: {fluent()}"
-                    )
-                elif iv != default_value:
-                    new_problem.set_initial_value(fluent(), iv)
+                # Default initial values
+                new_problem.add_fluent(fluent, default_initial_value=default_value)
+                # Initial values
+                if fluent.signature:
+                    objects = []
+                    for s in fluent.signature:
+                        objects.append(problem.objects(s.type))
+                    fluent_parameters = list(product(*objects))
+                    for fp in fluent_parameters:
+                        iv = problem.initial_value(fluent(*fp))
+                        if iv is None:
+                            raise UPProblemDefinitionError(
+                                f"Initial value not set for fluent: {fluent(*fp)}"
+                            )
+                        elif iv != default_value:
+                            new_problem.set_initial_value(fluent(*fp), iv)
+                else:
+                    iv = problem.initial_value(fluent())
+                    if iv is None:
+                        raise UPProblemDefinitionError(
+                            f"Initial value not set for fluent: {fluent()}"
+                        )
+                    elif iv != default_value:
+                        new_problem.set_initial_value(fluent(), iv)
 
-
-        # canviar numeros en precondicions i efectes d'accions
+        # Actions
         for action in problem.actions:
             new_action = action.clone()
             new_action.name = get_fresh_name(new_problem, action.name)
             new_action.clear_preconditions()
             new_action.clear_effects()
-
             for precondition in action.preconditions:
-                new_preconditions = self._get_new_fnodes(new_problem, precondition)
-                for np in new_preconditions:
-                    # si una precondicio es falsa -> accio mai passara -> no afegir accio
-                    new_action.add_precondition(np)
-            try:
-                for effect in action.effects:
-                    new_fnode = self._get_new_fnodes(new_problem, effect.fluent)
-                    new_value = self._get_new_fnodes(new_problem, effect.value)
-                    new_condition = self._get_new_fnodes(new_problem, effect.condition)
-                    if effect.is_increase():
-                        new_action.add_increase_effect(new_fnode, new_value, new_condition, effect.forall)
-                    elif effect.is_decrease():
-                        new_action.add_decrease_effect(new_fnode, new_value, new_condition, effect.forall)
-                    else:
-                        new_action.add_effect(new_fnode, new_value, new_condition, effect.forall)
-            except Exception:
-                print(f"Action {action.name} eliminated due to an access to a fluent out of range in the effects.")
-                continue
-            else:
-                new_problem.add_action(new_action)
-                new_to_old[new_action] = action
+                new_precondition = self._get_new_fnode(new_problem, precondition)
+                new_action.add_precondition(new_precondition)
+            for effect in action.effects:
+                new_fnode = self._get_new_fnode(new_problem, effect.fluent)
+                new_value = self._get_new_fnode(new_problem, effect.value)
+                new_condition = self._get_new_fnode(new_problem, effect.condition)
+                # OJU
+                if effect.is_increase():
+                    new_action.add_increase_effect(new_fnode, new_value, new_condition, effect.forall)
+                # OJU
+                elif effect.is_decrease():
+                    new_action.add_decrease_effect(new_fnode, new_value, new_condition, effect.forall)
+                else:
+                    new_action.add_effect(new_fnode, new_value, new_condition, effect.forall)
+            new_problem.add_action(new_action)
+            new_to_old[new_action] = action
 
-        for g in problem.goals:
-            new_goals = self._get_new_fnodes(new_problem, g)
-            for ng in new_goals:
-                new_problem.add_goal(ng)
+        for goal in problem.goals:
+            new_problem.add_goal(self._get_new_fnode(new_problem, goal))
+
         return CompilerResult(
             new_problem, partial(replace_action, map=new_to_old), self.name
         )
+
