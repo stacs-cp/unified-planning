@@ -413,3 +413,4 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
         return CompilerResult(
             new_problem, partial(replace_action, map=new_to_old), self.name
         )
+
