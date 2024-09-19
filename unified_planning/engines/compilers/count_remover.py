@@ -135,7 +135,7 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
         problem_kind: ProblemKind, compilation_kind: Optional[CompilationKind] = None
     ) -> ProblemKind:
         new_kind = problem_kind.clone()
-        new_kind.unset_conditions_kind("COUNTINGS")
+        #new_kind.unset_conditions_kind("COUNTINGS")
         return new_kind
 
     def expression_value(
