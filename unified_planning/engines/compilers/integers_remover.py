@@ -230,15 +230,7 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
             relationship_fluent = new_problem.fluent(relationship)
         except UPValueError:
             relationship_fluent = model.Fluent(relationship, _signature=params, environment=new_problem.environment)
-            if relationship == 'lt':
-                def_value = False
-            else:
-                try:
-                    def_value = new_problem.object('null')
-                except UPValueError:
-                    new_problem.add_object(model.Object('null', ut_number))
-                    def_value = new_problem.object('null')
-            new_problem.add_fluent(relationship_fluent, default_initial_value=def_value)
+            new_problem.add_fluent(relationship_fluent)
 
         # mirar si les relacions del rang d'aquests numeros estan inicialitzats
         for i in range(lower_bound, upper_bound + 1):
@@ -260,24 +252,39 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                     elif relationship == 'plus':
                         try:
                             plus_i_j = new_problem.object('n' + str(i+j))
-                            if plus_i_j:
-                                new_problem.set_initial_value(relationship_fluent(ni, nj), plus_i_j)
-                                new_problem.set_initial_value(relationship_fluent(nj, ni), plus_i_j)
+                            new_problem.set_initial_value(relationship_fluent(ni, nj), plus_i_j)
+                            new_problem.set_initial_value(relationship_fluent(nj, ni), plus_i_j)
                         except UPValueError:
-                            pass
+                            try:
+                                null = new_problem.object('null')
+                            except UPValueError:
+                                new_problem.add_object(model.Object('null', ut_number))
+                                null = new_problem.object('null')
+                            new_problem.set_initial_value(relationship_fluent(ni, nj), null)
+                            new_problem.set_initial_value(relationship_fluent(nj, ni), null)
                     elif relationship == 'minus':
                         try:
                             minus_i_j = new_problem.object('n' + str(i-j))
-                            if minus_i_j:
-                                new_problem.set_initial_value(relationship_fluent(ni, nj), minus_i_j)
+                            new_problem.set_initial_value(relationship_fluent(ni, nj), minus_i_j)
                         except UPValueError:
-                            pass
+                            try:
+                                null = new_problem.object('null')
+                            except UPValueError:
+                                new_problem.add_object(model.Object('null', ut_number))
+                                null = new_problem.object('null')
+                            new_problem.set_initial_value(relationship_fluent(ni, nj), null)
                         try:
                             minus_j_i = new_problem.object('n' + str(j-i))
-                            if minus_j_i:
-                                new_problem.set_initial_value(relationship_fluent(nj, ni), minus_j_i)
+                            new_problem.set_initial_value(relationship_fluent(nj, ni), minus_j_i)
                         except UPValueError:
-                            pass
+                            try:
+                                null = new_problem.object('null')
+                            except UPValueError:
+                                new_problem.add_object(model.Object('null', ut_number))
+                                null = new_problem.object('null')
+                            new_problem.set_initial_value(relationship_fluent(nj, ni), null)
+
+                    # Falta arreglar div i mult !!!!!
                     # Div
                     elif relationship == 'div':
                         try:
