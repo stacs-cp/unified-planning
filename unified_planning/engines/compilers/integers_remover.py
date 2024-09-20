@@ -194,14 +194,14 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
             ub = None
             print(node, new_args)
             for arg in new_args:
-                print(arg, arg.is_fluent_exp(), arg.type, arg.type.is_int_type())
                 # comprovar que es el mateix user type eh!!!
-                if arg.is_fluent_exp() and arg.type.is_user_type():
+                if arg.is_fluent_exp() and arg.type == new_problem.user_type('Number'):
                     old_fluent = old_problem.fluent(arg.fluent().name)
+                    print(old_fluent.type, old_fluent.type.lower_bound, old_fluent.type.upper_bound)
                     if lb is None or old_fluent.type.lower_bound < lb:
-                        lb = arg.type.lower_bound
+                        lb = old_fluent.type.lower_bound
                     if ub is None or old_fluent.type.upper_bound > ub:
-                        ub = arg.type.upper_bound
+                        ub = old_fluent.type.upper_bound
             print(lb, ub)
             self._add_relationships(new_problem, operation, lb, ub)
             if len(new_args) > 2:
