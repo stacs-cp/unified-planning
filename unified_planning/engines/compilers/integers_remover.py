@@ -169,6 +169,7 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                 # trobar el rang d'enters
                 lb = None
                 ub = None
+                print(node, new_args)
                 for arg in new_args:
                     print(arg, arg.type)
                     if arg.is_fluent_exp() and arg.type.is_int_type():
