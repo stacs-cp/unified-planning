@@ -177,7 +177,7 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                             lb = arg.type.lower_bound
                         if ub is None or arg.type.upper_bound > ub:
                             ub = arg.type.upper_bound
-                assert lb is not None and up is not None
+                print(lb,ub)
                 self._add_relationships(new_problem, 'lt', lb, ub)
                 if len(new_args) > 2:
                     result = em.Or(new_problem.fluent('lt')(new_args[0], new_args[1]), em.Equals(new_args[0], new_args[1]))
@@ -191,13 +191,14 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
             # trobar el rang d'enters
             lb = None
             ub = None
+            print(node, new_args)
             for arg in new_args:
                 if arg.is_fluent_exp() and arg.type.is_int_type():
                     if lb is None or arg.type.lower_bound < lb:
                         lb = arg.type.lower_bound
                     if ub is None or arg.type.upper_bound > ub:
                         ub = arg.type.upper_bound
-            assert lb is not None and up is not None
+            print(lb, ub)
             self._add_relationships(new_problem, operation, lb, ub)
             if len(new_args) > 2:
                 result = new_problem.fluent(operation)(new_args[0], new_args[1])

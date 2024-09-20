@@ -305,6 +305,8 @@ class IntegersBitsRemover(engines.engine.Engine, CompilerMixin):
         new_problem.add_fluent(div, default_initial_value=null)
         new_problem.add_fluent(mult, default_initial_value=null)
 
+        # tots els fluents enters han d'estar definits per rang
+        # buscar de tots els fluents quin es el rang mes gran, per decidir quants fluents booleans (bits) creem
         for fluent in problem.fluents:
             default_value = problem.fluents_defaults.get(fluent)
             if fluent.type.is_int_type():
