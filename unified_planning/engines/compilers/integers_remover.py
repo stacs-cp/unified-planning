@@ -136,6 +136,7 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
 
     def _get_new_fnode(
             self,
+            old_problem: "up.model.AbstractProblem",
             new_problem: "up.model.AbstractProblem",
             node: "up.model.fnode.FNode",
     ) -> up.model.fnode.FNode:
@@ -153,7 +154,7 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
         else:
             new_args = []
             for arg in node.args:
-                new = self._get_new_fnode(new_problem, arg)
+                new = self._get_new_fnode(old_problem, new_problem, arg)
                 new_args.append(new)
             if node.node_type == OperatorKind.PLUS:
                 operation = 'plus'
@@ -194,10 +195,12 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
             print(node, new_args)
             for arg in new_args:
                 print(arg, arg.is_fluent_exp(), arg.type, arg.type.is_int_type())
-                if arg.is_fluent_exp() and arg.type.is_int_type():
-                    if lb is None or arg.type.lower_bound < lb:
+                # comprovar que es el mateix user type eh!!!
+                if arg.is_fluent_exp() and arg.type.is_user_type():
+                    old_fluent = old_problem.fluent(arg.fluent().name)
+                    if lb is None or old_fluent.type.lower_bound < lb:
                         lb = arg.type.lower_bound
-                    if ub is None or arg.type.upper_bound > ub:
+                    if ub is None or old_fluent.type.upper_bound > ub:
                         ub = arg.type.upper_bound
             print(lb, ub)
             self._add_relationships(new_problem, operation, lb, ub)
@@ -427,12 +430,12 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
             new_action.clear_preconditions()
             new_action.clear_effects()
             for precondition in action.preconditions:
-                new_precondition = self._get_new_fnode(new_problem, precondition)
+                new_precondition = self._get_new_fnode(problem, new_problem, precondition)
                 new_action.add_precondition(new_precondition)
             for effect in action.effects:
-                new_fnode = self._get_new_fnode(new_problem, effect.fluent)
-                new_value = self._get_new_fnode(new_problem, effect.value)
-                new_condition = self._get_new_fnode(new_problem, effect.condition)
+                new_fnode = self._get_new_fnode(problem, new_problem, effect.fluent)
+                new_value = self._get_new_fnode(problem, new_problem, effect.value)
+                new_condition = self._get_new_fnode(problem, new_problem, effect.condition)
                 if effect.is_increase():
                     new_action.add_increase_effect(new_fnode, new_value, new_condition, effect.forall)
                 elif effect.is_decrease():
