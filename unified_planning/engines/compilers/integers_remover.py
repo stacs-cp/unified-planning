@@ -245,9 +245,11 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
             for j in range(i, upper_bound + 1):
                 ni = new_problem.object('n' + str(i))
                 nj = new_problem.object('n' + str(j))
-                print(new_problem.initial_values.get(relationship_fluent(ni,nj)))
+                print(ni, nj)
+                print(new_problem.initial_values.get(relationship_fluent(ni, nj)))
                 if not new_problem.initial_values.get(relationship_fluent(ni, nj)):
                     if relationship == 'lt':
+                        print("lt", ni, nj)
                         new_problem.set_initial_value(relationship_fluent(ni, nj), True)
                     elif relationship == 'plus':
                         try:
