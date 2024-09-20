@@ -231,6 +231,7 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
     ):
         # lt, plus, minus, div, mult
         # crear fluent de relacio si no hi es
+        print("add_relationships ", relationship, lower_bound, upper_bound)
         params = OrderedDict()
         ut_number = new_problem.user_type('Number')
         params['n1'] = ut_number
@@ -243,14 +244,15 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                 def_value = False
             else:
                 def_value = new_problem.object('null')
-            new_problem.add_fluent(relationship_fluent, default_initial_value = def_value)
+            new_problem.add_fluent(relationship_fluent, default_initial_value=def_value)
 
         # mirar si les relacions del rang d'aquests numeros estan inicialitzats
         for i in range(lower_bound, upper_bound + 1):
             for j in range(i, upper_bound + 1):
                 ni = new_problem.object('n' + str(i))
                 nj = new_problem.object('n' + str(j))
-                if new_problem.initial_value(relationship_fluent(ni, nj)) is None:
+                print(new_problem.initial_values.get(relationship_fluent(ni,nj)))
+                if new_problem.initial_values.get(relationship_fluent(ni,nj)) is None:
                     if relationship == 'lt':
                         new_problem.set_initial_value(relationship_fluent(ni, nj), True)
                     elif relationship == 'plus':
