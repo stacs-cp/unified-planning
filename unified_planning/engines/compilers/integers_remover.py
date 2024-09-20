@@ -170,6 +170,7 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                 lb = None
                 ub = None
                 for arg in new_args:
+                    print(arg, arg.type)
                     if arg.is_fluent_exp() and arg.type.is_int_type():
                         if lb is None or arg.type.lower_bound < lb:
                             lb = arg.type.lower_bound
