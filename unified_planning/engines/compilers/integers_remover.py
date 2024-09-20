@@ -207,8 +207,9 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
             lower_bound: int,
             upper_bound: int,
     ):
+        ut_number = new_problem.environment.type_manager.UserType('Number')
         for i in range(lower_bound, upper_bound):
-            new_number = model.Object('n' + str(i), new_problem.user_type('Number'))
+            new_number = model.Object('n' + str(i), ut_number)
             new_problem.add_object(new_number)
 
     def _add_relationships(
