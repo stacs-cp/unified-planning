@@ -446,7 +446,7 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
             new_to_old[new_action] = action
 
         for goal in problem.goals:
-            new_problem.add_goal(self._get_new_fnode(new_problem, goal))
+            new_problem.add_goal(self._get_new_fnode(problem, new_problem, goal))
 
         return CompilerResult(
             new_problem, partial(replace_action, map=new_to_old), self.name
