@@ -193,7 +193,7 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
             ub = None
             print(node, new_args)
             for arg in new_args:
-                print(arg, arg.is_fluent_exp(), arg.type.is_int_type())
+                print(arg, arg.is_fluent_exp(), arg.type, arg.type.is_int_type())
                 if arg.is_fluent_exp() and arg.type.is_int_type():
                     if lb is None or arg.type.lower_bound < lb:
                         lb = arg.type.lower_bound
@@ -232,9 +232,9 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
         ut_number = new_problem.user_type('Number')
         params['n1'] = ut_number
         params['n2'] = ut_number
-        if new_problem.fluent(relationship):
+        try:
             relationship_fluent = new_problem.fluent(relationship)
-        else:
+        except UPValueError:
             relationship_fluent = model.Fluent(relationship, _signature=params, environment=new_problem.environment)
             if relationship == 'lt':
                 def_value = False
