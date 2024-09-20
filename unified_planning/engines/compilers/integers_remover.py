@@ -221,7 +221,6 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
     ):
         # lt, plus, minus, div, mult
         # crear fluent de relacio si no hi es
-        print("add_relationships ", relationship, lower_bound, upper_bound)
         params = OrderedDict()
         ut_number = new_problem.user_type('Number')
         params['n1'] = ut_number
@@ -237,18 +236,12 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
             for j in range(i, upper_bound + 1):
                 ni = new_problem.object('n' + str(i))
                 nj = new_problem.object('n' + str(j))
-                print(ni, nj)
-                print(new_problem.initial_values)
-                print(new_problem.initial_values.get(relationship_fluent))
-                print(new_problem.initial_values.get(relationship_fluent(ni, nj)))
-                print(not new_problem.initial_values.get(relationship_fluent(ni, nj)))
                 if new_problem.initial_values.get(relationship_fluent(ni, nj)) is None:
-                    print("entraaa")
-                    print(relationship)
                     if relationship == 'lt':
-                        print("lt", ni, nj)
                         if i < j:
                             new_problem.set_initial_value(relationship_fluent(ni, nj), True)
+                        else:
+                            new_problem.set_initial_value(relationship_fluent(ni, nj), False)
                     elif relationship == 'plus':
                         try:
                             plus_i_j = new_problem.object('n' + str(i+j))
