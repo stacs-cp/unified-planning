@@ -193,6 +193,7 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
             ub = None
             print(node, new_args)
             for arg in new_args:
+                print(arg, arg.is_fluent_exp(), arg.type.is_int_type())
                 if arg.is_fluent_exp() and arg.type.is_int_type():
                     if lb is None or arg.type.lower_bound < lb:
                         lb = arg.type.lower_bound
@@ -228,7 +229,7 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
         # lt, plus, minus, div, mult
         # crear fluent de relacio si no hi es
         params = OrderedDict()
-        ut_number = new_problem.user_type('ut_number')
+        ut_number = new_problem.user_type('Number')
         params['n1'] = ut_number
         params['n2'] = ut_number
         if new_problem.fluent(relationship):
