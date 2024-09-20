@@ -246,9 +246,9 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                 ni = new_problem.object('n' + str(i))
                 nj = new_problem.object('n' + str(j))
                 print(ni, nj)
-                print(new_problem.initial_values.get(relationship_fluent(ni, nj)))
+                print(new_problem.initial_values.get(relationship_fluent(ni, nj)) is None)
                 print(not new_problem.initial_values.get(relationship_fluent(ni, nj)))
-                if not new_problem.initial_values.get(relationship_fluent(ni, nj)):
+                if new_problem.initial_values.get(relationship_fluent(ni, nj)) is None:
                     print("entraaa")
                     print(relationship)
                     if relationship == 'lt':
