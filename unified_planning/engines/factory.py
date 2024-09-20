@@ -111,6 +111,10 @@ DEFAULT_ENGINES = {
         "unified_planning.engines.compilers.integers_remover",
         "IntegersRemover",
     ),
+    "up_integers_bits_remover": (
+        "unified_planning.engines.compilers.integers_bits_remover",
+        "IntegersBitsRemover",
+    ),
     "up_usertype_fluents_remover": (
         "unified_planning.engines.compilers.usertype_fluents_remover",
         "UsertypeFluentsRemover",
@@ -171,6 +175,7 @@ DEFAULT_ENGINES_PREFERENCE_LIST = [
     "up_arrays_remover",
     "up_int_parameter_actions_remover",
     "up_integers_remover",
+    "up_integers_remover_bits",
     "up_state_invariants_remover",
     "up_usertype_fluents_remover",
     "tarski_grounder",

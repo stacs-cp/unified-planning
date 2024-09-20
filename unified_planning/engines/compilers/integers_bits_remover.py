@@ -41,19 +41,19 @@ from unified_planning.shortcuts import Int, FALSE
 import re
 
 
-class IntegersRemover(engines.engine.Engine, CompilerMixin):
+class IntegersBitsRemover(engines.engine.Engine, CompilerMixin):
     """
     Integers remover class: ...
     """
 
     def __init__(self, mode: str = 'strict'):
         engines.engine.Engine.__init__(self)
-        CompilerMixin.__init__(self, CompilationKind.INTEGERS_REMOVING)
+        CompilerMixin.__init__(self, CompilationKind.INTEGERS_BITS_REMOVING)
         self.mode = mode
 
     @property
     def name(self):
-        return "irm"
+        return "ibrm"
 
     @staticmethod
     def supported_kind() -> ProblemKind:
@@ -120,11 +120,11 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
 
     @staticmethod
     def supports(problem_kind):
-        return problem_kind <= IntegersRemover.supported_kind()
+        return problem_kind <= IntegersBitsRemover.supported_kind()
 
     @staticmethod
     def supports_compilation(compilation_kind: CompilationKind) -> bool:
-        return compilation_kind == CompilationKind.INTEGERS_REMOVING
+        return compilation_kind == CompilationKind.INTEGERS_BITS_REMOVING
 
     @staticmethod
     def resulting_problem_kind(
@@ -166,17 +166,6 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
             elif node.node_type == OperatorKind.LT:
                 operation = 'lt'
             elif node.node_type == OperatorKind.LE:
-                # trobar el rang d'enters
-                lb = None
-                ub = None
-                for arg in new_args:
-                    if arg.is_fluent_exp() and arg.type.is_int_type():
-                        if lb is None or arg.type.lower_bound < lb:
-                            lb = arg.type.lower_bound
-                        if ub is None or arg.type.upper_bound > ub:
-                            ub = arg.type.upper_bound
-                assert lb is not None and up is not None
-                self._add_relationships(new_problem, 'lt', lb, ub)
                 if len(new_args) > 2:
                     result = em.Or(new_problem.fluent('lt')(new_args[0], new_args[1]), em.Equals(new_args[0], new_args[1]))
                     for arg in new_args[2:]:
@@ -186,17 +175,6 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                     return em.Or(new_problem.fluent('lt')(*new_args), em.Equals(*new_args))
             else:
                 return em.create_node(node.node_type, tuple(new_args))
-            # trobar el rang d'enters
-            lb = None
-            ub = None
-            for arg in new_args:
-                if arg.is_fluent_exp() and arg.type.is_int_type():
-                    if lb is None or arg.type.lower_bound < lb:
-                        lb = arg.type.lower_bound
-                    if ub is None or arg.type.upper_bound > ub:
-                        ub = arg.type.upper_bound
-            assert lb is not None and up is not None
-            self._add_relationships(new_problem, operation, lb, ub)
             if len(new_args) > 2:
                 result = new_problem.fluent(operation)(new_args[0], new_args[1])
                 for arg in new_args[2:]:
@@ -218,83 +196,72 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
     def _add_relationships(
             self,
             new_problem: "up.model.AbstractProblem",
-            relationship: str,
             lower_bound: int,
+            mid_low_bound: Union[int, None],
+            mid_up_bound: Union[int, None],
             upper_bound: int,
     ):
-        # lt, plus, minus, div, mult
-        # crear fluent de relacio si no hi es
-        params = OrderedDict()
-        ut_number = new_problem.user_type('ut_number')
-        params['n1'] = ut_number
-        params['n2'] = ut_number
-        if new_problem.fluent(relationship):
-            relationship_fluent = new_problem.fluent(relationship)
-        else:
-            relationship_fluent = model.Fluent(relationship, _signature=params, environment=new_problem.environment)
-            if relationship == 'lt':
-                def_value = False
-            else:
-                def_value = new_problem.object('null')
-            new_problem.add_fluent(relationship_fluent, default_initial_value = def_value)
-
-        # mirar si les relacions del rang d'aquests numeros estan inicialitzats
+        lt = new_problem.fluent("lt")
+        plus = new_problem.fluent("plus")
+        minus = new_problem.fluent("minus")
+        div = new_problem.fluent("div")
+        mult = new_problem.fluent("mult")
         for i in range(lower_bound, upper_bound + 1):
-            for j in range(i, upper_bound + 1):
-                ni = new_problem.object('n' + str(i))
-                nj = new_problem.object('n' + str(j))
-                if new_problem.initial_value(relationship_fluent(ni, nj)) is None:
-                    if relationship == 'lt':
-                        new_problem.set_initial_value(relationship_fluent(ni, nj), True)
-                    elif relationship == 'plus':
+            if mid_low_bound is None or i < mid_low_bound:
+                for j in range(i, upper_bound + 1):
+                    if mid_up_bound is None or j >= mid_up_bound:
+                        ni = new_problem.object('n' + str(i))
+                        nj = new_problem.object('n' + str(j))
+                        # Less Than
+                        if i < j:
+                            new_problem.set_initial_value(lt(ni, nj), True)
+                        # Plus
                         try:
                             plus_i_j = new_problem.object('n' + str(i+j))
                             if plus_i_j:
-                                new_problem.set_initial_value(relationship_fluent(ni, nj), plus_i_j)
-                                new_problem.set_initial_value(relationship_fluent(nj, ni), plus_i_j)
+                                new_problem.set_initial_value(plus(ni, nj), plus_i_j)
+                                new_problem.set_initial_value(plus(nj, ni), plus_i_j)
                         except UPValueError:
                             pass
-                    elif relationship == 'minus':
+                        # Minus
                         try:
                             minus_i_j = new_problem.object('n' + str(i-j))
                             if minus_i_j:
-                                new_problem.set_initial_value(relationship_fluent(ni, nj), minus_i_j)
+                                new_problem.set_initial_value(minus(ni, nj), minus_i_j)
                         except UPValueError:
                             pass
                         try:
                             minus_j_i = new_problem.object('n' + str(j-i))
                             if minus_j_i:
-                                new_problem.set_initial_value(relationship_fluent(nj, ni), minus_j_i)
+                                new_problem.set_initial_value(minus(nj, ni), minus_j_i)
                         except UPValueError:
                             pass
-                    # Div
-                    elif relationship == 'div':
+                        # Div
                         try:
                             if j > 0:
                                 div_i_j = new_problem.object('n' + str(i/j))
                                 if div_i_j:
-                                    new_problem.set_initial_value(relationship_fluent(ni, nj), div_i_j)
+                                    new_problem.set_initial_value(div(ni, nj), div_i_j)
                         except UPValueError:
                             pass
                         try:
                             if i > 0:
                                 div_j_i = new_problem.object('n' + str(j/i))
                                 if div_j_i:
-                                    new_problem.set_initial_value(relationship_fluent(nj, ni), div_j_i)
+                                    new_problem.set_initial_value(div(nj, ni), div_j_i)
                         except UPValueError:
                             pass
-                    # Mult
-                    elif relationship == 'mult':
+                        # Mult
                         try:
                             mult_i_j = new_problem.object('n' + str(i*j))
                             if mult_i_j:
-                                new_problem.set_initial_value(relationship_fluent(ni, nj), mult_i_j)
+                                new_problem.set_initial_value(mult(ni, nj), mult_i_j)
                         except UPValueError:
                             pass
                         try:
                             mult_j_i = new_problem.object('n' + str(j*i))
                             if mult_j_i:
-                                new_problem.set_initial_value(relationship_fluent(nj, ni), mult_j_i)
+                                new_problem.set_initial_value(mult(nj, ni), mult_j_i)
                         except UPValueError:
                             pass
 
@@ -324,19 +291,19 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
         null = model.Object('null', ut_number)
         new_problem.add_object(null)
         # Relationships between objects
-        #params = OrderedDict()
-        #params['n1'] = ut_number
-        #params['n2'] = ut_number
-        #lt = model.Fluent('lt', _signature=params, environment=env)
-        #plus = model.Fluent('plus', ut_number, _signature=params, environment=env)
-        #minus = model.Fluent('minus', ut_number, _signature=params, environment=env)
-        #div = model.Fluent('div', ut_number, _signature=params, environment=env)
-        #mult = model.Fluent('mult', ut_number, _signature=params, environment=env)
-        #new_problem.add_fluent(lt, default_initial_value=False)
-        #new_problem.add_fluent(plus, default_initial_value=null)
-        #new_problem.add_fluent(minus, default_initial_value=null)
-        #new_problem.add_fluent(div, default_initial_value=null)
-        #new_problem.add_fluent(mult, default_initial_value=null)
+        params = OrderedDict()
+        params['n1'] = ut_number
+        params['n2'] = ut_number
+        lt = model.Fluent('lt', _signature=params, environment=env)
+        plus = model.Fluent('plus', ut_number, _signature=params, environment=env)
+        minus = model.Fluent('minus', ut_number, _signature=params, environment=env)
+        div = model.Fluent('div', ut_number, _signature=params, environment=env)
+        mult = model.Fluent('mult', ut_number, _signature=params, environment=env)
+        new_problem.add_fluent(lt, default_initial_value=False)
+        new_problem.add_fluent(plus, default_initial_value=null)
+        new_problem.add_fluent(minus, default_initial_value=null)
+        new_problem.add_fluent(div, default_initial_value=null)
+        new_problem.add_fluent(mult, default_initial_value=null)
 
         for fluent in problem.fluents:
             default_value = problem.fluents_defaults.get(fluent)
@@ -347,18 +314,18 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                 # First integer fluent! - control of ranges
                 if lb is None and ub is None:
                     self._add_object_numbers(new_problem, tlb, tub + 1)
-                    #self._add_relationships(new_problem, tlb, None, None, tub)
+                    self._add_relationships(new_problem, tlb, None, None, tub)
                     ub = tub
                     lb = tlb
                 # if another fluent has lower or upper range add them
                 elif tub > ub or tlb < lb:
                     if tub > ub:
                         self._add_object_numbers(new_problem, ub + 1, tub + 1)
-                        #self._add_relationships(new_problem, lb, None, ub+1, tub)
+                        self._add_relationships(new_problem, lb, None, ub+1, tub)
                         ub = tub
                     if tlb < lb:
                         self._add_object_numbers(new_problem, tlb, lb)
-                        #self._add_relationships(new_problem, tlb, lb, None, tub)
+                        self._add_relationships(new_problem, tlb, lb, None, tub)
                         lb = tlb
                 # Default initial values
                 if default_value is not None:
