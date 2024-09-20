@@ -246,14 +246,17 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                 ni = new_problem.object('n' + str(i))
                 nj = new_problem.object('n' + str(j))
                 print(ni, nj)
-                print(new_problem.initial_values.get(relationship_fluent(ni, nj)) is None)
+                print(new_problem.initial_values)
+                print(new_problem.initial_values.get(relationship_fluent))
+                print(new_problem.initial_values.get(relationship_fluent(ni, nj)))
                 print(not new_problem.initial_values.get(relationship_fluent(ni, nj)))
                 if new_problem.initial_values.get(relationship_fluent(ni, nj)) is None:
                     print("entraaa")
                     print(relationship)
                     if relationship == 'lt':
                         print("lt", ni, nj)
-                        new_problem.set_initial_value(relationship_fluent(ni, nj), True)
+                        if ni < nj:
+                            new_problem.set_initial_value(relationship_fluent(ni, nj), True)
                     elif relationship == 'plus':
                         try:
                             plus_i_j = new_problem.object('n' + str(i+j))
