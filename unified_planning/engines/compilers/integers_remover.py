@@ -167,50 +167,39 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
             elif node.node_type == OperatorKind.LT:
                 operation = 'lt'
             elif node.node_type == OperatorKind.LE:
-                # trobar el rang d'enters
-                lb = None
-                ub = None
-                print(node, new_args)
-                for arg in new_args:
-                    print(arg, arg.type)
-                    if arg.is_fluent_exp() and arg.type.is_int_type():
-                        if lb is None or arg.type.lower_bound < lb:
-                            lb = arg.type.lower_bound
-                        if ub is None or arg.type.upper_bound > ub:
-                            ub = arg.type.upper_bound
-                print(lb,ub)
+                operation = 'le'
+            else:
+                return em.create_node(node.node_type, tuple(new_args))
+            # trobar el rang d'enters
+            lb = None
+            ub = None
+            for arg in new_args:
+                if arg.is_fluent_exp() and arg.type == new_problem.user_type('Number'):
+                    old_fluent = old_problem.fluent(arg.fluent().name)
+                    if lb is None or old_fluent.type.lower_bound < lb:
+                        lb = old_fluent.type.lower_bound
+                    if ub is None or old_fluent.type.upper_bound > ub:
+                        ub = old_fluent.type.upper_bound
+            assert lb is not None and ub is not None
+            if operation == 'le':
                 self._add_relationships(new_problem, 'lt', lb, ub)
                 if len(new_args) > 2:
-                    result = em.Or(new_problem.fluent('lt')(new_args[0], new_args[1]), em.Equals(new_args[0], new_args[1]))
+                    result = em.Or(new_problem.fluent('lt')(new_args[0], new_args[1]),
+                                   em.Equals(new_args[0], new_args[1]))
                     for arg in new_args[2:]:
                         em.Or(new_problem.fluent('lt')(result, arg), em.Equals(result, arg))
                     return result
                 else:
                     return em.Or(new_problem.fluent('lt')(*new_args), em.Equals(*new_args))
             else:
-                return em.create_node(node.node_type, tuple(new_args))
-            # trobar el rang d'enters
-            lb = None
-            ub = None
-            print(node, new_args)
-            for arg in new_args:
-                # comprovar que es el mateix user type eh!!!
-                if arg.is_fluent_exp() and arg.type == new_problem.user_type('Number'):
-                    old_fluent = old_problem.fluent(arg.fluent().name)
-                    print(old_fluent.type, old_fluent.type.lower_bound, old_fluent.type.upper_bound)
-                    if lb is None or old_fluent.type.lower_bound < lb:
-                        lb = old_fluent.type.lower_bound
-                    if ub is None or old_fluent.type.upper_bound > ub:
-                        ub = old_fluent.type.upper_bound
-            print(lb, ub)
-            self._add_relationships(new_problem, operation, lb, ub)
-            if len(new_args) > 2:
-                result = new_problem.fluent(operation)(new_args[0], new_args[1])
-                for arg in new_args[2:]:
-                    result = new_problem.fluent(operation)(result, arg)
-                return result
-            else:
-                return new_problem.fluent(operation)(*new_args)
+                self._add_relationships(new_problem, operation, lb, ub)
+                if len(new_args) > 2:
+                    result = new_problem.fluent(operation)(new_args[0], new_args[1])
+                    for arg in new_args[2:]:
+                        result = new_problem.fluent(operation)(result, arg)
+                    return result
+                else:
+                    return new_problem.fluent(operation)(*new_args)
 
     def _add_object_numbers(
             self,
@@ -243,7 +232,11 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
             if relationship == 'lt':
                 def_value = False
             else:
-                def_value = new_problem.object('null')
+                try:
+                    def_value = new_problem.object('null')
+                except UPValueError:
+                    new_problem.add_object(model.Object('null', ut_number))
+                    def_value = new_problem.object('null')
             new_problem.add_fluent(relationship_fluent, default_initial_value=def_value)
 
         # mirar si les relacions del rang d'aquests numeros estan inicialitzats
@@ -252,7 +245,7 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                 ni = new_problem.object('n' + str(i))
                 nj = new_problem.object('n' + str(j))
                 print(new_problem.initial_values.get(relationship_fluent(ni,nj)))
-                if new_problem.initial_values.get(relationship_fluent(ni,nj)) is None:
+                if not new_problem.initial_values.get(relationship_fluent(ni, nj)):
                     if relationship == 'lt':
                         new_problem.set_initial_value(relationship_fluent(ni, nj), True)
                     elif relationship == 'plus':
@@ -330,8 +323,6 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
         lb = None
         ub = None
         ut_number = tm.UserType('Number')
-        null = model.Object('null', ut_number)
-        new_problem.add_object(null)
         # Relationships between objects
         #params = OrderedDict()
         #params['n1'] = ut_number
