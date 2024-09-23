@@ -246,13 +246,12 @@ class IntegersBitsRemover(engines.engine.Engine, CompilerMixin):
                 )
             elif iv != default_value:
                 print(iv)
-                n_binari = bin(iv.constant_value())[2:]  # bin() devuelve una cadena con '0b' al inicio, eliminamos eso con [2:]
+                n_binari = bin(iv.constant_value())[2:]
                 print(n_binari)
                 number_with_bits = n_binari.zfill(n_bits)
                 bits_param = [b == 1 for b in number_with_bits]
                 print(new_fluent, bits_param)
-                new_problem.set_initial_value(new_fluent(bits_param), True)
-
+                new_problem.set_initial_value(new_fluent(*bits_param), True)
 
     def _add_relationships(
             self,
@@ -387,9 +386,9 @@ class IntegersBitsRemover(engines.engine.Engine, CompilerMixin):
         new_problem.initial_values.clear()
         env = new_problem.environment
         tm = env.type_manager
-        # busquem el rang d'enters que te el problema
+
+        # Search range of integers in this problem
         for fluent in problem.fluents:
-            default_value = problem.fluents_defaults.get(fluent)
             if fluent.type.is_int_type():
                 # First integer fluent! - control of ranges
                 if self.lb is None and self.ub is None:
@@ -403,7 +402,7 @@ class IntegersBitsRemover(engines.engine.Engine, CompilerMixin):
                         self.lb = fluent.type.lower_bound
         self.n = self.ub - self.lb + 1
         print(self.ub, self.lb, self.n)
-        # sabem el rang, ara hem de canviar els fluents
+        # Change the integers fluents
         for fluent in problem.fluents:
             default_value = problem.fluents_defaults.get(fluent)
             if fluent.type.is_int_type():
