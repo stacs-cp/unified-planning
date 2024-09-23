@@ -225,33 +225,21 @@ class IntegersBitsRemover(engines.engine.Engine, CompilerMixin):
                     raise UPProblemDefinitionError(
                         f"Initial value not set for fluent: {fluent(*fp)}"
                     )
-                elif iv != default_value:
-                    bits_param = OrderedDict()
-                    n_binari = bin(iv)[2:]  # bin() devuelve una cadena con '0b' al inicio, eliminamos eso con [2:]
-                    print(n_binari.zfill(n_bits))
+                else:
+                    n_binari = bin(iv.constant_value())[2:]
                     number_with_bits = n_binari.zfill(n_bits)
-                    i = 0
-                    for b in number_with_bits:
-                        if b == 1:
-                            bits_param['b'+ str(i)] = True
-                        else:
-                            bits_param['b' + str(i)] = False
-                        i += 1
-                    new_problem.set_initial_value(new_fluent(*fp + bits_param), True)
+                    bits_param = [b == '1' for b in number_with_bits]
+                    new_problem.set_initial_value(new_fluent(*(fp + bits_param)), True)
         else:
             iv = old_problem.initial_value(fluent())
             if iv is None:
                 raise UPProblemDefinitionError(
                     f"Initial value not set for fluent: {fluent()}"
                 )
-            elif iv != default_value:
-                print(iv)
+            else:
                 n_binari = bin(iv.constant_value())[2:]
-                print(n_binari)
                 number_with_bits = n_binari.zfill(n_bits)
-                print(number_with_bits)
                 bits_param = [b == '1' for b in number_with_bits]
-                print(new_fluent, bits_param)
                 new_problem.set_initial_value(new_fluent(*bits_param), True)
 
     def _add_relationships(
