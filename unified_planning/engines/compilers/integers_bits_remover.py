@@ -253,9 +253,9 @@ class IntegersBitsRemover(engines.engine.Engine, CompilerMixin):
                 i = 0
                 for b in number_with_bits:
                     if b == 1:
-                        bits_param.append(up.model.Parameter('b' + str(i), em.TRUE()))
+                        bits_param.append(em.TRUE())
                     else:
-                        bits_param.append(up.model.Parameter('b' + str(i), em.FALSE()))
+                        bits_param.append(em.FALSE())
                     i += 1
                 new_problem.set_initial_value(new_fluent(bits_param), True)
 
