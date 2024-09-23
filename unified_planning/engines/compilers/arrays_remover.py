@@ -256,8 +256,10 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                 # si no hi ha vol dir que tots els possibles valors (amb parametres) hauran d'estar inicialitzats
                 default_value = None
             objects = []
+            print(fluent.signature)
             for s in fluent.signature:
                 objects.append(problem.objects(s.type))
+            print(objects)
             fluent_parameters = list(product(*objects))
             if fluent_parameters == [()]:
                 fluent_parameters = []
