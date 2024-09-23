@@ -256,19 +256,19 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
             else:
                 # si no hi ha vol dir que tots els possibles valors (amb parametres) hauran d'estar inicialitzats
                 default_value = None
-            this_signature = []
-            print(fluent.signature)
-            for s in fluent.signature:
-                print(s)
-                if s.type.is_user_type():
-                    print("usertype: ", problem.objects(s.type))
-                    this_signature.append(problem.objects(s.type))
-                else:
-                    this_signature.append(s)
-            print(this_signature)
-            fluent_parameters = list(product(*this_signature))
-            if fluent_parameters == [()]:
-                fluent_parameters = []
+            #this_signature = []
+            #for s in fluent.signature:
+            #    print(s)
+            #    if s.type.is_user_type():
+            #        print("usertype: ", problem.objects(s.type))
+            #        this_signature.append(problem.objects(s.type))
+            #    else:
+            #        this_signature.append(s)
+            #print(this_signature)
+            #problem.initial_values.
+            #fluent_parameters = list(product(*this_signature))
+            #if fluent_parameters == [()]:
+            #    fluent_parameters = []
 
             if fluent.type.is_array_type():
                 this_fluent = fluent.type
@@ -288,74 +288,94 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                     if new_default_value is not None:
                         for i in combination:
                             new_default_value = new_default_value.constant_value()[i]
+                    print(new_fluent, new_default_value)
                     new_problem.add_fluent(new_fluent, default_initial_value=new_default_value)
 
                     # obtenir el nom del fluent creat quan accedir []
                     old_name = fluent.name
                     for c in combination:
                         old_name += f"[{c}]"
+                    print(old_name)
 
-                    keys = problem.initial_values.keys()
-                    if fluent_parameters:
-                        for fp in fluent_parameters:
-                            iv = None
-                            new_initial_value = None
-                            for k in keys:
-                                if str(k) == old_name + '(' + ','.join(str(i) for i in fp) + ')':
-                                    iv = problem.initial_values.get(k)
-                                if str(k) == fluent.name + '(' + ','.join(str(i) for i in fp) + ')':
-                                    new_initial_value = problem.initial_values.get(k)
-                                    for c in combination:
-                                        new_initial_value = new_initial_value.constant_value()[c]
-                            if iv is not None:
-                                new_problem.set_initial_value(new_fluent(*fp), iv)
-                            elif new_initial_value is not None:
-                                new_problem.set_initial_value(new_fluent(*fp), new_initial_value)
-                            elif new_default_value is not None:
-                                new_problem.set_initial_value(new_fluent(*fp), new_default_value)
-                            else:
-                                raise UPProblemDefinitionError(
-                                    f"Initial value not set for fluent: {new_fluent(*fp)}"
-                                )
-                    else:
-                        iv = None
-                        new_initial_value = None
-                        for k in keys:
-                            if str(k) == old_name:
-                                iv = problem.initial_values.get(k)
-                            if str(k) == fluent.name:
-                                new_initial_value = problem.initial_values.get(k)
-                                for c in combination:
-                                    new_initial_value = new_initial_value.constant_value()[c]
-                        if iv is not None:
-                            new_problem.set_initial_value(new_fluent(), iv)
-                        elif new_initial_value is not None:
-                            new_problem.set_initial_value(new_fluent(), new_initial_value)
-                        elif new_default_value is not None:
-                            new_problem.set_initial_value(new_fluent(), new_default_value)
-                        else:
-                            raise UPProblemDefinitionError(
-                                f"Initial value not set for fluent: {new_fluent()}"
-                            )
+                    for k, v in problem.initial_values.items():
+                        print(k, v)
+                        print(k.type.is_array_type())
+                        if k.type.is_array_type():
+                            new_initial_value = v
+                            for c in combination:
+                                new_initial_value = new_initial_value.constant_value()[c]
+
+                            print(k, new_initial_value)
+                    #keys = problem.initial_values.keys()
+                    #print("keys", keys)
+                    #if fluent_parameters:
+                    #    print("fluent_parameters...")
+                    #    for fp in fluent_parameters:
+                    #        print(fp)
+                    #        iv = None
+                    #        new_initial_value = None
+                    #        for k in keys:
+                    #            if str(k) == old_name + '(' + ','.join(str(i) for i in fp) + ')':
+                    #                iv = problem.initial_values.get(k)
+                    #            if str(k) == fluent.name + '(' + ','.join(str(i) for i in fp) + ')':
+                    #                new_initial_value = problem.initial_values.get(k)
+                    #                for c in combination:
+                    #                    new_initial_value = new_initial_value.constant_value()[c]
+                    #        if iv is not None:
+                    #            new_problem.set_initial_value(new_fluent(*fp), iv)
+                    #        elif new_initial_value is not None:
+                    #            new_problem.set_initial_value(new_fluent(*fp), new_initial_value)
+                    #        elif new_default_value is not None:
+                    #            new_problem.set_initial_value(new_fluent(*fp), new_default_value)
+                    #        else:
+                    #            raise UPProblemDefinitionError(
+                    #                f"Initial value not set for fluent: {new_fluent(*fp)}"
+                    #            )
+                    #else:
+                    #    iv = None
+                    #    new_initial_value = None
+                    #    for k in keys:
+                    #        if str(k) == old_name:
+                    #            iv = problem.initial_values.get(k)
+                    #        if str(k) == fluent.name:
+                    #            new_initial_value = problem.initial_values.get(k)
+                    #            for c in combination:
+                    #                new_initial_value = new_initial_value.constant_value()[c]
+                    #    if iv is not None:
+                    #        new_problem.set_initial_value(new_fluent(), iv)
+                    #    elif new_initial_value is not None:
+                    #        new_problem.set_initial_value(new_fluent(), new_initial_value)
+                    #    elif new_default_value is not None:
+                    #        new_problem.set_initial_value(new_fluent(), new_default_value)
+                    #    else:
+                    #        raise UPProblemDefinitionError(
+                    #            f"Initial value not set for fluent: {new_fluent()}"
+                    #        )
             else:
                 new_problem.add_fluent(fluent, default_initial_value=default_value)
-                if fluent_parameters:
-                    for fp in fluent_parameters:
-                        iv = problem.initial_value(fluent(*fp))
-                        if iv is None:
-                            raise UPProblemDefinitionError(
-                                f"Initial value not set for fluent: {fluent(*fp)}"
-                            )
-                        elif iv != default_value:
-                            new_problem.set_initial_value(fluent(*fp), iv)
-                else:
-                    iv = problem.initial_value(fluent())
-                    if iv is None:
-                        raise UPProblemDefinitionError(
-                            f"Initial value not set for fluent: {fluent()}"
-                        )
-                    elif iv != default_value:
-                        new_problem.set_initial_value(fluent(), iv)
+                #if fluent_parameters:
+                #    for fp in fluent_parameters:
+                #        iv = problem.initial_value(fluent(*fp))
+                #        if iv is None:
+                #            raise UPProblemDefinitionError(
+                #                f"Initial value not set for fluent: {fluent(*fp)}"
+                #            )
+                #        elif iv != default_value:
+                #            new_problem.set_initial_value(fluent(*fp), iv)
+                #else:
+                #    iv = problem.initial_value(fluent())
+                #    if iv is None:
+                #        raise UPProblemDefinitionError(
+                #            f"Initial value not set for fluent: {fluent()}"
+                #        )
+                #    elif iv != default_value:
+                #        new_problem.set_initial_value(fluent(), iv)
+            # Afegir initial values
+            for k, v in problem.initial_values.items():
+                print(k, v)
+                print(k.type.is_array_type())
+                if not k.type.is_array_type():
+                    continue
 
         for action in problem.actions:
             new_action = action.clone()
