@@ -199,6 +199,7 @@ class IntegersBitsRemover(engines.engine.Engine, CompilerMixin):
             fluent: "up.model.Fluent"
     ):
         env = new_problem.environment
+        em = env.expression_manager
         tm = env.type_manager
         params = []
         n_bits = math.ceil(math.log2(self.n + 1))
@@ -252,9 +253,9 @@ class IntegersBitsRemover(engines.engine.Engine, CompilerMixin):
                 i = 0
                 for b in number_with_bits:
                     if b == 1:
-                        bits_param.append(up.model.Parameter('b' + str(i), True))
+                        bits_param.append(up.model.Parameter('b' + str(i), em.TRUE()))
                     else:
-                        bits_param.append(up.model.Parameter('b' + str(i), True))
+                        bits_param.append(up.model.Parameter('b' + str(i), em.FALSE()))
                     i += 1
                 new_problem.set_initial_value(new_fluent(bits_param), True)
 
