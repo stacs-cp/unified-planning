@@ -300,12 +300,14 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                     for k, v in problem.initial_values.items():
                         print(k, v)
                         print(k.type.is_array_type())
-                        if k.type.is_array_type():
+                        if k.type.is_array_type() and k.type.name == old_name:
+                            print("este es!")
                             new_initial_value = v
                             for c in combination:
                                 new_initial_value = new_initial_value.constant_value()[c]
 
-                            print(k, new_initial_value)
+                            print("AFEGIR:", new_fluent, k.args, new_initial_value)
+                            new_problem.set_initial_value(new_fluent(*k.args), new_initial_value)
                     #keys = problem.initial_values.keys()
                     #print("keys", keys)
                     #if fluent_parameters:
@@ -370,12 +372,11 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                 #        )
                 #    elif iv != default_value:
                 #        new_problem.set_initial_value(fluent(), iv)
-            # Afegir initial values
-            for k, v in problem.initial_values.items():
-                print(k, v)
-                print(k.type.is_array_type())
-                if not k.type.is_array_type():
-                    continue
+                # Afegir initial values
+                for k, v in problem.initial_values.items():
+                    print(k, v)
+                    if not k.type.is_array_type():
+                        new_problem.set_initial_value(k, v)
 
         for action in problem.actions:
             new_action = action.clone()
