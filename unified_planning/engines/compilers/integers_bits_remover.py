@@ -250,6 +250,7 @@ class IntegersBitsRemover(engines.engine.Engine, CompilerMixin):
                 print(n_binari)
                 number_with_bits = n_binari.zfill(n_bits)
                 bits_param = [b == 1 for b in number_with_bits]
+                print(new_fluent, bits_param)
                 new_problem.set_initial_value(new_fluent(bits_param), True)
 
 
