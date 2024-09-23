@@ -175,7 +175,7 @@ DEFAULT_ENGINES_PREFERENCE_LIST = [
     "up_arrays_remover",
     "up_int_parameter_actions_remover",
     "up_integers_remover",
-    "up_integers_remover_bits",
+    "up_integers_bits_remover",
     "up_state_invariants_remover",
     "up_usertype_fluents_remover",
     "tarski_grounder",
