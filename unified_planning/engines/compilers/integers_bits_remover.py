@@ -229,7 +229,7 @@ class IntegersBitsRemover(engines.engine.Engine, CompilerMixin):
                     n_binari = bin(iv.constant_value())[2:]
                     number_with_bits = n_binari.zfill(n_bits)
                     bits_param = [b == '1' for b in number_with_bits]
-                    new_problem.set_initial_value(new_fluent(*(fp + bits_param)), True)
+                    new_problem.set_initial_value(new_fluent(*fp + tuple(bits_param)), True)
         else:
             iv = old_problem.initial_value(fluent())
             if iv is None:
