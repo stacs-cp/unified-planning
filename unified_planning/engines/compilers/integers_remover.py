@@ -412,7 +412,6 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                         new_problem.set_initial_value(fluent(), iv)
 
         # Actions
-        print(self.lb,self.ub)
         for action in problem.actions:
             new_action = action.clone()
             new_action.name = get_fresh_name(new_problem, action.name)
