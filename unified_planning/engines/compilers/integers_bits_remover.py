@@ -244,16 +244,17 @@ class IntegersBitsRemover(engines.engine.Engine, CompilerMixin):
                     f"Initial value not set for fluent: {fluent()}"
                 )
             elif iv != default_value:
-                bits_param = OrderedDict()
+                print(iv)
+                bits_param = []
                 n_binari = bin(iv.constant_value())[2:]  # bin() devuelve una cadena con '0b' al inicio, eliminamos eso con [2:]
                 print(n_binari)
                 number_with_bits = n_binari.zfill(n_bits)
                 i = 0
                 for b in number_with_bits:
                     if b == 1:
-                        bits_param['b' + str(i)] = True
+                        bits_param.append(up.model.Parameter('b' + str(i), True))
                     else:
-                        bits_param['b' + str(i)] = False
+                        bits_param.append(up.model.Parameter('b' + str(i), True))
                     i += 1
                 new_problem.set_initial_value(new_fluent(bits_param), True)
 
@@ -406,6 +407,7 @@ class IntegersBitsRemover(engines.engine.Engine, CompilerMixin):
                     if fluent.type.lower_bound < self.lb:
                         self.lb = fluent.type.lower_bound
         self.n = self.ub - self.lb + 1
+        print(self.ub, self.lb, self.n)
         # sabem el rang, ara hem de canviar els fluents
         for fluent in problem.fluents:
             default_value = problem.fluents_defaults.get(fluent)
