@@ -282,8 +282,8 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                     new_type = this_fluent.elements_type
                     this_fluent = this_fluent.elements_type
                 for combination in list(product(*domain)):
-                    new_fluent_name = get_fresh_name(new_problem, fluent.name, list(map(str, combination)))
-                    new_fluent = model.Fluent(new_fluent_name, new_type, fluent.signature, fluent.environment)
+                    new_fluent = model.Fluent(get_fresh_name(new_problem, fluent.name, list(map(str, combination))),
+                                              new_type, fluent.signature, fluent.environment)
                     new_default_value = default_value
                     if new_default_value is not None:
                         for i in combination:
@@ -292,15 +292,13 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                     new_problem.add_fluent(new_fluent, default_initial_value=new_default_value)
 
                     # obtenir el nom del fluent creat quan accedir []
-                    old_name = fluent.name
-                    for c in combination:
-                        old_name += f"[{c}]"
-                    print(old_name)
+                    old_name = fluent.name + ''.join(f"[{c}]" for c in combination)
+                    print("old name", old_name)
 
                     for k, v in problem.initial_values.items():
                         print(k, v)
                         print(k.type.is_array_type())
-                        if k.type.is_array_type() and k.type.name == old_name:
+                        if k.type.is_array_type() and k.fluent().name == fluent.name:
                             print("este es!")
                             new_initial_value = v
                             for c in combination:
