@@ -433,30 +433,7 @@ class IntegersBitsRemover(engines.engine.Engine, CompilerMixin):
                     elif iv != default_value:
                         new_problem.set_initial_value(fluent(), iv)
 
-        # Actions
-        for action in problem.actions:
-            new_action = action.clone()
-            new_action.name = get_fresh_name(new_problem, action.name)
-            new_action.clear_preconditions()
-            new_action.clear_effects()
-            for precondition in action.preconditions:
-                new_precondition = self._get_new_fnode(problem, new_problem, precondition)
-                new_action.add_precondition(new_precondition)
-            for effect in action.effects:
-                new_fnode = self._get_new_fnode(problem, new_problem, effect.fluent)
-                new_value = self._get_new_fnode(problem, new_problem, effect.value)
-                new_condition = self._get_new_fnode(problem, new_problem, effect.condition)
-                if effect.is_increase():
-                    new_action.add_increase_effect(new_fnode, new_value, new_condition, effect.forall)
-                elif effect.is_decrease():
-                    new_action.add_decrease_effect(new_fnode, new_value, new_condition, effect.forall)
-                else:
-                    new_action.add_effect(new_fnode, new_value, new_condition, effect.forall)
-            new_problem.add_action(new_action)
-            new_to_old[new_action] = action
 
-        for goal in problem.goals:
-            new_problem.add_goal(self._get_new_fnode(problem, new_problem, goal))
 
         return CompilerResult(
             new_problem, partial(replace_action, map=new_to_old), self.name
