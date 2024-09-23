@@ -49,7 +49,8 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
     def __init__(self, mode: str = 'strict'):
         engines.engine.Engine.__init__(self)
         CompilerMixin.__init__(self, CompilationKind.INTEGERS_REMOVING)
-        self.mode = mode
+        self.lb = None
+        self.ub = None
 
     @property
     def name(self):
@@ -138,9 +139,7 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
             self,
             old_problem: "up.model.AbstractProblem",
             new_problem: "up.model.AbstractProblem",
-            node: "up.model.fnode.FNode",
-            lb: int,
-            ub: int
+            node: "up.model.fnode.FNode"
     ) -> up.model.fnode.FNode:
         env = new_problem.environment
         em = env.expression_manager
@@ -173,7 +172,7 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
             else:
                 return em.create_node(node.node_type, tuple(new_args))
             if operation == 'le':
-                self._add_relationships(new_problem, 'lt', lb, ub)
+                self._add_relationships(new_problem, 'lt')
                 if len(new_args) > 2:
                     result = em.Or(new_problem.fluent('lt')(new_args[0], new_args[1]),
                                    em.Equals(new_args[0], new_args[1]))
@@ -183,7 +182,7 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                 else:
                     return em.Or(new_problem.fluent('lt')(*new_args), em.Equals(*new_args))
             else:
-                self._add_relationships(new_problem, operation, lb, ub)
+                self._add_relationships(new_problem, operation)
                 if len(new_args) > 2:
                     result = new_problem.fluent(operation)(new_args[0], new_args[1])
                     for arg in new_args[2:]:
@@ -207,8 +206,6 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
             self,
             new_problem: "up.model.AbstractProblem",
             relationship: str,
-            lower_bound: int,
-            upper_bound: int,
     ):
         # lt, plus, minus, div, mult
         # crear fluent de relacio si no hi es
@@ -223,8 +220,8 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
             new_problem.add_fluent(relationship_fluent)
 
         # mirar si les relacions del rang d'aquests numeros estan inicialitzats
-        for i in range(lower_bound, upper_bound + 1):
-            for j in range(i, upper_bound + 1):
+        for i in range(self.lb, self.ub + 1):
+            for j in range(i, self.ub + 1):
                 ni = new_problem.object('n' + str(i))
                 nj = new_problem.object('n' + str(j))
                 if new_problem.initial_values.get(relationship_fluent(ni, nj)) is None:
@@ -338,9 +335,6 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
         new_problem.initial_values.clear()
         env = new_problem.environment
         tm = env.type_manager
-        assert self.mode == 'strict' or self.mode == 'permissive'
-        lb = None
-        ub = None
         ut_number = tm.UserType('Number')
         for fluent in problem.fluents:
             default_value = problem.fluents_defaults.get(fluent)
@@ -349,21 +343,18 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                 tub = fluent.type.upper_bound
                 new_fluent = model.Fluent(fluent.name, ut_number, fluent.signature, env)
                 # First integer fluent! - control of ranges
-                if lb is None and ub is None:
+                if self.lb is None and self.ub is None:
                     self._add_object_numbers(new_problem, tlb, tub + 1)
-                    #self._add_relationships(new_problem, tlb, None, None, tub)
-                    ub = tub
-                    lb = tlb
+                    self.ub = tub
+                    self.lb = tlb
                 # if another fluent has lower or upper range add them
-                elif tub > ub or tlb < lb:
-                    if tub > ub:
-                        self._add_object_numbers(new_problem, ub + 1, tub + 1)
-                        #self._add_relationships(new_problem, lb, None, ub+1, tub)
-                        ub = tub
-                    if tlb < lb:
-                        self._add_object_numbers(new_problem, tlb, lb)
-                        #self._add_relationships(new_problem, tlb, lb, None, tub)
-                        lb = tlb
+                elif tub > self.ub or tlb < self.lb:
+                    if tub > self.ub:
+                        self._add_object_numbers(new_problem, self.ub + 1, tub + 1)
+                        self.ub = tub
+                    if tlb < self.lb:
+                        self._add_object_numbers(new_problem, tlb, self.lb)
+                        self.lb = tlb
                 # Default initial values
                 if default_value is not None:
                     new_problem.add_fluent(new_fluent,
@@ -421,7 +412,7 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                         new_problem.set_initial_value(fluent(), iv)
 
         # Actions
-        print(lb,ub)
+        print(self.lb,self.ub)
         for action in problem.actions:
             new_action = action.clone()
             new_action.name = get_fresh_name(new_problem, action.name)
