@@ -246,17 +246,10 @@ class IntegersBitsRemover(engines.engine.Engine, CompilerMixin):
                 )
             elif iv != default_value:
                 print(iv)
-                bits_param = []
                 n_binari = bin(iv.constant_value())[2:]  # bin() devuelve una cadena con '0b' al inicio, eliminamos eso con [2:]
                 print(n_binari)
                 number_with_bits = n_binari.zfill(n_bits)
-                i = 0
-                for b in number_with_bits:
-                    if b == 1:
-                        bits_param.append(em.TRUE())
-                    else:
-                        bits_param.append(em.FALSE())
-                    i += 1
+                bits_param = [b == 1 for b in number_with_bits]
                 new_problem.set_initial_value(new_fluent(bits_param), True)
 
 
