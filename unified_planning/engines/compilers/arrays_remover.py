@@ -249,18 +249,24 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
         new_problem.initial_values.clear()
         assert self.mode == 'strict' or self.mode == 'permissive'
         for fluent in problem.fluents:
+            print("fluent: ",fluent)
             # guardar el default_initial_value
             if problem.fluents_defaults.get(fluent):
                 default_value = problem.fluents_defaults.get(fluent)
             else:
                 # si no hi ha vol dir que tots els possibles valors (amb parametres) hauran d'estar inicialitzats
                 default_value = None
-            objects = []
+            this_signature = []
             print(fluent.signature)
             for s in fluent.signature:
-                objects.append(problem.objects(s.type))
-            print(objects)
-            fluent_parameters = list(product(*objects))
+                print(s)
+                if s.type.is_user_type():
+                    print("usertype: ", problem.objects(s.type))
+                    this_signature.append(problem.objects(s.type))
+                else:
+                    this_signature.append(s)
+            print(this_signature)
+            fluent_parameters = list(product(*this_signature))
             if fluent_parameters == [()]:
                 fluent_parameters = []
 
