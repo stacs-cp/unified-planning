@@ -276,13 +276,15 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                         if k.type.is_array_type() and k.fluent().name == fluent.name:
                             for c in combination:
                                 v = v.constant_value()[c]
-                            new_problem.set_initial_value(new_fluent(*k.args), v)
+                            # Nomes afegir si es diferent del valor default
+                            if v != default_value:
+                                new_problem.set_initial_value(new_fluent(*k.args), v)
             else:
                 new_problem.add_fluent(fluent, default_initial_value=default_value)
-        # Afegir initial values quan no son arrays
-        for k, v in problem.initial_values.items():
-            if not k.type.is_array_type():
-                new_problem.set_initial_value(k, v)
+                # Afegir initial values quan no son arrays
+                for k, v in problem.initial_values.items():
+                    if k.fluent().name == fluent.name and v != default_value:
+                        new_problem.set_initial_value(k, v)
 
         for action in problem.actions:
             new_action = action.clone()
