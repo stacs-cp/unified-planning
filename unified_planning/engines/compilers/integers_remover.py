@@ -139,6 +139,8 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
             old_problem: "up.model.AbstractProblem",
             new_problem: "up.model.AbstractProblem",
             node: "up.model.fnode.FNode",
+            lb: int,
+            ub: int
     ) -> up.model.fnode.FNode:
         env = new_problem.environment
         em = env.expression_manager
@@ -170,17 +172,6 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                 operation = 'le'
             else:
                 return em.create_node(node.node_type, tuple(new_args))
-            # trobar el rang d'enters
-            lb = None
-            ub = None
-            for arg in new_args:
-                if arg.is_fluent_exp() and arg.type == new_problem.user_type('Number'):
-                    old_fluent = old_problem.fluent(arg.fluent().name)
-                    if lb is None or old_fluent.type.lower_bound < lb:
-                        lb = old_fluent.type.lower_bound
-                    if ub is None or old_fluent.type.upper_bound > ub:
-                        ub = old_fluent.type.upper_bound
-            assert lb is not None and ub is not None
             if operation == 'le':
                 self._add_relationships(new_problem, 'lt', lb, ub)
                 if len(new_args) > 2:
@@ -281,7 +272,6 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                                 null = new_problem.object('null')
                             new_problem.set_initial_value(relationship_fluent(nj, ni), null)
 
-                    # Falta arreglar div i mult !!!!!
                     # Div
                     elif relationship == 'div':
                         try:
@@ -352,21 +342,6 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
         lb = None
         ub = None
         ut_number = tm.UserType('Number')
-        # Relationships between objects
-        #params = OrderedDict()
-        #params['n1'] = ut_number
-        #params['n2'] = ut_number
-        #lt = model.Fluent('lt', _signature=params, environment=env)
-        #plus = model.Fluent('plus', ut_number, _signature=params, environment=env)
-        #minus = model.Fluent('minus', ut_number, _signature=params, environment=env)
-        #div = model.Fluent('div', ut_number, _signature=params, environment=env)
-        #mult = model.Fluent('mult', ut_number, _signature=params, environment=env)
-        #new_problem.add_fluent(lt, default_initial_value=False)
-        #new_problem.add_fluent(plus, default_initial_value=null)
-        #new_problem.add_fluent(minus, default_initial_value=null)
-        #new_problem.add_fluent(div, default_initial_value=null)
-        #new_problem.add_fluent(mult, default_initial_value=null)
-
         for fluent in problem.fluents:
             default_value = problem.fluents_defaults.get(fluent)
             if fluent.type.is_int_type():
@@ -446,6 +421,7 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                         new_problem.set_initial_value(fluent(), iv)
 
         # Actions
+        print(lb,ub)
         for action in problem.actions:
             new_action = action.clone()
             new_action.name = get_fresh_name(new_problem, action.name)
