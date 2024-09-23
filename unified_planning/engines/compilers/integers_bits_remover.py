@@ -200,12 +200,13 @@ class IntegersBitsRemover(engines.engine.Engine, CompilerMixin):
     ):
         env = new_problem.environment
         tm = env.type_manager
-        params = fluent.signature
+        params = OrderedDict()
         n_bits = math.ceil(math.log2(self.n + 1))
         for i in range(0, n_bits):
             params['b' + str(i)] = tm.BoolType()
+        params_as_list = [up.model.Parameter(name, t) for name, t in params.items()]
         print(params)
-        new_fluent = model.Fluent(fluent.name, _signature=params, environment=new_problem.environment)
+        new_fluent = model.Fluent(fluent.name, _signature=fluent.signature + params_as_list, environment=new_problem.environment)
         default_value = old_problem.fluents_defaults.get(fluent)
         # Default initial values
         if default_value is not None:
