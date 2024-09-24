@@ -365,12 +365,12 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                 # Default initial values
                 new_problem.add_fluent(fluent, default_initial_value=default_value)
 
-            # Initial values
-            for k, v in problem.initial_values.items():
-                if k.type.is_int_type():
-                    new_problem.set_initial_value(k, new_problem.object('n' + str(v)))
-                else:
-                    new_problem.set_initial_value(k, v)
+        # Initial values
+        for k, v in problem.initial_values.items():
+            if k.type.is_int_type():
+                new_problem.set_initial_value(k, new_problem.object('n' + str(v)))
+            else:
+                new_problem.set_initial_value(k, v)
         # Actions
         for action in problem.actions:
             new_action = action.clone()
