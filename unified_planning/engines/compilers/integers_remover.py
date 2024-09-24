@@ -396,7 +396,7 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                     self._add_relationships(new_problem, 'minus')
                     new_result_value = new_problem.fluent('minus')(new_fnode, new_value)
                     print("minus", new_fnode, new_result_value)
-                    new_action.add_decrease_effect(new_fnode, new_value, new_condition, effect.forall)
+                    new_action.add_decrease_effect(new_fnode, new_result_value, new_condition, effect.forall)
                 else:
                     new_action.add_effect(new_fnode, new_value, new_condition, effect.forall)
             new_problem.add_action(new_action)
