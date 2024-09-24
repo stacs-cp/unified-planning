@@ -368,7 +368,7 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
         # Initial values
         for k, v in problem.initial_values.items():
             if k.type.is_int_type():
-                new_problem.set_initial_value(k, new_problem.object('n' + str(v)))
+                new_problem.set_initial_value(new_problem.fluent(k.fluent().name)(*k.args), new_problem.object('n' + str(v)))
             else:
                 new_problem.set_initial_value(k, v)
         # Actions
