@@ -388,6 +388,7 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
             for precondition in action.preconditions:
                 print("precondition: ", precondition)
                 new_precondition = self._get_new_fnode(problem, new_problem, precondition)
+                print(new_precondition)
                 new_action.add_precondition(new_precondition)
             for effect in action.effects:
                 print("effect: ", effect)
@@ -395,14 +396,19 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                 new_value = self._get_new_fnode(problem, new_problem, effect.value)
                 new_condition = self._get_new_fnode(problem, new_problem, effect.condition)
                 if effect.is_increase():
+                    print("increase")
                     self._add_relationships(new_problem, 'plus')
                     new_result_value = new_problem.fluent('plus')(new_fnode, new_value)
+                    print(new_fnode, new_result_value)
                     new_action.add_effect(new_fnode, new_result_value, new_condition, effect.forall)
                 elif effect.is_decrease():
+                    print("decrease")
                     self._add_relationships(new_problem, 'minus')
                     new_result_value = new_problem.fluent('minus')(new_fnode, new_value)
+                    print(new_fnode, new_result_value)
                     new_action.add_effect(new_fnode, new_result_value, new_condition, effect.forall)
                 else:
+                    print(new_fnode, new_value)
                     new_action.add_effect(new_fnode, new_value, new_condition, effect.forall)
             new_problem.add_action(new_action)
             new_to_old[new_action] = action
