@@ -361,56 +361,16 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                                            default_initial_value=new_problem.object('n' + str(default_value)))
                 else:
                     new_problem.add_fluent(new_fluent)
-                # Initial values
-                if fluent.signature:
-                    objects = []
-                    for s in fluent.signature:
-                        objects.append(problem.objects(s.type))
-                    fluent_parameters = list(product(*objects))
-                    for fp in fluent_parameters:
-                        iv = problem.initial_value(fluent(*fp))
-                        if iv is None:
-                            raise UPProblemDefinitionError(
-                                f"Initial value not set for fluent: {fluent(*fp)}"
-                            )
-                        elif iv != default_value:
-                            new_initial_value = model.Object('n' + str(iv), ut_number)
-                            new_problem.set_initial_value(new_fluent(*fp), new_initial_value)
-                else:
-                    iv = problem.initial_value(fluent())
-                    if iv is None:
-                        raise UPProblemDefinitionError(
-                            f"Initial value not set for fluent: {fluent()}"
-                        )
-                    elif iv != default_value:
-                        new_initial_value = model.Object('n' + str(iv), ut_number)
-                        new_problem.set_initial_value(new_fluent(), new_initial_value)
             else:
                 # Default initial values
                 new_problem.add_fluent(fluent, default_initial_value=default_value)
-                # Initial values
-                if fluent.signature:
-                    objects = []
-                    for s in fluent.signature:
-                        objects.append(problem.objects(s.type))
-                    fluent_parameters = list(product(*objects))
-                    for fp in fluent_parameters:
-                        iv = problem.initial_value(fluent(*fp))
-                        if iv is None:
-                            raise UPProblemDefinitionError(
-                                f"Initial value not set for fluent: {fluent(*fp)}"
-                            )
-                        elif iv != default_value:
-                            new_problem.set_initial_value(fluent(*fp), iv)
-                else:
-                    iv = problem.initial_value(fluent())
-                    if iv is None:
-                        raise UPProblemDefinitionError(
-                            f"Initial value not set for fluent: {fluent()}"
-                        )
-                    elif iv != default_value:
-                        new_problem.set_initial_value(fluent(), iv)
 
+            # Initial values
+            for k, v in problem.initial_values.items():
+                if k.type.is_int_type():
+                    new_problem.set_initial_value(k, new_problem.object('n' + str(v)))
+                else:
+                    new_problem.set_initial_value(k, v)
         # Actions
         for action in problem.actions:
             new_action = action.clone()
