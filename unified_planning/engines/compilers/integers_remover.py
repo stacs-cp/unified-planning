@@ -362,7 +362,7 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                 else:
                     new_problem.add_fluent(new_fluent)
                 for k, v in problem.initial_values.items():
-                    if k.type.is_array_type() and k.fluent().name == fluent.name and v != default_value:
+                    if k.type.is_int_type() and k.fluent().name == fluent.name and v != default_value:
                         new_problem.set_initial_value(new_problem.fluent(k.fluent().name)(*k.args),
                                                       new_problem.object('n' + str(v)))
             else:
