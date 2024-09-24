@@ -221,9 +221,15 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
         params['n2'] = ut_number
         if relationship == 'lt':
             relationship_fluent = model.Fluent(relationship, _signature=params, environment=new_problem.environment)
+            new_problem.add_fluent(relationship_fluent, default_initial_value=False)
         else:
+            try:
+                null = new_problem.object('null')
+            except UPValueError:
+                new_problem.add_object(model.Object('null', ut_number))
+                null = new_problem.object('null')
             relationship_fluent = model.Fluent(relationship, ut_number, _signature=params, environment=new_problem.environment)
-        new_problem.add_fluent(relationship_fluent)
+            new_problem.add_fluent(relationship_fluent, default_initial_value=null)
         # si es el primer cop es creen les relacions
         for i in range(self.lb, self.ub + 1):
             for j in range(i, self.ub + 1):
@@ -233,46 +239,26 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                     if relationship == 'lt':
                         if i < j:
                             new_problem.set_initial_value(relationship_fluent(ni, nj), True)
-                        else:
-                            new_problem.set_initial_value(relationship_fluent(ni, nj), False)
                         if j < i:
                             new_problem.set_initial_value(relationship_fluent(nj, ni), True)
-                        else:
-                            new_problem.set_initial_value(relationship_fluent(nj, ni), False)
                     elif relationship == 'plus':
                         try:
                             plus_i_j = new_problem.object('n' + str(i+j))
                             new_problem.set_initial_value(relationship_fluent(ni, nj), plus_i_j)
                             new_problem.set_initial_value(relationship_fluent(nj, ni), plus_i_j)
                         except UPValueError:
-                            try:
-                                null = new_problem.object('null')
-                            except UPValueError:
-                                new_problem.add_object(model.Object('null', ut_number))
-                                null = new_problem.object('null')
-                            new_problem.set_initial_value(relationship_fluent(ni, nj), null)
-                            new_problem.set_initial_value(relationship_fluent(nj, ni), null)
+                            continue
                     elif relationship == 'minus':
                         try:
                             minus_i_j = new_problem.object('n' + str(i-j))
                             new_problem.set_initial_value(relationship_fluent(ni, nj), minus_i_j)
                         except UPValueError:
-                            try:
-                                null = new_problem.object('null')
-                            except UPValueError:
-                                new_problem.add_object(model.Object('null', ut_number))
-                                null = new_problem.object('null')
-                            new_problem.set_initial_value(relationship_fluent(ni, nj), null)
+                            continue
                         try:
                             minus_j_i = new_problem.object('n' + str(j-i))
                             new_problem.set_initial_value(relationship_fluent(nj, ni), minus_j_i)
                         except UPValueError:
-                            try:
-                                null = new_problem.object('null')
-                            except UPValueError:
-                                new_problem.add_object(model.Object('null', ut_number))
-                                null = new_problem.object('null')
-                            new_problem.set_initial_value(relationship_fluent(nj, ni), null)
+                            continue
 
                     # Div
                     elif relationship == 'div':
@@ -281,45 +267,25 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                                 div_i_j = new_problem.object('n' + str(i/j))
                                 new_problem.set_initial_value(relationship_fluent(ni, nj), div_i_j)
                         except UPValueError:
-                            try:
-                                null = new_problem.object('null')
-                            except UPValueError:
-                                new_problem.add_object(model.Object('null', ut_number))
-                                null = new_problem.object('null')
-                            new_problem.set_initial_value(relationship_fluent(ni, nj), null)
+                            continue
                         try:
                             if i > 0:
                                 div_j_i = new_problem.object('n' + str(j/i))
                                 new_problem.set_initial_value(relationship_fluent(nj, ni), div_j_i)
                         except UPValueError:
-                            try:
-                                null = new_problem.object('null')
-                            except UPValueError:
-                                new_problem.add_object(model.Object('null', ut_number))
-                                null = new_problem.object('null')
-                            new_problem.set_initial_value(relationship_fluent(nj, ni), null)
+                            continue
                     # Mult
                     elif relationship == 'mult':
                         try:
                             mult_i_j = new_problem.object('n' + str(i*j))
                             new_problem.set_initial_value(relationship_fluent(ni, nj), mult_i_j)
                         except UPValueError:
-                            try:
-                                null = new_problem.object('null')
-                            except UPValueError:
-                                new_problem.add_object(model.Object('null', ut_number))
-                                null = new_problem.object('null')
-                            new_problem.set_initial_value(relationship_fluent(ni, nj), null)
+                            continue
                         try:
                             mult_j_i = new_problem.object('n' + str(j*i))
                             new_problem.set_initial_value(relationship_fluent(nj, ni), mult_j_i)
                         except UPValueError:
-                            try:
-                                null = new_problem.object('null')
-                            except UPValueError:
-                                new_problem.add_object(model.Object('null', ut_number))
-                                null = new_problem.object('null')
-                            new_problem.set_initial_value(relationship_fluent(nj, ni), null)
+                            continue
 
     def _compile(
             self,
