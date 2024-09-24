@@ -202,7 +202,9 @@ class IntegersBitsRemover(engines.engine.Engine, CompilerMixin):
         em = env.expression_manager
         tm = env.type_manager
         params = []
-        n_bits = math.ceil(math.log2(self.n + 1))
+        print(fluent.type.lower_bound)
+        print(fluent.type.upper_bound)
+        n_bits = math.ceil(math.log2(fluent.type.upper_bound - fluent.type.lower_bound + 1))
         for i in range(0, n_bits):
             params.append(up.model.Parameter('b' + str(i), tm.BoolType()))
         print(params)
