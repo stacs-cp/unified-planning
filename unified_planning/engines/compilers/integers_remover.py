@@ -172,7 +172,10 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
             else:
                 return em.create_node(node.node_type, tuple(new_args))
             if operation == 'le':
-                self._add_relationships(new_problem, 'lt')
+                try:
+                    new_problem.fluent('lt')
+                except UPValueError:
+                    self._add_relationships(new_problem, 'lt')
                 if len(new_args) > 2:
                     result = em.Or(new_problem.fluent('lt')(new_args[0], new_args[1]),
                                    em.Equals(new_args[0], new_args[1]))
@@ -182,7 +185,10 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                 else:
                     return em.Or(new_problem.fluent('lt')(*new_args), em.Equals(*new_args))
             else:
-                self._add_relationships(new_problem, operation)
+                try:
+                    new_problem.fluent(operation)
+                except UPValueError:
+                    self._add_relationships(new_problem, operation)
                 if len(new_args) > 2:
                     result = new_problem.fluent(operation)(new_args[0], new_args[1])
                     for arg in new_args[2:]:
