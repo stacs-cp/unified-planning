@@ -51,7 +51,6 @@ class IntegersBitsRemover(engines.engine.Engine, CompilerMixin):
         CompilerMixin.__init__(self, CompilationKind.INTEGERS_BITS_REMOVING)
         self.lb = None
         self.ub = None
-        self.n = 0
 
     @property
     def name(self):
@@ -202,12 +201,9 @@ class IntegersBitsRemover(engines.engine.Engine, CompilerMixin):
         em = env.expression_manager
         tm = env.type_manager
         params = []
-        print(fluent.type.lower_bound)
-        print(fluent.type.upper_bound)
         n_bits = math.ceil(math.log2(fluent.type.upper_bound - fluent.type.lower_bound + 1))
         for i in range(0, n_bits):
             params.append(up.model.Parameter('b' + str(i), tm.BoolType()))
-        print(params)
         new_fluent = model.Fluent(fluent.name, _signature=fluent.signature + params, environment=new_problem.environment)
         default_value = old_problem.fluents_defaults.get(fluent)
         # Default initial values
@@ -371,8 +367,6 @@ class IntegersBitsRemover(engines.engine.Engine, CompilerMixin):
                         self.ub = fluent.type.upper_bound
                     if fluent.type.lower_bound < self.lb:
                         self.lb = fluent.type.lower_bound
-        self.n = self.ub - self.lb + 1
-        print(self.ub, self.lb, self.n)
         # Change the integers fluents
         for fluent in problem.fluents:
             default_value = problem.fluents_defaults.get(fluent)
