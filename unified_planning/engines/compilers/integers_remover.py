@@ -257,8 +257,6 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                     elif relationship == 'minus':
                         try:
                             minus_i_j = new_problem.object('n' + str(i-j))
-                            print(ni, nj, minus_i_j)
-                            print(type(ni), type(nj), type(minus_i_j))
                             new_problem.set_initial_value(relationship_fluent(ni, nj), minus_i_j)
                         except UPValueError:
                             try:
@@ -395,17 +393,13 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                 new_value = self._get_new_fnode(problem, new_problem, effect.value)
                 new_condition = self._get_new_fnode(problem, new_problem, effect.condition)
                 if effect.is_increase():
-                    print(effect)
                     self._add_relationships(new_problem, 'plus')
                     new_result_value = new_problem.fluent('plus')(new_fnode, new_value)
-                    print("plus", new_fnode, new_result_value)
                     new_action.add_effect(new_fnode, new_result_value, new_condition, effect.forall)
                 elif effect.is_decrease():
-                    print(effect, new_fnode, new_value)
                     self._add_relationships(new_problem, 'minus')
                     new_result_value = new_problem.fluent('minus')(new_fnode, new_value)
-                    print("minus", new_fnode, new_result_value)
-                    new_action.add_decrease_effect(new_fnode, new_result_value, new_condition, effect.forall)
+                    new_action.add_effect(new_fnode, new_result_value, new_condition, effect.forall)
                 else:
                     new_action.add_effect(new_fnode, new_value, new_condition, effect.forall)
             new_problem.add_action(new_action)
