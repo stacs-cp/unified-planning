@@ -213,11 +213,18 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
         ut_number = new_problem.user_type('Number')
         params['n1'] = ut_number
         params['n2'] = ut_number
-        try:
-            relationship_fluent = new_problem.fluent(relationship)
-        except UPValueError:
-            relationship_fluent = model.Fluent(relationship, _signature=params, environment=new_problem.environment)
-            new_problem.add_fluent(relationship_fluent)
+        if relationship == 'lt':
+            try:
+                relationship_fluent = new_problem.fluent(relationship)
+            except UPValueError:
+                relationship_fluent = model.Fluent(relationship, _signature=params, environment=new_problem.environment)
+                new_problem.add_fluent(relationship_fluent)
+        else:
+            try:
+                relationship_fluent = new_problem.fluent(relationship)
+            except UPValueError:
+                relationship_fluent = model.Fluent(relationship, ut_number, _signature=params, environment=new_problem.environment)
+                new_problem.add_fluent(relationship_fluent)
 
         # mirar si les relacions del rang d'aquests numeros estan inicialitzats
         for i in range(self.lb, self.ub + 1):
@@ -251,6 +258,7 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                         try:
                             minus_i_j = new_problem.object('n' + str(i-j))
                             print(ni, nj, minus_i_j)
+                            print(type(ni), type(nj), type(minus_i_j))
                             new_problem.set_initial_value(relationship_fluent(ni, nj), minus_i_j)
                         except UPValueError:
                             try:
