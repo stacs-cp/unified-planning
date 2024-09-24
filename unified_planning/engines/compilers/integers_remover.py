@@ -153,24 +153,19 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
         elif node.is_parameter_exp() or node.is_object_exp() or node.is_fluent_exp() or node.is_constant() or node.is_variable_exp():
             return node
         else:
-            new_args = []
-            for arg in node.args:
-                new = self._get_new_fnode(old_problem, new_problem, arg)
-                new_args.append(new)
-            if node.node_type == OperatorKind.PLUS:
-                operation = 'plus'
-            elif node.node_type == OperatorKind.MINUS:
-                operation = 'minus'
-            elif node.node_type == OperatorKind.DIV:
-                operation = 'div'
-            elif node.node_type == OperatorKind.TIMES:
-                operation = 'mult'
-            elif node.node_type == OperatorKind.LT:
-                operation = 'lt'
-            elif node.node_type == OperatorKind.LE:
-                operation = 'le'
-            else:
+            new_args = [self._get_new_fnode(old_problem, new_problem, arg) for arg in node.args]
+            operation_map = {
+                OperatorKind.PLUS: 'plus',
+                OperatorKind.MINUS: 'minus',
+                OperatorKind.DIV: 'div',
+                OperatorKind.TIMES: 'mult',
+                OperatorKind.LT: 'lt',
+                OperatorKind.LE: 'le'
+            }
+            operation = operation_map.get(node.node_type)
+            if operation is None:
                 return em.create_node(node.node_type, tuple(new_args))
+
             if operation == 'le':
                 try:
                     new_problem.fluent('lt')
@@ -182,20 +177,18 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                     for arg in new_args[2:]:
                         em.Or(new_problem.fluent('lt')(result, arg), em.Equals(result, arg))
                     return result
-                else:
-                    return em.Or(new_problem.fluent('lt')(*new_args), em.Equals(*new_args))
-            else:
-                try:
-                    new_problem.fluent(operation)
-                except UPValueError:
-                    self._add_relationships(new_problem, operation)
-                if len(new_args) > 2:
-                    result = new_problem.fluent(operation)(new_args[0], new_args[1])
-                    for arg in new_args[2:]:
-                        result = new_problem.fluent(operation)(result, arg)
-                    return result
-                else:
-                    return new_problem.fluent(operation)(*new_args)
+                return em.Or(new_problem.fluent('lt')(*new_args), em.Equals(*new_args))
+            # other operations
+            try:
+                new_problem.fluent(operation)
+            except UPValueError:
+                self._add_relationships(new_problem, operation)
+            if len(new_args) > 2:
+                result = new_problem.fluent(operation)(new_args[0], new_args[1])
+                for arg in new_args[2:]:
+                    result = new_problem.fluent(operation)(result, arg)
+                return result
+            return new_problem.fluent(operation)(*new_args)
 
     def _add_object_numbers(
             self,
@@ -205,8 +198,7 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
     ):
         ut_number = new_problem.environment.type_manager.UserType('Number')
         for i in range(lower_bound, upper_bound):
-            new_number = model.Object('n' + str(i), ut_number)
-            new_problem.add_object(new_number)
+            new_problem.add_object(model.Object('n' + str(i), ut_number))
 
     def _add_relationships(
             self,
@@ -215,75 +207,62 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
     ):
         # lt, plus, minus, div, mult
         # crear fluent de relacio si no hi es
-        params = OrderedDict()
         ut_number = new_problem.user_type('Number')
-        params['n1'] = ut_number
-        params['n2'] = ut_number
+        params = OrderedDict({'n1': ut_number, 'n2': ut_number})
+
         if relationship == 'lt':
             relationship_fluent = model.Fluent(relationship, _signature=params, environment=new_problem.environment)
             new_problem.add_fluent(relationship_fluent, default_initial_value=False)
         else:
-            try:
-                null = new_problem.object('null')
-            except UPValueError:
-                new_problem.add_object(model.Object('null', ut_number))
-                null = new_problem.object('null')
+            null = new_problem.object('null') if 'null' in new_problem.objects else model.Object('null', ut_number)
+            if 'null' not in new_problem.objects:
+                new_problem.add_object(null)
             relationship_fluent = model.Fluent(relationship, ut_number, _signature=params, environment=new_problem.environment)
             new_problem.add_fluent(relationship_fluent, default_initial_value=null)
+
         # si es el primer cop es creen les relacions
         for i in range(self.lb, self.ub + 1):
+            ni = new_problem.object(f'n{i}')
             for j in range(i, self.ub + 1):
-                ni = new_problem.object('n' + str(i))
-                nj = new_problem.object('n' + str(j))
-                if new_problem.initial_values.get(relationship_fluent(ni, nj)) is None:
-                    if relationship == 'lt':
-                        if i < j:
-                            new_problem.set_initial_value(relationship_fluent(ni, nj), True)
-                        if j < i:
-                            new_problem.set_initial_value(relationship_fluent(nj, ni), True)
-                    elif relationship == 'plus':
+                nj = new_problem.object(f'n{j}')
+                if relationship == 'lt':
+                    if i < j:
+                        new_problem.set_initial_value(relationship_fluent(ni, nj), True)
+                    if j < i:
+                        new_problem.set_initial_value(relationship_fluent(nj, ni), True)
+                elif relationship == 'plus':
+                    try:
+                        plus_i_j = new_problem.object(f'n{i+j}')
+                        new_problem.set_initial_value(relationship_fluent(ni, nj), plus_i_j)
+                        new_problem.set_initial_value(relationship_fluent(nj, ni), plus_i_j)
+                    except UPValueError:
+                        continue
+                elif relationship == 'minus':
+                    for a, b in [(i, j), (j, i)]:
                         try:
-                            plus_i_j = new_problem.object('n' + str(i+j))
-                            new_problem.set_initial_value(relationship_fluent(ni, nj), plus_i_j)
-                            new_problem.set_initial_value(relationship_fluent(nj, ni), plus_i_j)
+                            minus_ab = new_problem.object(f'n{a - b}')
+                            new_problem.set_initial_value(
+                                relationship_fluent(new_problem.object(f'n{a}'), new_problem.object(f'n{b}')), minus_ab)
                         except UPValueError:
                             continue
-                    elif relationship == 'minus':
+                # Div
+                elif relationship == 'div':
+                    for a, b in [(i, j), (j, i)]:
+                        if b > 0:
+                            try:
+                                div_ab = new_problem.object(f'n{a / b}')
+                                new_problem.set_initial_value(
+                                    relationship_fluent(new_problem.object(f'n{a}'), new_problem.object(f'n{b}')),
+                                    div_ab)
+                            except UPValueError:
+                                continue
+                # Mult
+                elif relationship == 'mult':
+                    for a, b in [(i, j), (j, i)]:
                         try:
-                            minus_i_j = new_problem.object('n' + str(i-j))
-                            new_problem.set_initial_value(relationship_fluent(ni, nj), minus_i_j)
-                        except UPValueError:
-                            continue
-                        try:
-                            minus_j_i = new_problem.object('n' + str(j-i))
-                            new_problem.set_initial_value(relationship_fluent(nj, ni), minus_j_i)
-                        except UPValueError:
-                            continue
-
-                    # Div
-                    elif relationship == 'div':
-                        try:
-                            if j > 0:
-                                div_i_j = new_problem.object('n' + str(i/j))
-                                new_problem.set_initial_value(relationship_fluent(ni, nj), div_i_j)
-                        except UPValueError:
-                            continue
-                        try:
-                            if i > 0:
-                                div_j_i = new_problem.object('n' + str(j/i))
-                                new_problem.set_initial_value(relationship_fluent(nj, ni), div_j_i)
-                        except UPValueError:
-                            continue
-                    # Mult
-                    elif relationship == 'mult':
-                        try:
-                            mult_i_j = new_problem.object('n' + str(i*j))
-                            new_problem.set_initial_value(relationship_fluent(ni, nj), mult_i_j)
-                        except UPValueError:
-                            continue
-                        try:
-                            mult_j_i = new_problem.object('n' + str(j*i))
-                            new_problem.set_initial_value(relationship_fluent(nj, ni), mult_j_i)
+                            mult_ab = new_problem.object(f'n{a * b}')
+                            new_problem.set_initial_value(
+                                relationship_fluent(new_problem.object(f'n{a}'), new_problem.object(f'n{b}')), mult_ab)
                         except UPValueError:
                             continue
 
