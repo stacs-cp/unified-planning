@@ -943,16 +943,13 @@ def plan_debug(plan, debug):
 ####
 #plan_debug(plan, FALSE)
 
-print(original_problem.fluents)
-print(problem.fluents)
-
 ## solve
 # with OneshotPlanner(names=['enhsp','enhsp'], params=[{'heuristic': 'hadd'}, {'heuristic': 'hmax'}]) as planner:
-#with OneshotPlanner(problem_kind=problem.kind) as planner:
-#    result = planner.solve(problem)
-#    if result.plan is not None:
-#        print("Plan returned: %s" % result.plan)
-#        print("Plan logs: %s" % result.log_messages)
-#        plan_debug(result.plan)
-#    else:
-#        print("No plan found. %s" % result.log_messages)
+with OneshotPlanner(problem_kind=problem.kind) as planner:
+    result = planner.solve(problem)
+    if result.plan is not None:
+        print("Plan returned: %s" % result.plan)
+        print("Plan logs: %s" % result.log_messages)
+        plan_debug(result.plan)
+    else:
+        print("No plan found. %s" % result.log_messages)
