@@ -141,6 +141,9 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
             new_problem: "up.model.AbstractProblem",
             node: "up.model.fnode.FNode"
     ) -> up.model.fnode.FNode:
+        print("node:", node)
+        print("type:", node.node_type)
+        print("args:", node.args)
         env = new_problem.environment
         em = env.expression_manager
         tm = env.type_manager
@@ -150,7 +153,7 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
             return em.ObjectExp(new_number)
         elif node.is_fluent_exp() and node.fluent().type.is_int_type():
             return new_problem.fluent(node.fluent().name)(*node.fluent().signature)
-        elif node.is_parameter_exp() or node.is_object_exp() or node.is_fluent_exp() or node.is_constant() or node.is_variable_exp():
+        elif node.is_object_exp() or node.is_fluent_exp() or node.is_constant() or node.is_parameter_exp():
             return node
         else:
             new_args = [self._get_new_fnode(old_problem, new_problem, arg) for arg in node.args]
@@ -164,8 +167,17 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
             }
             operation = operation_map.get(node.node_type)
             if operation is None:
-                return em.create_node(node.node_type, tuple(new_args))
-
+                if node.is_exists() or node.is_forall():
+                    new_variables = []
+                    for v in node.variables():
+                        if v.type.is_int_type():
+                            self._add_object_numbers(new_problem, v.type.lower_bound, v.type.upper_bound)
+                            new_variables.append(model.Variable(v.name, tm.UserType('Number')))
+                        else:
+                            new_variables.append(v)
+                    return em.create_node(node.node_type, tuple(new_args), payload=tuple(new_variables))
+                else:
+                    return em.create_node(node.node_type, tuple(new_args))
             if operation == 'le':
                 try:
                     new_problem.fluent('lt')
@@ -364,6 +376,7 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
             new_to_old[new_action] = action
 
         for goal in problem.goals:
+            print(goal)
             new_problem.add_goal(self._get_new_fnode(problem, new_problem, goal))
 
         return CompilerResult(
