@@ -146,7 +146,7 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
         tm = env.type_manager
         if node.is_int_constant():
             number_user_type = tm.UserType('Number')
-            new_number = model.Object('n' + str(node.int_constant_value()), number_user_type)
+            new_number = model.Object(f'n{node.int_constant_value()}', number_user_type)
             return em.ObjectExp(new_number)
         elif node.is_fluent_exp() and node.fluent().type.is_int_type():
             return new_problem.fluent(node.fluent().name)(*node.fluent().signature)
@@ -197,8 +197,21 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
             upper_bound: int,
     ):
         ut_number = new_problem.environment.type_manager.UserType('Number')
-        for i in range(lower_bound, upper_bound):
-            new_problem.add_object(model.Object('n' + str(i), ut_number))
+        if self.lb is None and self.ub is None:
+            for i in range(lower_bound, upper_bound + 1):
+                new_problem.add_object(model.Object(f'n{i}', ut_number))
+            self.lb = lower_bound
+            self.ub = upper_bound
+        # if another fluent has lower or upper range add them
+        else:
+            if upper_bound > self.ub:
+                for i in range(self.ub + 1, upper_bound + 1):
+                    new_problem.add_object(model.Object(f'n{i}', ut_number))
+                self.ub = upper_bound
+            if lower_bound < self.lb:
+                for i in range(lower_bound, self.lb):
+                    new_problem.add_object(model.Object(f'n{i}', ut_number))
+                self.lb = lower_bound
 
     def _add_relationships(
             self,
@@ -290,33 +303,26 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
         ut_number = tm.UserType('Number')
         for fluent in problem.fluents:
             default_value = problem.fluents_defaults.get(fluent)
+            new_signature = []
+            for s in fluent.signature:
+                if s.type.is_int_type():
+                    self._add_object_numbers(new_problem, s.type.lower_bound, s.type.upper_bound)
+                    new_signature.append(up.model.Parameter(s.name, ut_number))
+                else:
+                    new_signature.append(s)
             if fluent.type.is_int_type():
-                tlb = fluent.type.lower_bound
-                tub = fluent.type.upper_bound
-                new_fluent = model.Fluent(fluent.name, ut_number, fluent.signature, env)
-                # First integer fluent! - control of ranges
-                if self.lb is None and self.ub is None:
-                    self._add_object_numbers(new_problem, tlb, tub + 1)
-                    self.ub = tub
-                    self.lb = tlb
-                # if another fluent has lower or upper range add them
-                elif tub > self.ub or tlb < self.lb:
-                    if tub > self.ub:
-                        self._add_object_numbers(new_problem, self.ub + 1, tub + 1)
-                        self.ub = tub
-                    if tlb < self.lb:
-                        self._add_object_numbers(new_problem, tlb, self.lb)
-                        self.lb = tlb
+                new_fluent = model.Fluent(fluent.name, ut_number, new_signature, env)
+                self._add_object_numbers(new_problem, fluent.type.lower_bound, fluent.type.upper_bound)
                 # Default initial values
                 if default_value is not None:
                     new_problem.add_fluent(new_fluent,
-                                           default_initial_value=new_problem.object('n' + str(default_value)))
+                                           default_initial_value=new_problem.object(f'n{default_value}'))
                 else:
                     new_problem.add_fluent(new_fluent)
                 for k, v in problem.initial_values.items():
                     if k.type.is_int_type() and k.fluent().name == fluent.name and v != default_value:
                         new_problem.set_initial_value(new_problem.fluent(k.fluent().name)(*k.args),
-                                                      new_problem.object('n' + str(v)))
+                                                      new_problem.object(f'n{v}'))
             else:
                 # Default initial values
                 new_problem.add_fluent(fluent, default_initial_value=default_value)
