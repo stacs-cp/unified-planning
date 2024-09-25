@@ -325,7 +325,8 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                                                       new_problem.object(f'n{v}'))
             else:
                 # Default initial values
-                new_problem.add_fluent(fluent, default_initial_value=default_value)
+                new_fluent = model.Fluent(fluent.name, fluent.type, new_signature, env)
+                new_problem.add_fluent(new_fluent, default_initial_value=default_value)
                 for k, v in problem.initial_values.items():
                     if k.fluent().name == fluent.name and v != default_value:
                         new_problem.set_initial_value(k, v)
