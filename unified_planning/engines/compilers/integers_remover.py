@@ -141,6 +141,9 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
             new_problem: "up.model.AbstractProblem",
             node: "up.model.fnode.FNode"
     ) -> up.model.fnode.FNode:
+        print("node:", node)
+        print("type:", node.node_type)
+        print("args:", node.args)
         env = new_problem.environment
         em = env.expression_manager
         tm = env.type_manager
@@ -373,6 +376,7 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
             new_to_old[new_action] = action
 
         for goal in problem.goals:
+            print(goal)
             new_problem.add_goal(self._get_new_fnode(problem, new_problem, goal))
 
         return CompilerResult(
