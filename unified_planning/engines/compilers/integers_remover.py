@@ -214,9 +214,11 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
             relationship_fluent = model.Fluent(relationship, _signature=params, environment=new_problem.environment)
             new_problem.add_fluent(relationship_fluent, default_initial_value=False)
         else:
-            null = new_problem.object('null') if 'null' in new_problem.objects else model.Object('null', ut_number)
-            if 'null' not in new_problem.objects:
-                new_problem.add_object(null)
+            try:
+                null = new_problem.object('null')
+            except UPValueError:
+                new_problem.add_object(model.Object('null', ut_number))
+                null = new_problem.object('null')
             relationship_fluent = model.Fluent(relationship, ut_number, _signature=params, environment=new_problem.environment)
             new_problem.add_fluent(relationship_fluent, default_initial_value=null)
 
