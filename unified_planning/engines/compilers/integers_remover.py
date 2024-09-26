@@ -66,7 +66,7 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
         supported_kind.set_parameters("BOUNDED_INT_FLUENT_PARAMETERS")
         supported_kind.set_parameters("BOOL_ACTION_PARAMETERS")
         supported_kind.set_parameters("BOUNDED_INT_ACTION_PARAMETERS")
-        supported_kind.set_parameters("UNBOUNDED_INT_ACTION_PARAMETERS")
+        #supported_kind.set_parameters("UNBOUNDED_INT_ACTION_PARAMETERS")
         supported_kind.set_parameters("REAL_ACTION_PARAMETERS")
         supported_kind.set_numbers("BOUNDED_TYPES")
         supported_kind.set_problem_type("SIMPLE_NUMERIC_PLANNING")
@@ -133,6 +133,7 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
     ) -> ProblemKind:
         new_kind = problem_kind.clone()
         new_kind.unset_conditions_kind("INT_FLUENTS")
+        new_kind.unset_parameters("BOUNDED_INT_FLUENT_PARAMETERS")
         return new_kind
 
     def _get_new_fnode(
