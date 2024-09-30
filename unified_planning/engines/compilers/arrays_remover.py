@@ -251,10 +251,10 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
         for fluent in problem.fluents:
             # guardar el default_initial_value
             if problem.fluents_defaults.get(fluent):
-                default_value = problem.fluents_defaults.get(fluent)
+                original_default_value = problem.fluents_defaults.get(fluent)
             else:
                 # si no hi ha vol dir que tots els possibles valors (amb parametres) hauran d'estar inicialitzats
-                default_value = None
+                original_default_value = None
 
             if fluent.type.is_array_type():
                 this_fluent = fluent.type
@@ -265,6 +265,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                     new_type = this_fluent.elements_type
                     this_fluent = new_type
                 for combination in list(product(*domain)):
+                    default_value = original_default_value
                     new_fluent = model.Fluent(get_fresh_name(new_problem, fluent.name, list(map(str, combination))),
                                               new_type, fluent.signature, fluent.environment)
                     if default_value is not None:
@@ -280,10 +281,10 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                             if v != default_value:
                                 new_problem.set_initial_value(new_fluent(*k.args), v)
             else:
-                new_problem.add_fluent(fluent, default_initial_value=default_value)
+                new_problem.add_fluent(fluent, default_initial_value=original_default_value)
                 # Afegir initial values quan no son arrays
                 for k, v in problem.initial_values.items():
-                    if k.fluent().name == fluent.name and v != default_value:
+                    if k.fluent().name == fluent.name and v != original_default_value:
                         new_problem.set_initial_value(k, v)
 
         for action in problem.actions:
