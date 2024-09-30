@@ -145,7 +145,8 @@ class FluentsSetMixin:
             else:
                 warn(msg)
         self._fluents.append(fluent)
-        if fluent.type.is_array_type() and type(default_initial_value) is list:
+        if fluent.type.is_array_type():
+            assert type(default_initial_value) is list, "Default initial value does not match the Array Type"
             default_initial_value = [default_initial_value]
         if not default_initial_value is None:
             (v_exp,) = self.environment.expression_manager.auto_promote(
