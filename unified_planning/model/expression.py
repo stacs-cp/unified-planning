@@ -240,8 +240,6 @@ class ExpressionManager(object):
 
         if len(tuple_args) == 0:
             return self.Int(0)
-        elif len(tuple_args) == 1:
-            return tuple_args[0]
         else:
             return self.create_node(node_type=OperatorKind.COUNT, args=tuple_args)
 
