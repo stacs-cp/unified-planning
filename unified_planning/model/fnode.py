@@ -184,6 +184,8 @@ class FNode(object):
     def constant_value(self) -> Union[bool, int, Fraction, list, tuple]:
         """Returns the constant value stored in this expression."""
         assert self.is_constant()
+        if self.node_type == OperatorKind.LIST_CONSTANT:
+            return list(self._content.payload)
         return self._content.payload
 
     def bool_constant_value(self) -> bool:
@@ -204,7 +206,7 @@ class FNode(object):
     def list_constant_value(self) -> List:
         """Returns the `list` constant value stored in this expression."""
         assert self.is_list_constant()
-        return self._content.payload
+        return list(self._content.payload)
 
     def fluent(self) -> "unified_planning.model.fluent.Fluent":
         """Return the `Fluent` stored in this expression."""
