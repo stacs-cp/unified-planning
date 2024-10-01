@@ -30,11 +30,11 @@ class FluentsSetMixin:
     """
 
     def __init__(
-        self,
-        environment,
-        add_user_type_method,
-        has_name_method,
-        initial_defaults: Dict["up.model.types.Type", "ConstantExpression"] = {},
+            self,
+            environment,
+            add_user_type_method,
+            has_name_method,
+            initial_defaults: Dict["up.model.types.Type", "ConstantExpression"] = {},
     ):
         self._env = environment
         self._add_user_type_method = add_user_type_method
@@ -96,12 +96,12 @@ class FluentsSetMixin:
             self.add_fluent(fluent)
 
     def add_fluent(
-        self,
-        fluent_or_name: Union["up.model.fluent.Fluent", str],
-        typename: Optional["up.model.types.Type"] = None,
-        *,
-        default_initial_value: Optional["ConstantExpression"] = None,
-        **kwargs: "up.model.types.Type",
+            self,
+            fluent_or_name: Union["up.model.fluent.Fluent", str],
+            typename: Optional["up.model.types.Type"] = None,
+            *,
+            default_initial_value: Optional["ConstantExpression"] = None,
+            **kwargs: "up.model.types.Type",
     ) -> "up.model.fluent.Fluent":
         """Adds the given `fluent` to the `problem`.
 
@@ -130,7 +130,7 @@ class FluentsSetMixin:
             assert len(kwargs) == 0 and typename is None
             fluent = fluent_or_name
             assert (
-                fluent.environment == self._env
+                    fluent.environment == self._env
             ), "Fluent does not have the same environment of the problem"
         else:
             fluent = up.model.fluent.Fluent(
@@ -139,20 +139,26 @@ class FluentsSetMixin:
         if self._has_name_method(fluent.name):
             msg = f"Name {fluent.name} already defined! Different elements of a problem can have the same name if the environment flag error_used_name is disabled."
             if self._env.error_used_name or any(
-                fluent.name == f.name for f in self._fluents
+                    fluent.name == f.name for f in self._fluents
             ):
                 raise UPProblemDefinitionError(msg)
             else:
                 warn(msg)
         self._fluents.append(fluent)
-        if fluent.type.is_array_type():
-            assert type(default_initial_value) is list, f"Default initial value: {default_initial_value} does not match the Array Type"
-            default_initial_value = [default_initial_value]
         if not default_initial_value is None:
+            assert not (type(default_initial_value) == list), \
+                f"The default initial value must match the type of the deepest elements in the array structure."
             (v_exp,) = self.environment.expression_manager.auto_promote(
                 default_initial_value
             )
             self._fluents_defaults[fluent] = v_exp
+            if fluent.type.is_array_type():
+                this_fluent = fluent.type
+                while this_fluent.is_array_type():
+                    this_fluent = this_fluent.elements_type
+                assert this_fluent.is_compatible(v_exp.type), \
+                    (f"Default initial value: {default_initial_value} does not match the type of the deepest elements "
+                     f"in the array structure.")
         elif fluent.type in self._initial_defaults:
             self._fluents_defaults[fluent] = self._initial_defaults[fluent.type]
         if fluent.type.is_user_type():
@@ -172,7 +178,7 @@ class FluentsSetMixin:
 
     @property
     def fluents_defaults(
-        self,
+            self,
     ) -> Dict["up.model.fluent.Fluent", "up.model.fnode.FNode"]:
         """Returns the `problem's fluents defaults`."""
         return self._fluents_defaults
