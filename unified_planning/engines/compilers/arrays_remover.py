@@ -150,85 +150,64 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
     ) -> List["up.model.fnode.FNode"]:
         env = new_problem.environment
         em = env.expression_manager
+
         if node.is_fluent_exp():
             new_fluent = self._get_new_fluent(node.fluent())
-            if self.mode == 'strict':
-                try:
-                    assert new_problem.fluent(new_fluent.name)(*node.fluent().signature)
-                except KeyError:
+            try:
+                new_problem.fluent(new_fluent.name)(*node.fluent().signature)
+            except KeyError:
+                if self.mode == 'strict':
                     print(f"Fluent {new_fluent.name} out of range!")
                     exit(1)
-            else:
-                try:
-                    assert new_problem.fluent(new_fluent.name)(*node.fluent().signature)
-                except Exception:
+                else:
                     if new_fluent.type.is_bool_type():
                         return [FALSE()]
-                    else:
-                        return [None]
+                    return [None]
             return [new_fluent(*node.args)]
         elif node.is_parameter_exp() or node.is_constant():
             return [node]
         else:
             if node.arg(0).type.is_array_type():
-                new_type = node.arg(0).type
+                assert all(arg.type.is_array_type() for arg in node.args), "Argument is not an array type"
+
+                this_type = node.arg(0).type
                 domain = []
-                while new_type.is_array_type():
-                    domain_in = []
-                    for i in range(0, new_type.size):
-                        domain_in.append(i)
-                    domain.append(domain_in)
-                    new_type = new_type.elements_type
-                combinations = list(product(*domain))
+                while this_type.is_array_type():
+                    domain.append(range(this_type.size))
+                    this_type = this_type.elements_type
+
                 new_fnodes = []
-                for c in combinations:
+                for combination in list(product(*domain)):
                     new_args = []
                     for arg in node.args:
                         if arg.is_fluent_exp():
                             new_fluent = self._get_new_fluent(arg.fluent())
-                            new_name = new_fluent.name + ''.join(f'_{str(i)}' for i in c)
-                            if self.mode == 'strict':
-                                try:
-                                    new_arg = new_problem.fluent(new_name)(*arg.fluent().signature)
-                                except KeyError:
+                            new_name = new_fluent.name + ''.join(f'_{str(i)}' for i in combination)
+                            try:
+                                new_arg = new_problem.fluent(new_name)(*arg.args)
+                            except KeyError:
+                                if self.mode == 'strict':
                                     print(f"Fluent {new_fluent.name} out of range!")
                                     exit(1)
-                            else:
-                                try:
-                                    new_arg = new_problem.fluent(new_name)(*arg.fluent().signature)
-                                except Exception:
-                                    if new_fluent.type.is_bool_type():
-                                        new_arg = FALSE()
-                                    else:
-                                        new_arg = None
+                                else:
+                                    new_arg = FALSE() if new_fluent.type.is_bool_type() else None
                         elif arg.constant_value():
                             new_arg = arg
-                            for i in c:
+                            for i in combination:
                                 new_arg = new_arg.constant_value()[i]
                         else:
                             new_arg = arg
                         new_args.append(new_arg)
                     if None in new_args:
-                        if node.type.is_bool_type():
-                            new_fnodes.append(FALSE())
-                        else:
-                            new_fnodes.append(None)
+                        new_fnodes.append(FALSE() if node.type.is_bool_type() else None)
                     else:
                         new_fnodes.append(em.create_node(node.node_type, tuple(new_args)))
                 return new_fnodes
             else:
-                new_args = []
-                for arg in node.args:
-                    new_list_args = self._get_new_fnodes(new_problem, arg)
-                    for nla in new_list_args:
-                        new_args.append(nla)
+                new_args = [nla for arg in node.args for nla in self._get_new_fnodes(new_problem, arg)]
                 if None in new_args:
-                    if node.type.is_bool_type():
-                        return [FALSE()]
-                    else:
-                        return [None]
-                else:
-                    return [(em.create_node(node.node_type, tuple(new_args)))]
+                    return [FALSE() if node.type.is_bool_type() else None]
+                return [em.create_node(node.node_type, tuple(new_args))]
 
     def _compile(
         self,
@@ -249,40 +228,35 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
         new_problem.initial_values.clear()
         assert self.mode == 'strict' or self.mode == 'permissive'
         for fluent in problem.fluents:
-            # guardar el default_initial_value
-            if problem.fluents_defaults.get(fluent):
-                default_value = problem.fluents_defaults.get(fluent)
-            else:
-                # si no hi ha vol dir que tots els possibles valors (amb parametres) hauran d'estar inicialitzats
-                default_value = None
+            default_value = problem.fluents_defaults.get(fluent, None)
 
             if fluent.type.is_array_type():
-                this_fluent = fluent.type
-                new_type = this_fluent.elements_type
+                this_type = fluent.type
                 domain = []
-                while this_fluent.is_array_type():
-                    domain.append(list(range(this_fluent.size)))
-                    new_type = this_fluent.elements_type
-                    this_fluent = new_type
+                while this_type.is_array_type():
+                    domain.append(range(this_type.size))
+                    this_type = this_type.elements_type
                 for combination in list(product(*domain)):
-                    new_fluent = model.Fluent(get_fresh_name(new_problem, fluent.name, list(map(str, combination))),
-                                              new_type, fluent.signature, fluent.environment)
+                    fluent_name = get_fresh_name(new_problem, fluent.name, list(map(str, combination)))
+                    new_fluent = model.Fluent(fluent_name, this_type, fluent.signature, fluent.environment)
                     new_problem.add_fluent(new_fluent, default_initial_value=default_value)
-                    for k, v in problem.initial_values.items():
-                        if k.type.is_array_type() and k.fluent().name == fluent.name:
+
+                    for f, v in problem.explicit_initial_values.items():
+                        if f.fluent() == fluent:
+                            element_value = v
                             for c in combination:
-                                v = v.constant_value()[c]
-                            # Nomes afegir si es diferent del valor default
-                            if v != default_value:
-                                new_problem.set_initial_value(new_fluent(*k.args), v)
+                                element_value = element_value.constant_value()[c]
+                            new_problem.set_initial_value(new_fluent(*f.args), element_value)
             else:
                 new_problem.add_fluent(fluent, default_initial_value=default_value)
-                # Afegir initial values quan no son arrays
-                for k, v in problem.initial_values.items():
-                    if k.fluent().name == fluent.name and v != default_value:
-                        new_problem.set_initial_value(k, v)
+                for f, v in problem.explicit_initial_values.items():
+                    if f.fluent() == fluent:
+                        new_problem.set_initial_value(fluent(*f.args), v)
 
         for action in problem.actions:
+            for p in action.parameters:
+                assert not p.type.is_int_type(), \
+                    f"Integer parameter '{p.name}' in action '{action.name}' must be removed before processing."
             new_action = action.clone()
             new_action.name = get_fresh_name(new_problem, action.name)
             new_action.clear_preconditions()
