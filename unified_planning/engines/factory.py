@@ -103,6 +103,10 @@ DEFAULT_ENGINES = {
         "unified_planning.engines.compilers.arrays_remover",
         "ArraysRemover",
     ),
+    "up_arrays_and_integers_remover": (
+        "unified_planning.engines.compilers.arrays_and_integers_remover",
+        "ArraysAndIntegersRemover",
+    ),
     "up_int_parameter_actions_remover": (
         "unified_planning.engines.compilers.int_parameter_actions_remover",
         "IntParameterActionsRemover",
@@ -173,6 +177,7 @@ DEFAULT_ENGINES_PREFERENCE_LIST = [
     "up_quantifiers_remover",
     "up_count_remover",
     "up_arrays_remover",
+    "up_arrays_and_integers_remover",
     "up_int_parameter_actions_remover",
     "up_integers_remover",
     "up_integers_bits_remover",
