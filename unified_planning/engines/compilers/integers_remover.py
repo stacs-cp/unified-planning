@@ -316,11 +316,13 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
             new_signature = []
             for s in fluent.signature:
                 if s.type.is_int_type():
+                    assert s.type.lower_bound is not None and s.type.upper_bound, f"Integer {s} not bounded"
                     self._add_object_numbers(new_problem, s.type.lower_bound, s.type.upper_bound)
                     new_signature.append(up.model.Parameter(s.name, ut_number))
                 else:
                     new_signature.append(s)
             if fluent.type.is_int_type():
+                assert fluent.type.lower_bound is not None and fluent.type.upper_bound, f"Integer {fluent} not bounded"
                 new_fluent = model.Fluent(fluent.name, ut_number, new_signature, env)
                 self._add_object_numbers(new_problem, fluent.type.lower_bound, fluent.type.upper_bound)
                 # Default initial values
