@@ -31,6 +31,7 @@ class CompilationKind(Enum):
     NEGATIVE_CONDITIONS_REMOVING = auto()
     QUANTIFIERS_REMOVING = auto()
     ARRAYS_REMOVING = auto()
+    ARRAYS_AND_INTEGERS_REMOVING = auto()
     INT_PARAMETER_ACTIONS_REMOVING = auto()
     INTEGERS_REMOVING = auto()
     INTEGERS_BITS_REMOVING = auto()
