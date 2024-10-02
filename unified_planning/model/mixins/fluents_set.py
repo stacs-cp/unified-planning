@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
+from itertools import product
 from warnings import warn
 import unified_planning as up
 from unified_planning.model.expression import ConstantExpression
@@ -151,14 +151,16 @@ class FluentsSetMixin:
             (v_exp,) = self.environment.expression_manager.auto_promote(
                 default_initial_value
             )
-            self._fluents_defaults[fluent] = v_exp
             if fluent.type.is_array_type():
                 this_fluent = fluent.type
+                domain = []
                 while this_fluent.is_array_type():
+                    domain.append(list(range(this_fluent.size)))
                     this_fluent = this_fluent.elements_type
                 assert this_fluent.is_compatible(v_exp.type), \
                     (f"Default initial value: {default_initial_value} does not match the type of the deepest elements "
                      f"in the array structure.")
+            self._fluents_defaults[fluent] = v_exp
         elif fluent.type in self._initial_defaults:
             self._fluents_defaults[fluent] = self._initial_defaults[fluent.type]
         if fluent.type.is_user_type():
