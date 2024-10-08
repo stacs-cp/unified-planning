@@ -27,7 +27,7 @@ from unified_planning.exceptions import UPProblemDefinitionError, UPValueError
 from unified_planning.model import (
     Problem,
     Action,
-    ProblemKind,
+    ProblemKind, Parameter,
 )
 from unified_planning.model.problem_kind_versioning import LATEST_PROBLEM_KIND_VERSION
 from unified_planning.engines.compilers.utils import (
@@ -51,6 +51,7 @@ class IntegersBitsRemover(engines.engine.Engine, CompilerMixin):
         CompilerMixin.__init__(self, CompilationKind.INTEGERS_BITS_REMOVING)
         self.lb = None
         self.ub = None
+        self.n_bits = OrderedDict()
 
     @property
     def name(self):
@@ -66,7 +67,7 @@ class IntegersBitsRemover(engines.engine.Engine, CompilerMixin):
         supported_kind.set_parameters("BOUNDED_INT_FLUENT_PARAMETERS")
         supported_kind.set_parameters("BOOL_ACTION_PARAMETERS")
         supported_kind.set_parameters("BOUNDED_INT_ACTION_PARAMETERS")
-        supported_kind.set_parameters("UNBOUNDED_INT_ACTION_PARAMETERS")
+        #supported_kind.set_parameters("UNBOUNDED_INT_ACTION_PARAMETERS")
         supported_kind.set_parameters("REAL_ACTION_PARAMETERS")
         supported_kind.set_numbers("BOUNDED_TYPES")
         supported_kind.set_problem_type("SIMPLE_NUMERIC_PLANNING")
@@ -144,10 +145,12 @@ class IntegersBitsRemover(engines.engine.Engine, CompilerMixin):
         env = new_problem.environment
         em = env.expression_manager
         tm = env.type_manager
-        if node.is_int_constant():
-            number_user_type = tm.UserType('Number')
-            new_number = model.Object('n' + str(node.int_constant_value()), number_user_type)
-            return em.ObjectExp(new_number)
+        if node.is_equals() and (node.arg(0).type.is_int_type() or node.arg(1).type.is_int_type()):
+            fluent, value = (node.arg(0), node.arg(1)) if node.arg(0).is_fluent_exp() else (node.arg(1), node.arg(0))
+            n_bits = self.n_bits.get(fluent.fluent().name, None)
+            new_value = self._convert_value(value, n_bits)
+            return new_problem.fluent(fluent.fluent().name)(*(tuple(fluent.args) + tuple(new_value)))
+
         elif node.is_fluent_exp() and node.fluent().type.is_int_type():
             return new_problem.fluent(node.fluent().name)(*node.fluent().signature)
         elif node.is_parameter_exp() or node.is_object_exp() or node.is_fluent_exp() or node.is_constant() or node.is_variable_exp():
@@ -191,6 +194,15 @@ class IntegersBitsRemover(engines.engine.Engine, CompilerMixin):
                 else:
                     return new_problem.fluent(operation)(*new_args)
 
+    def _convert_value(self, value, n_bits):
+        n_binari = bin(value.constant_value())[2:]
+        number_with_bits = n_binari.zfill(n_bits)
+        return [b == '1' for b in number_with_bits]
+
+    def _get_fluent_parameters(self, new_problem: "up.model.AbstractProblem", params, indices) -> list:
+        """Generates the parameters of the fluent."""
+        return
+
     def _convert_int_fluent(
             self,
             old_problem: "up.model.AbstractProblem",
@@ -201,10 +213,12 @@ class IntegersBitsRemover(engines.engine.Engine, CompilerMixin):
         em = env.expression_manager
         tm = env.type_manager
         params = []
-        n_bits = math.ceil(math.log2(fluent.type.upper_bound - fluent.type.lower_bound + 1))
+        n_bits = math.ceil(math.log2(fluent.type.upper_bound + 1)) # com controlar rang????
         for i in range(0, n_bits):
             params.append(up.model.Parameter('b' + str(i), tm.BoolType()))
         new_fluent = model.Fluent(fluent.name, _signature=fluent.signature + params, environment=new_problem.environment)
+        self.n_bits[fluent.name] = n_bits
+
         default_value = old_problem.fluents_defaults.get(fluent)
         # Default initial values
         if default_value is not None:
@@ -214,125 +228,21 @@ class IntegersBitsRemover(engines.engine.Engine, CompilerMixin):
         # Initial values
         for k, v in old_problem.initial_values.items():
             if k.type.is_int_type() and k.fluent().name == fluent.name:
-                n_binari = bin(v.constant_value())[2:]
-                number_with_bits = n_binari.zfill(n_bits)
-                bits_param = [b == '1' for b in number_with_bits]
+                # convertir v (constant entera en tuple de booleans
+                bits_param = self._convert_value(v, n_bits)
                 new_problem.set_initial_value(new_problem.fluent(k.fluent().name)(*k.args + tuple(bits_param)),
                                               True)
 
-    def _add_relationships(
+    def _treat_effect_fluents(
             self,
             new_problem: "up.model.AbstractProblem",
-            relationship: str,
+            fluent: "up.model.fnode.FNode",
+            value: "up.model.fnode.FNode",
     ):
-        # lt, plus, minus, div, mult
-        # crear fluent de relacio si no hi es
-        params = OrderedDict()
-        ut_number = new_problem.user_type('Number')
-        params['n1'] = ut_number
-        params['n2'] = ut_number
-        try:
-            relationship_fluent = new_problem.fluent(relationship)
-        except UPValueError:
-            relationship_fluent = model.Fluent(relationship, _signature=params, environment=new_problem.environment)
-            new_problem.add_fluent(relationship_fluent)
+        print(fluent.fluent())
+        print(value.fluent())
+        print(new_problem.fluent(value.args))
 
-        # mirar si les relacions del rang d'aquests numeros estan inicialitzats
-        for i in range(self.lb, self.ub + 1):
-            for j in range(i, self.ub + 1):
-                ni = new_problem.object('n' + str(i))
-                nj = new_problem.object('n' + str(j))
-                if new_problem.initial_values.get(relationship_fluent(ni, nj)) is None:
-                    if relationship == 'lt':
-                        if i < j:
-                            new_problem.set_initial_value(relationship_fluent(ni, nj), True)
-                        else:
-                            new_problem.set_initial_value(relationship_fluent(ni, nj), False)
-                        if j < i:
-                            new_problem.set_initial_value(relationship_fluent(nj, ni), True)
-                        else:
-                            new_problem.set_initial_value(relationship_fluent(nj, ni), False)
-                    elif relationship == 'plus':
-                        try:
-                            plus_i_j = new_problem.object('n' + str(i+j))
-                            new_problem.set_initial_value(relationship_fluent(ni, nj), plus_i_j)
-                            new_problem.set_initial_value(relationship_fluent(nj, ni), plus_i_j)
-                        except UPValueError:
-                            try:
-                                null = new_problem.object('null')
-                            except UPValueError:
-                                new_problem.add_object(model.Object('null', ut_number))
-                                null = new_problem.object('null')
-                            new_problem.set_initial_value(relationship_fluent(ni, nj), null)
-                            new_problem.set_initial_value(relationship_fluent(nj, ni), null)
-                    elif relationship == 'minus':
-                        try:
-                            minus_i_j = new_problem.object('n' + str(i-j))
-                            new_problem.set_initial_value(relationship_fluent(ni, nj), minus_i_j)
-                        except UPValueError:
-                            try:
-                                null = new_problem.object('null')
-                            except UPValueError:
-                                new_problem.add_object(model.Object('null', ut_number))
-                                null = new_problem.object('null')
-                            new_problem.set_initial_value(relationship_fluent(ni, nj), null)
-                        try:
-                            minus_j_i = new_problem.object('n' + str(j-i))
-                            new_problem.set_initial_value(relationship_fluent(nj, ni), minus_j_i)
-                        except UPValueError:
-                            try:
-                                null = new_problem.object('null')
-                            except UPValueError:
-                                new_problem.add_object(model.Object('null', ut_number))
-                                null = new_problem.object('null')
-                            new_problem.set_initial_value(relationship_fluent(nj, ni), null)
-
-                    # Div
-                    elif relationship == 'div':
-                        try:
-                            if j > 0:
-                                div_i_j = new_problem.object('n' + str(i/j))
-                                new_problem.set_initial_value(relationship_fluent(ni, nj), div_i_j)
-                        except UPValueError:
-                            try:
-                                null = new_problem.object('null')
-                            except UPValueError:
-                                new_problem.add_object(model.Object('null', ut_number))
-                                null = new_problem.object('null')
-                            new_problem.set_initial_value(relationship_fluent(ni, nj), null)
-                        try:
-                            if i > 0:
-                                div_j_i = new_problem.object('n' + str(j/i))
-                                new_problem.set_initial_value(relationship_fluent(nj, ni), div_j_i)
-                        except UPValueError:
-                            try:
-                                null = new_problem.object('null')
-                            except UPValueError:
-                                new_problem.add_object(model.Object('null', ut_number))
-                                null = new_problem.object('null')
-                            new_problem.set_initial_value(relationship_fluent(nj, ni), null)
-                    # Mult
-                    elif relationship == 'mult':
-                        try:
-                            mult_i_j = new_problem.object('n' + str(i*j))
-                            new_problem.set_initial_value(relationship_fluent(ni, nj), mult_i_j)
-                        except UPValueError:
-                            try:
-                                null = new_problem.object('null')
-                            except UPValueError:
-                                new_problem.add_object(model.Object('null', ut_number))
-                                null = new_problem.object('null')
-                            new_problem.set_initial_value(relationship_fluent(ni, nj), null)
-                        try:
-                            mult_j_i = new_problem.object('n' + str(j*i))
-                            new_problem.set_initial_value(relationship_fluent(nj, ni), mult_j_i)
-                        except UPValueError:
-                            try:
-                                null = new_problem.object('null')
-                            except UPValueError:
-                                new_problem.add_object(model.Object('null', ut_number))
-                                null = new_problem.object('null')
-                            new_problem.set_initial_value(relationship_fluent(nj, ni), null)
 
     def _compile(
             self,
@@ -379,6 +289,17 @@ class IntegersBitsRemover(engines.engine.Engine, CompilerMixin):
                 for k, v in problem.initial_values.items():
                     if k.fluent().name == fluent.name and v != default_value:
                         new_problem.set_initial_value(k, v)
+
+        for action in problem.actions:
+            new_action = action.clone()
+            new_action.name = get_fresh_name(new_problem, action.name)
+            new_action.clear_preconditions()
+            new_action.clear_effects()
+            for precondition in action.preconditions:
+                new_precondition = self._get_new_fnode(problem, new_problem, precondition)
+                #new_action.add_precondition(new_precondition)
+
+
 
         return CompilerResult(
             new_problem, partial(replace_action, map=new_to_old), self.name

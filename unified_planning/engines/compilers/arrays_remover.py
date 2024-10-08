@@ -21,7 +21,7 @@ import unified_planning.engines as engines
 from unified_planning import model
 from unified_planning.engines.mixins.compiler import CompilationKind, CompilerMixin
 from unified_planning.engines.results import CompilerResult
-from unified_planning.exceptions import UPProblemDefinitionError
+from unified_planning.exceptions import UPProblemDefinitionError, UPValueError
 from unified_planning.model import (
     Problem,
     Action,
@@ -155,7 +155,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
             new_fluent = self._get_new_fluent(node.fluent())
             try:
                 new_problem.fluent(new_fluent.name)(*node.fluent().signature)
-            except KeyError:
+            except (KeyError, UPValueError):
                 if self.mode == 'strict':
                     print(f"Fluent {new_fluent.name} out of range!")
                     exit(1)
@@ -185,7 +185,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                             new_name = new_fluent.name + ''.join(f'_{str(i)}' for i in combination)
                             try:
                                 new_arg = new_problem.fluent(new_name)(*arg.args)
-                            except KeyError:
+                            except (KeyError, UPValueError):
                                 if self.mode == 'strict':
                                     print(f"Fluent {new_fluent.name} out of range!")
                                     exit(1)
@@ -208,6 +208,13 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                 if None in new_args:
                     return [FALSE() if node.type.is_bool_type() else None]
                 return [em.create_node(node.node_type, tuple(new_args))]
+
+    def get_element_value(self, v, combination):
+        """Obtain the value of the element for a given combination of access."""
+        element_value = v
+        for c in combination:
+            element_value = element_value.constant_value()[c]
+        return element_value
 
     def _compile(
         self,
@@ -243,14 +250,18 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
 
                     for f, v in problem.explicit_initial_values.items():
                         if f.fluent() == fluent:
-                            element_value = v
-                            for c in combination:
-                                element_value = element_value.constant_value()[c]
-                            new_problem.set_initial_value(new_fluent(*f.args), element_value)
+                            element_value = self.get_element_value(v, combination)
+                            if element_value != default_value:
+                                new_problem.set_initial_value(new_fluent(*f.args), element_value)
+                        elif f.fluent().name.split('[')[0] == fluent.name and not f.fluent().type.is_array_type():
+                            indices = [int(i) for i in re.findall(r'\[([0-9]+)\]', f.fluent().name)]
+                            if tuple(indices) == combination and v != default_value:
+                                new_problem.set_initial_value(new_fluent(*f.args), v)
+                        # falta el cas que es indexat pero segueix sent array
             else:
                 new_problem.add_fluent(fluent, default_initial_value=default_value)
                 for f, v in problem.explicit_initial_values.items():
-                    if f.fluent() == fluent:
+                    if f.fluent() == fluent and v != default_value:
                         new_problem.set_initial_value(fluent(*f.args), v)
 
         for action in problem.actions:
