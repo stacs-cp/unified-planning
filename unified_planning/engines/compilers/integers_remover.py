@@ -150,7 +150,7 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
             new_number = model.Object(f'n{node.int_constant_value()}', number_user_type)
             return em.ObjectExp(new_number)
         elif node.is_fluent_exp() and node.fluent().type.is_int_type():
-            return new_problem.fluent(node.fluent().name)(*node.fluent().signature)
+            return new_problem.fluent(node.fluent().name)(*node.args)
         elif node.is_object_exp() or node.is_fluent_exp() or node.is_constant() or node.is_parameter_exp():
             return node
         else:
