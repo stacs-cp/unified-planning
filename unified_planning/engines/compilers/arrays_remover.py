@@ -191,28 +191,28 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
             return [node]
 
         # Arrays
-        if node.arg(0).type.is_array_type():
-            assert all(arg.type.is_array_type() for arg in node.args), "Argument is not an array type"
-
-            domain, this_type = self._get_domain_and_type(node.arg(0))
-            new_nodes = []
-            for combination in list(product(*domain)):
+        else:
+            if node.arg(0).type.is_array_type():
+                assert all(arg.type.is_array_type() for arg in node.args), "Argument is not an array type"
+                domain, this_type = self._get_domain_and_type(node.arg(0))
+                new_nodes = []
+                for combination in list(product(*domain)):
+                    new_args = [
+                        self._process_arg(new_problem, arg, combination)
+                        for arg in node.args
+                    ]
+                    if None in new_args:
+                        new_nodes.append(FALSE() if node.type.is_bool_type() else None)
+                    else:
+                        new_nodes.append(em.create_node(node.node_type, tuple(new_args)))
+                return new_nodes
+            else:
                 new_args = [
-                    self._process_arg(new_problem, arg, combination)
-                    for arg in node.args
+                    nla for arg in node.args for nla in self._get_new_nodes(new_problem, arg)
                 ]
                 if None in new_args:
-                    new_nodes.append(FALSE() if node.type.is_bool_type() else None)
-                else:
-                    new_nodes.append(em.create_node(node.node_type, tuple(new_args)))
-            return new_nodes
-
-        new_args = [
-            nla for arg in node.args for nla in self._get_new_nodes(new_problem, arg)
-        ]
-        if None in new_args:
-            return [FALSE() if node.type.is_bool_type() else None]
-        return [em.create_node(node.node_type, tuple(new_args))]
+                    return [FALSE() if node.type.is_bool_type() else None]
+                return [em.create_node(node.node_type, tuple(new_args))]
 
     def get_element_value(self, v, combination):
         """Obtain the value of the element for a given combination of access."""
@@ -282,9 +282,9 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                     new_action.add_precondition(np)
             try:
                 for effect in action.effects:
-                    new_fnode = self._get_new_nodes(new_problem, effect.fluent)
-                    new_value = self._get_new_nodes(new_problem, effect.value)
-                    new_condition = self._get_new_nodes(new_problem, effect.condition)
+                    new_fnode = self._get_new_nodes(new_problem, effect.fluent)[0]
+                    new_value = self._get_new_nodes(new_problem, effect.value)[0]
+                    new_condition = self._get_new_nodes(new_problem, effect.condition)[0]
                     if effect.is_increase():
                         new_action.add_increase_effect(new_fnode, new_value, new_condition, effect.forall)
                     elif effect.is_decrease():
