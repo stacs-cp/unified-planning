@@ -23,32 +23,32 @@ import unified_planning.engines as engines
 from unified_planning import model
 from unified_planning.engines.mixins.compiler import CompilationKind, CompilerMixin
 from unified_planning.engines.results import CompilerResult
-from unified_planning.exceptions import UPProblemDefinitionError, UPValueError
 from unified_planning.model import (
     Problem,
     Action,
-    ProblemKind, Parameter,
+    ProblemKind,
 )
 from unified_planning.model.problem_kind_versioning import LATEST_PROBLEM_KIND_VERSION
 from unified_planning.engines.compilers.utils import (
     get_fresh_name,
     replace_action,
 )
-from typing import Dict, List, Optional, OrderedDict, Union
+from typing import Dict, List, Optional, OrderedDict, Iterable, Tuple, Iterator
 from functools import partial
-from unified_planning.model.types import _UserType
-from unified_planning.shortcuts import Int, FALSE
+from unified_planning.shortcuts import And, Not, Iff, Equals, Or
 import re
 
 
-class IntegersBitsRemover(engines.engine.Engine, CompilerMixin):
+class IntArraysBitsRemover(engines.engine.Engine, CompilerMixin):
     """
-    Integers remover class: ...
+    Integers Arrays Remover class:
+    The problem has to contain arrays/multiarrays of integers. They will be transformed into a bit boolean format to
+    represent the numbers.
     """
 
     def __init__(self, mode: str = 'strict'):
         engines.engine.Engine.__init__(self)
-        CompilerMixin.__init__(self, CompilationKind.INTEGERS_BITS_REMOVING)
+        CompilerMixin.__init__(self, CompilationKind.INT_ARRAYS_BITS_REMOVING)
         self.lb = None
         self.ub = None
         self.n_bits = OrderedDict()
@@ -67,20 +67,20 @@ class IntegersBitsRemover(engines.engine.Engine, CompilerMixin):
         supported_kind.set_parameters("BOUNDED_INT_FLUENT_PARAMETERS")
         supported_kind.set_parameters("BOOL_ACTION_PARAMETERS")
         supported_kind.set_parameters("BOUNDED_INT_ACTION_PARAMETERS")
-        #supported_kind.set_parameters("UNBOUNDED_INT_ACTION_PARAMETERS")
+        # supported_kind.set_parameters("UNBOUNDED_INT_ACTION_PARAMETERS")
         supported_kind.set_parameters("REAL_ACTION_PARAMETERS")
         supported_kind.set_numbers("BOUNDED_TYPES")
         supported_kind.set_problem_type("SIMPLE_NUMERIC_PLANNING")
         supported_kind.set_problem_type("GENERAL_NUMERIC_PLANNING")
         supported_kind.set_fluents_type("INT_FLUENTS")
         supported_kind.set_fluents_type("REAL_FLUENTS")
+        supported_kind.set_fluents_type("ARRAY_FLUENTS")
         supported_kind.set_fluents_type("OBJECT_FLUENTS")
         supported_kind.set_conditions_kind("NEGATIVE_CONDITIONS")
         supported_kind.set_conditions_kind("DISJUNCTIVE_CONDITIONS")
         supported_kind.set_conditions_kind("EQUALITIES")
         supported_kind.set_conditions_kind("EXISTENTIAL_CONDITIONS")
         supported_kind.set_conditions_kind("UNIVERSAL_CONDITIONS")
-        supported_kind.set_conditions_kind("COUNTINGS")
         supported_kind.set_effects_kind("CONDITIONAL_EFFECTS")
         supported_kind.set_effects_kind("INCREASE_EFFECTS")
         supported_kind.set_effects_kind("DECREASE_EFFECTS")
@@ -122,11 +122,11 @@ class IntegersBitsRemover(engines.engine.Engine, CompilerMixin):
 
     @staticmethod
     def supports(problem_kind):
-        return problem_kind <= IntegersBitsRemover.supported_kind()
+        return problem_kind <= IntArraysBitsRemover.supported_kind()
 
     @staticmethod
     def supports_compilation(compilation_kind: CompilationKind) -> bool:
-        return compilation_kind == CompilationKind.INTEGERS_BITS_REMOVING
+        return compilation_kind == CompilationKind.INT_ARRAYS_BITS_REMOVING
 
     @staticmethod
     def resulting_problem_kind(
@@ -134,115 +134,194 @@ class IntegersBitsRemover(engines.engine.Engine, CompilerMixin):
     ) -> ProblemKind:
         new_kind = problem_kind.clone()
         new_kind.unset_conditions_kind("INT_FLUENTS")
+        new_kind.unset_conditions_kind("ARRAY_FLUENTS")
         return new_kind
 
-    def _get_new_fnode(
+    def _get_new_fluent(
             self,
-            old_problem: "up.model.AbstractProblem",
+            new_problem: "up.model.AbstractProblem",
+            node: "up.model.fnode.FNode",
+            indexes: Optional["up.model.fnode.FNode"] = None,
+    ) -> List["up.model.fnode.FNode"]:
+        assert node.is_fluent_exp()
+
+        name_fluent = node.fluent().name.split('[')[0]
+        n_bits = self.n_bits[name_fluent]
+
+        if node.fluent().type.is_int_type():
+            indexes = [int(i) for i in re.findall(r'\[([0-9]+)]', node.fluent().name)]
+        assert indexes is not None
+        position_object_fluent = new_problem.object(f'p_{"_".join(map(str, indexes))}')
+        return [
+            new_problem.fluent(f"{name_fluent}_{i}")(*node.args, position_object_fluent)
+            for i in range(n_bits)
+        ]
+
+    def _get_fluent_domain(
+            self,
+            fluent: "up.model.Fluent",
+            save: bool = False
+    ) -> Iterable[int]:
+        domain = []
+        inner_fluent = fluent.type
+        assert inner_fluent.is_array_type()
+
+        while inner_fluent.is_array_type():
+            domain.append(range(inner_fluent.size))
+            inner_fluent = inner_fluent.elements_type
+
+        assert inner_fluent.is_int_type(), f"Fluent {fluent.name} has not type int. Only integer arrays supported."
+
+        #  save number of bits of the fluent
+        if save:
+            self.n_bits[fluent.name] = math.ceil(math.log2(inner_fluent.upper_bound + 1))
+
+        return tuple(product(*domain))
+
+    def _get_element_value(self, v, combination) -> "up.model.fnode.FNode":
+        """Obtain the value of the element for a given combination of access."""
+        element_value = v
+        for c in combination:
+            element_value = element_value.constant_value()[c]
+        return element_value
+
+    def _get_new_expression(
+            self,
             new_problem: "up.model.AbstractProblem",
             node: "up.model.fnode.FNode"
     ) -> up.model.fnode.FNode:
-        env = new_problem.environment
-        em = env.expression_manager
-        tm = env.type_manager
-        if node.is_equals() and (node.arg(0).type.is_int_type() or node.arg(1).type.is_int_type()):
-            fluent, value = (node.arg(0), node.arg(1)) if node.arg(0).is_fluent_exp() else (node.arg(1), node.arg(0))
-            n_bits = self.n_bits.get(fluent.fluent().name, None)
-            new_value = self._convert_value(value, n_bits)
-            return new_problem.fluent(fluent.fluent().name)(*(tuple(fluent.args) + tuple(new_value)))
+        operation_map = {
+            OperatorKind.EQUALS: 'equals',  # The only operator that works within arrays
+            OperatorKind.LT: 'lt',
+            OperatorKind.LE: 'le',
+            #OperatorKind.PLUS: 'plus',
+            #OperatorKind.MINUS: 'minus',
+            #OperatorKind.DIV: 'div',
+            #OperatorKind.TIMES: 'mult',
+        }
+        operation = operation_map.get(node.node_type)
+        # de mom suporta equals i lt
+        if operation is not None:
+            fluent = node.arg(0)
+            value = node.arg(1)
+            new_fluents, new_values = self._convert_fluent_and_value(new_problem, fluent, value)
 
-        elif node.is_fluent_exp() and node.fluent().type.is_int_type():
-            return new_problem.fluent(node.fluent().name)(*node.fluent().signature)
-        elif node.is_parameter_exp() or node.is_object_exp() or node.is_fluent_exp() or node.is_constant() or node.is_variable_exp():
-            return node
-        else:
-            new_args = []
-            for arg in node.args:
-                new = self._get_new_fnode(old_problem, new_problem, arg)
-                new_args.append(new)
-            if node.node_type == OperatorKind.PLUS:
-                operation = 'plus'
-            elif node.node_type == OperatorKind.MINUS:
-                operation = 'minus'
-            elif node.node_type == OperatorKind.DIV:
-                operation = 'div'
-            elif node.node_type == OperatorKind.TIMES:
-                operation = 'mult'
-            elif node.node_type == OperatorKind.LT:
-                operation = 'lt'
-            elif node.node_type == OperatorKind.LE:
-                operation = 'le'
-            else:
-                return em.create_node(node.node_type, tuple(new_args))
-            if operation == 'le':
-                self._add_relationships(new_problem, 'lt')
-                if len(new_args) > 2:
-                    result = em.Or(new_problem.fluent('lt')(new_args[0], new_args[1]),
-                                   em.Equals(new_args[0], new_args[1]))
-                    for arg in new_args[2:]:
-                        em.Or(new_problem.fluent('lt')(result, arg), em.Equals(result, arg))
-                    return result
-                else:
-                    return em.Or(new_problem.fluent('lt')(*new_args), em.Equals(*new_args))
-            else:
-                self._add_relationships(new_problem, operation)
-                if len(new_args) > 2:
-                    result = new_problem.fluent(operation)(new_args[0], new_args[1])
-                    for arg in new_args[2:]:
-                        result = new_problem.fluent(operation)(result, arg)
-                    return result
-                else:
-                    return new_problem.fluent(operation)(*new_args)
+            if fluent.type.is_int_type():
+                if operation == 'equals':
+                    and_node = []
+                    for f, v in zip(new_fluents, new_values):
+                        if value.is_fluent_exp():
+                            and_node.append(Iff(f, v))
+                        else:
+                            and_node.append(f if v else Not(f))
+                    return And(and_node)
+
+                elif operation == 'lt':
+                    if value.is_fluent_exp():
+                        or_node = []
+                        iff_node = []
+                        for f, v in zip(new_fluents, new_values):
+                            new_and_node = And(Not(f), v)
+                            or_node.append(And(iff_node, new_and_node))
+                            iff_node.append(Iff(f, v))
+                        return Or(or_node)
+                    else:
+                        # es podria millorar ?
+                        or_node = []
+                        for i in range(value.constant_value()-1):
+                            lower_value_bits = self._convert_value(i, len(new_values))
+                            and_node = []
+                            for f, v in zip(new_fluents, lower_value_bits):
+                                and_node.append(f if v else Not(f))
+                            or_node.append(And(and_node))
+                        return Or(or_node)
+
+                elif operation == 'le':
+                    and_node = []
+                    for f, v in zip(new_fluents, new_values):
+                        if value.is_fluent_exp():
+                            and_node.append(Iff(f, v))
+                        else:
+                            and_node.append(f if v else Not(f))
+                    equals_node = And(and_node)
+
+                    if value.is_fluent_exp():
+                        or_node = []
+                        iff_node = []
+                        for f, v in zip(new_fluents, new_values):
+                            new_and_node = And(Not(f), v)
+                            or_node.append(And(iff_node, new_and_node))
+                            iff_node.append(Iff(f, v))
+                        lt_node = Or(or_node)
+
+                    else:
+                        or_node = []
+                        for i in range(value.constant_value()-1):
+                            lower_value_bits = self._convert_value(i, len(new_values))
+                            and_node = []
+                            for f, v in zip(new_fluents, lower_value_bits):
+                                and_node.append(f if v else Not(f))
+                            or_node.append(And(and_node))
+                        lt_node = Or(or_node)
+
+                    return Or(equals_node, lt_node)
+                #elif operation == 'plus':
+                #elif operation == 'minus':
+                #elif operation == 'div':
+                #elif operation == 'mult':
+
+            elif fluent.type.is_array_type() and operation == 'equals':
+                and_node = []
+                for i in range(len(new_fluents)):
+                    for f, v in zip(new_fluents[i], new_values[i]):
+                        if value.is_fluent_exp():
+                            and_node.append(Iff(f, v))
+                        else:
+                            and_node.append(f if v else Not(f))
+                return And(and_node)
+        return node
 
     def _convert_value(self, value, n_bits):
-        n_binari = bin(value.constant_value())[2:]
-        number_with_bits = n_binari.zfill(n_bits)
-        return [b == '1' for b in number_with_bits]
+        """Convert integer value to binary list of n_bits."""
+        return [b == '1' for b in bin(value)[2:].zfill(n_bits)]
 
-    def _get_fluent_parameters(self, new_problem: "up.model.AbstractProblem", params, indices) -> list:
-        """Generates the parameters of the fluent."""
-        return
+    def _set_fluent_bits(self, problem, fluent, k_args, object_ref, new_value, n_bits):
+        for bit_index in range(n_bits):
+            this_fluent = problem.fluent(f"{fluent.name}_{bit_index}")(*k_args, object_ref)
+            problem.set_initial_value(this_fluent, new_value[bit_index])
 
-    def _convert_int_fluent(
-            self,
-            old_problem: "up.model.AbstractProblem",
-            new_problem: "up.model.AbstractProblem",
-            fluent: "up.model.Fluent"
-    ):
-        env = new_problem.environment
-        em = env.expression_manager
-        tm = env.type_manager
-        params = []
-        n_bits = math.ceil(math.log2(fluent.type.upper_bound + 1)) # com controlar rang????
-        for i in range(0, n_bits):
-            params.append(up.model.Parameter('b' + str(i), tm.BoolType()))
-        new_fluent = model.Fluent(fluent.name, _signature=fluent.signature + params, environment=new_problem.environment)
-        self.n_bits[fluent.name] = n_bits
-
-        default_value = old_problem.fluents_defaults.get(fluent)
-        # Default initial values
-        if default_value is not None:
-            new_problem.add_fluent(new_fluent, default_initial_value=False)
-        else:
-            new_problem.add_fluent(new_fluent)
-        # Initial values
-        for k, v in old_problem.initial_values.items():
-            if k.type.is_int_type() and k.fluent().name == fluent.name:
-                # convertir v (constant entera en tuple de booleans
-                bits_param = self._convert_value(v, n_bits)
-                new_problem.set_initial_value(new_problem.fluent(k.fluent().name)(*k.args + tuple(bits_param)),
-                                              True)
-
-    def _treat_effect_fluents(
+    def _convert_fluent_and_value(
             self,
             new_problem: "up.model.AbstractProblem",
             fluent: "up.model.fnode.FNode",
             value: "up.model.fnode.FNode",
-    ):
-        print(fluent.fluent())
-        print(value.fluent())
-        print(new_problem.fluent(value.args))
+    ) -> Tuple[List["up.model.fnode.FNode"], List["up.model.fnode.FNode"]]:
+        """Convert fluent and value to bits."""
+        name_fluent = fluent.fluent().name.split('[')[0]
+        n_bits = self.n_bits[name_fluent]
 
+        if fluent.type.is_int_type():
+            new_fluents = self._get_new_fluent(new_problem, fluent)
+            if value.is_fluent_exp():
+                new_values = self._get_new_fluent(new_problem, value)
+            else:
+                new_values = self._convert_value(value.constant_value(), n_bits)
+        else:
+            assert fluent.type.is_array_type()
+            indices = tuple(int(i) for i in re.findall(r'\[([0-9]+)]', fluent.fluent().name))
+            new_fluents = []
+            new_values = []
+            if value.is_fluent_exp():
+                value_fluent_domain = tuple(int(i) for i in re.findall(r'\[([0-9]+)]', value.fluent().name))
+                for combination in self._get_fluent_domain(fluent.fluent()):
+                    new_fluents.append(self._get_new_fluent(new_problem, fluent, indices + combination))
+                    new_values.append(self._get_new_fluent(new_problem, value, value_fluent_domain + combination))
+            else:
+                for combination in self._get_fluent_domain(fluent.fluent()):
+                    new_fluents.append(self._get_new_fluent(new_problem, fluent, indices + combination))
+                    element_value = self._get_element_value(value, combination)
+                    new_values.append(self._convert_value(element_value.constant_value(), n_bits))
+        return new_fluents, new_values
 
     def _compile(
             self,
@@ -261,32 +340,55 @@ class IntegersBitsRemover(engines.engine.Engine, CompilerMixin):
         new_problem.clear_actions()
         new_problem.clear_goals()
         new_problem.initial_values.clear()
-        env = new_problem.environment
-        tm = env.type_manager
 
-        # Search range of integers in this problem
         for fluent in problem.fluents:
-            if fluent.type.is_int_type():
-                # First integer fluent! - control of ranges
-                if self.lb is None and self.ub is None:
-                    self.ub = fluent.type.upper_bound
-                    self.lb = fluent.type.lower_bound
-                # if another fluent has lower or upper range add them
-                elif fluent.type.upper_bound > self.ub or fluent.type.lower_bound < self.lb:
-                    if fluent.type.upper_bound > self.ub:
-                        self.ub = fluent.type.upper_bound
-                    if fluent.type.lower_bound < self.lb:
-                        self.lb = fluent.type.lower_bound
-        # Change the integers fluents
-        for fluent in problem.fluents:
-            default_value = problem.fluents_defaults.get(fluent)
-            if fluent.type.is_int_type():
-                self._convert_int_fluent(problem, new_problem, fluent)
-            else:
+            # Change the integer array fluents
+            if fluent.type.is_array_type():
+                Position = new_problem.environment.type_manager.UserType('Position')
+                new_user_type = new_problem.environment.type_manager.UserType(fluent.name.capitalize(), Position)
+                new_parameter = up.model.Parameter('p', new_user_type)
+
+                combination = self._get_fluent_domain(fluent, True)
+                for c in combination:
+                    new_problem.add_object(model.Object(f'p_{"_".join(map(str, c))}', new_user_type))
+
+                n_bits = self.n_bits[fluent.name]
                 # Default initial values
-                new_problem.add_fluent(fluent, default_initial_value=default_value)
+                default_value = problem.fluents_defaults.get(fluent)
+                default_bits = self._convert_value(default_value.constant_value(), n_bits)
+                for i in range(n_bits):
+                    new_fluent = model.Fluent(f"{fluent.name}_{i}", _signature=fluent.signature + [new_parameter],
+                                              environment=new_problem.environment)
+                    new_problem.add_fluent(new_fluent, default_initial_value=default_bits[i] if default_value else None)
+
                 # Initial values
-                for k, v in problem.initial_values.items():
+                for k, v in problem.explicit_initial_values.items():
+                    fluent_name = k.fluent().name.split('[')[0]
+                    # For entire arrays (e.g., puzzle = [[8,7,6], [0,4,1], [2,5,3]])
+                    if k.fluent() == fluent:
+                        for positions in combination:
+                            element_value = self._get_element_value(v, positions)
+                            new_value = self._convert_value(element_value.constant_value(), n_bits)
+                            object_ref = new_problem.object(f'p_{"_".join(map(str, positions))}')
+                            self._set_fluent_bits(new_problem, fluent, k.args, object_ref, new_value, n_bits)
+
+                    # For sub-arrays (e.g., puzzle[0] = [8,7,6]) or specific elements (e.g., puzzle[0][0] = 8)
+                    elif fluent_name == fluent.name:
+                        explicit_domain = tuple(int(i) for i in re.findall(r'\[([0-9]+)]', k.fluent().name))
+                        domain = self._get_fluent_domain(k.fluent()) if k.fluent().type.is_array_type() else [()]
+
+                        for c in domain:
+                            element_value = self._get_element_value(v, c)
+                            new_value = self._convert_value(element_value.constant_value(), n_bits)
+
+                            if new_value != default_bits:
+                                combined_domain = explicit_domain + c if c else explicit_domain
+                                object_ref = new_problem.object(f'p_{"_".join(map(str, combined_domain))}')
+                                self._set_fluent_bits(new_problem, fluent, k.args, object_ref, new_value, n_bits)
+            else:
+                default_value = problem.fluents_defaults.get(fluent)
+                new_problem.add_fluent(fluent, default_initial_value=default_value)
+                for k, v in problem.explicit_initial_values.items():
                     if k.fluent().name == fluent.name and v != default_value:
                         new_problem.set_initial_value(k, v)
 
@@ -296,12 +398,34 @@ class IntegersBitsRemover(engines.engine.Engine, CompilerMixin):
             new_action.clear_preconditions()
             new_action.clear_effects()
             for precondition in action.preconditions:
-                new_precondition = self._get_new_fnode(problem, new_problem, precondition)
-                #new_action.add_precondition(new_precondition)
+                new_precondition = self._get_new_expression(new_problem, precondition)
+                new_action.add_precondition(new_precondition)
+            for effect in action.effects:
+                fluent = effect.fluent
+                value = effect.value
 
+                new_condition = self._get_new_expression(new_problem, effect.condition)
 
+                fluent_name = fluent.fluent().name.split('[')[0]
+                if fluent_name in self.n_bits:
+                    new_fluents, new_values = self._convert_fluent_and_value(new_problem, fluent, value)
+                    # For specific elements (e.g., puzzle[0][0] := 8)
+                    if fluent.fluent().type.is_int_type():
+                        for f, v in zip(new_fluents, new_values):
+                            new_action.add_effect(f, v, new_condition, effect.forall)
+                    # For arrays (e.g., puzzle := [[8,7,6],[0,4,1],[2,5,3]]) or sub-arrays (e.g., puzzle[0] := [8,7,6])
+                    else:
+                        for i in range(len(new_fluents)):
+                            for f, v in zip(new_fluents[i], new_values[i]):
+                                new_action.add_effect(f, v, new_condition, effect.forall)
+                else:
+                    new_action.add_effect(fluent, value, new_condition, effect.forall)
+            new_problem.add_action(new_action)
+            new_to_old[new_action] = action
+
+        for goal in problem.goals:
+            new_problem.add_goal(self._get_new_expression(new_problem, goal))
 
         return CompilerResult(
             new_problem, partial(replace_action, map=new_to_old), self.name
         )
-
