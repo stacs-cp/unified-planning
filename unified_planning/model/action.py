@@ -332,6 +332,8 @@ class InstantaneousAction(Action):
         :param forall: The 'Variables' that are universally quantified in this
             effect; the default value is empty.
         """
+        if fluent.type.is_array_type() and type(value) is list:
+            value = [value]
         (
             fluent_exp,
             value_exp,
