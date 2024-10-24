@@ -64,7 +64,7 @@ FEATURES = {
         "EQUALITIES",
         "EXISTENTIAL_CONDITIONS",
         "UNIVERSAL_CONDITIONS",
-        "COUNTINGS",
+        "COUNTING",
     ],
     "EFFECTS_KIND": [
         "CONDITIONAL_EFFECTS",
