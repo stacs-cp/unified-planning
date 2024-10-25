@@ -14,37 +14,27 @@
 #
 """This module defines the quantifiers remover class."""
 import itertools
-from itertools import product
 
 from unified_planning.exceptions import UPValueError
 from unified_planning.model.walkers import simplifier
 
 import unified_planning as up
 import unified_planning.engines as engines
-from unified_planning import model
 from unified_planning.engines.mixins.compiler import CompilationKind, CompilerMixin
 from unified_planning.engines.results import CompilerResult
 from unified_planning.model import (
     Problem,
-    InstantaneousAction,
-    DurativeAction,
     Action,
     ProblemKind,
-    Oversubscription,
-    TemporalOversubscription,
-    Object,
-    Variable,
-    Expression,
-    Effect, OperatorKind,
+    OperatorKind,
 )
 from unified_planning.model.problem_kind_versioning import LATEST_PROBLEM_KIND_VERSION
 from unified_planning.engines.compilers.utils import (
     replace_action,
 )
-from typing import Dict, List, Optional, Tuple, OrderedDict, Any, Union
+from typing import Dict, Optional, Union
 from functools import partial
-from unified_planning.shortcuts import Int, Plus, Not, Minus, And, Equals, TRUE, FALSE, Or
-import re
+from unified_planning.shortcuts import Not, And, Or
 
 class CountRemover(engines.engine.Engine, CompilerMixin):
     """
