@@ -147,7 +147,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
         while this_type.is_array_type():
             domain.append(range(this_type.size))
             this_type = this_type.elements_type
-        return domain, this_type
+        return tuple(product(*domain)), this_type
 
     def _process_arg(self, new_problem, arg, combination):
         """Process an argument depending on the type."""
@@ -196,7 +196,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                 assert all(arg.type.is_array_type() for arg in node.args), "Argument is not an array type"
                 domain, this_type = self._get_domain_and_type(node.arg(0))
                 new_nodes = []
-                for combination in list(product(*domain)):
+                for combination in domain:
                     new_args = [
                         self._process_arg(new_problem, arg, combination)
                         for arg in node.args
@@ -246,21 +246,32 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
             if fluent.type.is_array_type():
                 domain, this_type = self._get_domain_and_type(fluent)
 
-                for combination in list(product(*domain)):
+                for combination in domain:
                     fluent_name = get_fresh_name(new_problem, fluent.name, list(map(str, combination)))
                     new_fluent = model.Fluent(fluent_name, this_type, fluent.signature, fluent.environment)
                     new_problem.add_fluent(new_fluent, default_initial_value=default_value)
 
-                    for f, v in problem.explicit_initial_values.items():
-                        if f.fluent() == fluent:
-                            element_value = self.get_element_value(v, combination)
-                            if element_value != default_value:
-                                new_problem.set_initial_value(new_fluent(*f.args), element_value)
-                        elif f.fluent().name.split('[')[0] == fluent.name and not f.fluent().type.is_array_type():
-                            indices = [int(i) for i in re.findall(r'\[([0-9]+)\]', f.fluent().name)]
-                            if tuple(indices) == combination and v != default_value:
-                                new_problem.set_initial_value(new_fluent(*f.args), v)
-                        # falta el cas que es indexat pero segueix sent array
+                for f, v in problem.explicit_initial_values.items():
+                    fluent_name = f.fluent().name.split('[')[0]
+                    if f.fluent() == fluent:
+                        domain, _ = self._get_domain_and_type(f.fluent())
+                        for d in domain:
+                            this_fluent = new_problem.fluent(f'{fluent_name}_{"_".join(map(str, d))}')
+                            this_value = self.get_element_value(v, d)
+                            new_problem.set_initial_value(this_fluent(*f.args), this_value)
+
+                    elif fluent_name == fluent.name:
+                        indices = tuple(int(i) for i in re.findall(r'\[([0-9]+)\]', f.fluent().name))
+                        if not f.fluent().type.is_array_type():
+                            this_fluent = new_problem.fluent(f'{fluent_name}_{"_".join(map(str, indices))}')
+                            new_problem.set_initial_value(this_fluent(*f.args), v)
+                        else:
+                            post_domain, _ = self._get_domain_and_type(f.fluent())
+                            for i in post_domain:
+                                combined_domain = indices + i
+                                this_fluent = new_problem.fluent(f'{fluent_name}_{"_".join(map(str, combined_domain))}')
+                                new_problem.set_initial_value(this_fluent(*f.args), self.get_element_value(v, i))
+
             else:
                 new_problem.add_fluent(fluent, default_initial_value=default_value)
                 for f, v in problem.explicit_initial_values.items():
