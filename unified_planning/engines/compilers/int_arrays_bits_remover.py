@@ -355,11 +355,11 @@ class IntArraysBitsRemover(engines.engine.Engine, CompilerMixin):
                 n_bits = self.n_bits[fluent.name]
                 # Default initial values
                 default_value = problem.fluents_defaults.get(fluent)
-                default_bits = self._convert_value(default_value.constant_value(), n_bits)
+                default_bits = self._convert_value(default_value.constant_value(), n_bits) if default_value else [None] * n_bits
                 for i in range(n_bits):
                     new_fluent = model.Fluent(f"{fluent.name}_{i}", _signature=fluent.signature + [new_parameter],
                                               environment=new_problem.environment)
-                    new_problem.add_fluent(new_fluent, default_initial_value=default_bits[i] if default_value else None)
+                    new_problem.add_fluent(new_fluent, default_initial_value=default_bits[i])
 
                 # Initial values
                 for k, v in problem.explicit_initial_values.items():
