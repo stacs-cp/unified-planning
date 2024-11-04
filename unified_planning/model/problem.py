@@ -22,6 +22,7 @@ from unified_planning.model import Fluent
 from unified_planning.model.abstract_problem import AbstractProblem
 from unified_planning.model.mixins import (
     ActionsSetMixin,
+    AxiomsSetMixin,
     TimeModelMixin,
     FluentsSetMixin,
     ObjectsSetMixin,
@@ -51,6 +52,7 @@ class Problem(  # type: ignore[misc]
     UserTypesSetMixin,
     TimeModelMixin,
     FluentsSetMixin,
+    AxiomsSetMixin,
     ActionsSetMixin,
     ObjectsSetMixin,
     InitialStateMixin,
@@ -77,6 +79,7 @@ class Problem(  # type: ignore[misc]
         FluentsSetMixin.__init__(
             self, self.environment, self._add_user_type, self.has_name, initial_defaults
         )
+        AxiomsSetMixin.__init__(self, self.environment)
         ActionsSetMixin.__init__(
             self, self.environment, self._add_user_type, self.has_name
         )
@@ -114,6 +117,10 @@ class Problem(  # type: ignore[misc]
         s.append("fluents = [\n")
         s.extend(map(custom_str, self.fluents))
         s.append("]\n\n")
+        if len(self.axioms) > 0:
+            s.append("axioms = [\n")
+            s.extend(map(custom_str, self.axioms))
+            s.append("]\n\n")
         s.append("actions = [\n")
         s.extend(map(custom_str, self.actions))
         s.append("]\n\n")
@@ -178,6 +185,8 @@ class Problem(  # type: ignore[misc]
 
         if set(self._goals) != set(oth._goals):
             return False
+        if set(self._axioms) != set(oth._axioms):
+            return False
         if set(self._actions) != set(oth._actions):
             return False
         if set(self._trajectory_constraints) != set(oth._trajectory_constraints):
@@ -210,6 +219,8 @@ class Problem(  # type: ignore[misc]
         res += InitialStateMixin.__hash__(self)
         res += MetricsMixin.__hash__(self)
 
+        for a in self._axioms:
+            res += hash(a)
         for a in self._actions:
             res += hash(a)
         for c in self._trajectory_constraints:
@@ -234,6 +245,7 @@ class Problem(  # type: ignore[misc]
         InitialStateMixin._clone_to(self, new_p)
         TimeModelMixin._clone_to(self, new_p)
 
+        new_p._axioms = [a.clone() for a in self._axioms]
         new_p._actions = [a.clone() for a in self._actions]
         new_p._timed_effects = {
             t: [e.clone() for e in el] for t, el in self._timed_effects.items()
@@ -584,7 +596,10 @@ class Problem(  # type: ignore[misc]
             isinstance(goal, bool) or goal.environment == self._env
         ), "goal does not have the same environment of the problem"
         (goal_exp,) = self._env.expression_manager.auto_promote(goal)
-        assert self._env.type_checker.get_type(goal_exp).is_bool_type()
+        assert (
+            self._env.type_checker.get_type(goal_exp).is_bool_type()
+            or self._env.type_checker.get_type(goal_exp).is_derived_bool_type()
+        )
         if goal_exp != self._env.expression_manager.TRUE():
             self._goals.append(goal_exp)
 
@@ -666,6 +681,8 @@ class Problem(  # type: ignore[misc]
 
         for action in self._actions:
             factory.update_problem_kind_action(action)
+        if len(self.axioms) > 0:
+            factory.kind.set_fluents_type("DERIVED_FLUENTS")
         if len(self._timed_effects) > 0:
             factory.kind.set_time("CONTINUOUS_TIME")
             factory.kind.set_time("TIMED_EFFECTS")

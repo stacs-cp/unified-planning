@@ -62,6 +62,8 @@ class InitialStateMixin:
             value = [value]
         fluent_exp, value_exp = self._env.expression_manager.auto_promote(fluent, value)
         assert fluent_exp.is_fluent_exp(), "fluent field must be a fluent"
+        if fluent.type.is_derived_bool_type():
+            raise UPTypeError("You cannot set the initial value of a derived fluent!")
         if not fluent_exp.type.is_compatible(value_exp.type):
             raise UPTypeError("Initial value assignment has not compatible types!")
         self._initial_value[fluent_exp] = value_exp
@@ -89,6 +91,8 @@ class InitialStateMixin:
                 )
         if fluent_exp in self._initial_value:
             return self._initial_value[fluent_exp]
+        elif fluent_exp.fluent().type.is_derived_bool_type():
+            return self._env.expression_manager.FALSE()
         elif fluent_exp.fluent() in self._fluent_set.fluents_defaults:
             if fluent.type.is_array_type():
                 elements_default = self._fluent_set.fluents_defaults[fluent_exp.fluent()]
@@ -117,7 +121,7 @@ class InitialStateMixin:
         for f in self._fluent_set.fluents:
             for f_exp in get_all_fluent_exp(self._object_set, f):
                 value = self.initial_value(f_exp)
-                if value is not None:
+                if not f.type.is_derived_bool_type() and value is not None:
                     res[f_exp] = value
         return res
 
