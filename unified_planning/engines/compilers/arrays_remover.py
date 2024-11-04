@@ -293,9 +293,9 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                     new_action.add_precondition(np)
             try:
                 for effect in action.effects:
-                    new_fnode = self._get_new_nodes(new_problem, effect.fluent)[0]
-                    new_value = self._get_new_nodes(new_problem, effect.value)[0]
-                    new_condition = self._get_new_nodes(new_problem, effect.condition)[0]
+                    new_fnode = self._get_new_nodes(new_problem, effect.fluent)[0].simplify()
+                    new_value = self._get_new_nodes(new_problem, effect.value)[0].simplify()
+                    new_condition = self._get_new_nodes(new_problem, effect.condition)[0].simplify()
                     if effect.is_increase():
                         new_action.add_increase_effect(new_fnode, new_value, new_condition, effect.forall)
                     elif effect.is_decrease():
@@ -303,7 +303,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                     else:
                         new_action.add_effect(new_fnode, new_value, new_condition, effect.forall)
             except Exception:
-                # print(f"Action {action.name} eliminated due to an access to a fluent out of range in the effects.")
+                print(f"Action {action.name} eliminated due to an access to a fluent out of range in the effects.")
                 continue
             else:
                 new_problem.add_action(new_action)
