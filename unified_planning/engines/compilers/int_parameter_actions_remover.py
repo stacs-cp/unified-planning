@@ -31,7 +31,7 @@ from unified_planning.model import (
     Action,
     ProblemKind,
     Type,
-    Fluent,
+    Fluent, MinimizeExpressionOnFinalState, MinimizeActionCosts,
 )
 from unified_planning.model.problem_kind_versioning import LATEST_PROBLEM_KIND_VERSION
 from unified_planning.engines.compilers.utils import (
@@ -72,6 +72,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
         supported_kind.set_fluents_type("INT_FLUENTS")
         supported_kind.set_fluents_type("REAL_FLUENTS")
         supported_kind.set_fluents_type("ARRAY_FLUENTS")
+        supported_kind.set_fluents_type("DERIVED_FLUENTS")
         supported_kind.set_fluents_type("OBJECT_FLUENTS")
         supported_kind.set_conditions_kind("NEGATIVE_CONDITIONS")
         supported_kind.set_conditions_kind("DISJUNCTIVE_CONDITIONS")
@@ -108,10 +109,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
         supported_kind.set_actions_cost_kind("STATIC_FLUENTS_IN_ACTIONS_COST")
         supported_kind.set_actions_cost_kind("FLUENTS_IN_ACTIONS_COST")
         supported_kind.set_quality_metrics("PLAN_LENGTH")
-        supported_kind.set_quality_metrics("OVERSUBSCRIPTION")
-        supported_kind.set_quality_metrics("TEMPORAL_OVERSUBSCRIPTION")
         supported_kind.set_quality_metrics("MAKESPAN")
-        supported_kind.set_quality_metrics("FINAL_VALUE")
         supported_kind.set_actions_cost_kind("INT_NUMBERS_IN_ACTIONS_COST")
         supported_kind.set_actions_cost_kind("REAL_NUMBERS_IN_ACTIONS_COST")
         supported_kind.set_oversubscription_kind("INT_NUMBERS_IN_OVERSUBSCRIPTION")
@@ -241,6 +239,21 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                     else:
                         new_problem.add_action(new_action)
                         trace_back_map[new_action] = (action, c)
+
+        new_problem.clear_quality_metrics()
+        for qm in problem.quality_metrics:
+            if qm.is_minimize_sequential_plan_length() or qm.is_minimize_makespan():
+                new_problem.add_quality_metric(qm)
+            elif qm.is_minimize_action_costs():
+                assert isinstance(qm, MinimizeActionCosts)
+                new_costs: Dict["up.model.Action", "up.model.Expression"] = {}
+                for new_act, old_act in trace_back_map.items():
+                    if old_act is None:
+                        continue
+                    new_costs[new_act] = qm.get_action_cost(old_act[0])
+                new_problem.add_quality_metric(
+                    MinimizeActionCosts(new_costs, environment=new_problem.environment)
+                )
 
         return CompilerResult(
             new_problem,

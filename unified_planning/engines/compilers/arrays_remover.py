@@ -25,12 +25,13 @@ from unified_planning.exceptions import UPProblemDefinitionError, UPValueError
 from unified_planning.model import (
     Problem,
     Action,
-    ProblemKind,
+    ProblemKind, Axiom, MinimizeActionCosts, Oversubscription, BoolExpression, NumericConstant,
+    MinimizeExpressionOnFinalState, MaximizeExpressionOnFinalState,
 )
 from unified_planning.model.problem_kind_versioning import LATEST_PROBLEM_KIND_VERSION
 from unified_planning.engines.compilers.utils import (
     get_fresh_name,
-    replace_action,
+    replace_action, updated_minimize_action_costs,
 )
 from typing import Dict, List, Optional
 from functools import partial
@@ -67,6 +68,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
         supported_kind.set_fluents_type("INT_FLUENTS")
         supported_kind.set_fluents_type("REAL_FLUENTS")
         supported_kind.set_fluents_type("ARRAY_FLUENTS")
+        supported_kind.set_fluents_type("DERIVED_FLUENTS")
         supported_kind.set_fluents_type("OBJECT_FLUENTS")
         supported_kind.set_conditions_kind("NEGATIVE_CONDITIONS")
         supported_kind.set_conditions_kind("DISJUNCTIVE_CONDITIONS")
@@ -103,10 +105,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
         supported_kind.set_actions_cost_kind("STATIC_FLUENTS_IN_ACTIONS_COST")
         supported_kind.set_actions_cost_kind("FLUENTS_IN_ACTIONS_COST")
         supported_kind.set_quality_metrics("PLAN_LENGTH")
-        supported_kind.set_quality_metrics("OVERSUBSCRIPTION")
-        supported_kind.set_quality_metrics("TEMPORAL_OVERSUBSCRIPTION")
         supported_kind.set_quality_metrics("MAKESPAN")
-        supported_kind.set_quality_metrics("FINAL_VALUE")
         supported_kind.set_actions_cost_kind("INT_NUMBERS_IN_ACTIONS_COST")
         supported_kind.set_actions_cost_kind("REAL_NUMBERS_IN_ACTIONS_COST")
         supported_kind.set_oversubscription_kind("INT_NUMBERS_IN_OVERSUBSCRIPTION")
@@ -175,21 +174,19 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
     ) -> List["up.model.fnode.FNode"]:
         env = new_problem.environment
         em = env.expression_manager
-
         if node.is_fluent_exp():
             new_fluent = self._get_new_fluent(node.fluent())
-            try:
-                new_problem.fluent(new_fluent.name)(*node.fluent().signature)
-            except (KeyError, UPValueError):
+            if new_problem.has_fluent(new_fluent.name):
+                return [new_fluent(*node.args)]
+            else:
                 if self.mode == 'strict':
                     print(f"Fluent {new_fluent.name} out of range!")
                     exit(1)
-                return [FALSE()] if new_fluent.type.is_bool_type() else [None]
-            return [new_fluent(*node.args)]
+                else:
+                    return [FALSE() if node.fluent().type.is_bool_type() else None]
 
         elif node.is_parameter_exp() or node.is_constant():
             return [node]
-
         # Arrays
         else:
             if node.arg(0).type.is_array_type():
@@ -204,7 +201,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                     if None in new_args:
                         new_nodes.append(FALSE() if node.type.is_bool_type() else None)
                     else:
-                        new_nodes.append(em.create_node(node.node_type, tuple(new_args)))
+                        new_nodes.append(em.create_node(node.node_type, tuple(new_args)).simplify())
                 return new_nodes
             else:
                 new_args = [
@@ -212,7 +209,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                 ]
                 if None in new_args:
                     return [FALSE() if node.type.is_bool_type() else None]
-                return [em.create_node(node.node_type, tuple(new_args))]
+                return [em.create_node(node.node_type, tuple(new_args)).simplify()]
 
     def get_element_value(self, v, combination):
         """Obtain the value of the element for a given combination of access."""
@@ -237,6 +234,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
         new_problem.clear_fluents()
         new_problem.clear_actions()
         new_problem.clear_goals()
+        new_problem.clear_axioms()
         new_problem.initial_values.clear()
         assert self.mode == 'strict' or self.mode == 'permissive'
 
@@ -278,6 +276,30 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                     if f.fluent() == fluent and v != default_value:
                         new_problem.set_initial_value(fluent(*f.args), v)
 
+        for axiom in problem.axioms:
+            new_axiom = axiom.clone()
+            new_axiom.name = get_fresh_name(new_problem, new_axiom.name)
+            new_axiom.clear_preconditions()
+            new_axiom.clear_effects()
+            for precondition in axiom.preconditions:
+                new_preconditions = self._get_new_nodes(new_problem, precondition)
+                for np in new_preconditions:
+                    new_axiom.add_precondition(np)
+            for effect in axiom.effects:
+                new_fnode = self._get_new_nodes(new_problem, effect.fluent)[0]
+                new_value = self._get_new_nodes(new_problem, effect.value)[0]
+                new_condition = self._get_new_nodes(new_problem, effect.condition)[0]
+                if not new_condition.is_false() and new_fnode is not None:
+                    if effect.is_increase():
+                        new_axiom.add_increase_effect(new_fnode, new_value, new_condition, effect.forall)
+                    elif effect.is_decrease():
+                        new_axiom.add_decrease_effect(new_fnode, new_value, new_condition, effect.forall)
+                    else:
+                        new_axiom.add_effect(new_fnode, new_value, new_condition, effect.forall)
+
+            new_problem.add_axiom(new_axiom)
+            new_to_old[new_axiom] = axiom
+
         for action in problem.actions:
             for p in action.parameters:
                 assert not p.type.is_int_type(), \
@@ -289,30 +311,56 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
 
             for precondition in action.preconditions:
                 new_preconditions = self._get_new_nodes(new_problem, precondition)
+                if FALSE() in new_preconditions:
+                    #print(f"Action {action.name} removed as it will never be applied.")
+                    break
                 for np in new_preconditions:
                     new_action.add_precondition(np)
-            try:
-                for effect in action.effects:
-                    new_fnode = self._get_new_nodes(new_problem, effect.fluent)[0].simplify()
-                    new_value = self._get_new_nodes(new_problem, effect.value)[0].simplify()
-                    new_condition = self._get_new_nodes(new_problem, effect.condition)[0].simplify()
-                    if effect.is_increase():
-                        new_action.add_increase_effect(new_fnode, new_value, new_condition, effect.forall)
-                    elif effect.is_decrease():
-                        new_action.add_decrease_effect(new_fnode, new_value, new_condition, effect.forall)
-                    else:
-                        new_action.add_effect(new_fnode, new_value, new_condition, effect.forall)
-            except Exception:
-                print(f"Action {action.name} eliminated due to an access to a fluent out of range in the effects.")
-                continue
             else:
-                new_problem.add_action(new_action)
-                new_to_old[new_action] = action
+                for effect in action.effects:
+                    new_fnode = self._get_new_nodes(new_problem, effect.fluent)[0]
+                    new_value = self._get_new_nodes(new_problem, effect.value)[0]
+                    new_condition = self._get_new_nodes(new_problem, effect.condition)[0]
+                    if not new_condition.is_false() and new_fnode is not None:
+                        if effect.is_increase():
+                            new_action.add_increase_effect(new_fnode, new_value, new_condition, effect.forall)
+                        elif effect.is_decrease():
+                            new_action.add_decrease_effect(new_fnode, new_value, new_condition, effect.forall)
+                        else:
+                            new_action.add_effect(new_fnode, new_value, new_condition, effect.forall)
+                    else:
+                        # print(f"Effect {effect} not added.")
+                        continue
+                else:
+                    new_problem.add_action(new_action)
+                    new_to_old[new_action] = action
 
         for g in problem.goals:
             new_goals = self._get_new_nodes(new_problem, g)
             for ng in new_goals:
                 new_problem.add_goal(ng)
+
+        new_problem.clear_quality_metrics()
+        for qm in problem.quality_metrics:
+            if qm.is_minimize_sequential_plan_length() or qm.is_minimize_makespan():
+                new_problem.add_quality_metric(qm)
+            elif qm.is_minimize_action_costs():
+                new_problem.add_quality_metric(
+                    updated_minimize_action_costs(
+                        qm, new_to_old, new_problem.environment
+                    )
+                )
+            elif qm.is_minimize_expression_on_final_state():
+                new_expression = self._get_new_nodes(new_problem, qm.expression)
+                for ne in new_expression:
+                    new_problem.add_quality_metric(MinimizeExpressionOnFinalState(ne))
+            elif qm.is_maximize_expression_on_final_state():
+                new_expression = self._get_new_nodes(new_problem, qm.expression)
+                for ne in new_expression:
+                    new_problem.add_quality_metric(MaximizeExpressionOnFinalState(ne))
+            else:
+                new_problem.add_quality_metric(qm)
+
         return CompilerResult(
             new_problem, partial(replace_action, map=new_to_old), self.name
         )
