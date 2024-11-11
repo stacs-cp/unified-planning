@@ -71,6 +71,7 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
         supported_kind.set_fluents_type("INT_FLUENTS")
         supported_kind.set_fluents_type("REAL_FLUENTS")
         supported_kind.set_fluents_type("OBJECT_FLUENTS")
+        supported_kind.set_fluents_type("DERIVED_FLUENTS")
         supported_kind.set_conditions_kind("NEGATIVE_CONDITIONS")
         supported_kind.set_conditions_kind("DISJUNCTIVE_CONDITIONS")
         supported_kind.set_conditions_kind("EQUALITIES")
@@ -381,22 +382,26 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                 new_fnode = self._get_new_fnode(problem, new_problem, effect.fluent)
                 new_value = self._get_new_fnode(problem, new_problem, effect.value)
                 new_condition = self._get_new_fnode(problem, new_problem, effect.condition)
-                #if effect.is_increase():
+                if effect.is_increase():
+                    print("Increase effects not supported yet.")
+                    exit(1)
                 #    try:
                 #        new_result_value = new_problem.fluent('plus')(new_fnode, new_value)
                 #    except UPValueError:
                 #        self._add_relationships(new_problem, 'plus')
                 #        new_result_value = new_problem.fluent('plus')(new_fnode, new_value)
                 #    new_action.add_effect(new_fnode, new_result_value, new_condition, effect.forall)
-                #elif effect.is_decrease():
+                elif effect.is_decrease():
+                    print("Decrease effects not supported yet.")
+                    exit(1)
                 #    try:
                 #        new_result_value = new_problem.fluent('minus')(new_fnode, new_value)
                 #    except UPValueError:
                 #        self._add_relationships(new_problem, 'minus')
                 #        new_result_value = new_problem.fluent('minus')(new_fnode, new_value)
                 #    new_action.add_effect(new_fnode, new_result_value, new_condition, effect.forall)
-                #else:
-                new_action.add_effect(new_fnode, new_value, new_condition, effect.forall)
+                else:
+                    new_action.add_effect(new_fnode, new_value, new_condition, effect.forall)
             new_problem.add_action(new_action)
             new_to_old[new_action] = action
 
