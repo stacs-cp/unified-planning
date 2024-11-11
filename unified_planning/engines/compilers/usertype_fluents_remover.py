@@ -42,7 +42,7 @@ from unified_planning.model import (
     Object,
     Expression,
     DurationInterval,
-    UPState,
+    UPState, Axiom,
 )
 from unified_planning.model.problem_kind_versioning import LATEST_PROBLEM_KIND_VERSION
 from unified_planning.model.walkers import UsertypeFluentsWalker
@@ -90,6 +90,7 @@ class UsertypeFluentsRemover(engines.engine.Engine, CompilerMixin):
         supported_kind.set_fluents_type("INT_FLUENTS")
         supported_kind.set_fluents_type("REAL_FLUENTS")
         supported_kind.set_fluents_type("OBJECT_FLUENTS")
+        supported_kind.set_fluents_type("DERIVED_FLUENTS")
         supported_kind.set_conditions_kind("NEGATIVE_CONDITIONS")
         supported_kind.set_conditions_kind("DISJUNCTIVE_CONDITIONS")
         supported_kind.set_conditions_kind("EQUALITIES")
@@ -195,10 +196,35 @@ class UsertypeFluentsRemover(engines.engine.Engine, CompilerMixin):
                 fluents_map[fluent] = new_fluent
                 new_problem.add_fluent(new_fluent)
             else:
-                new_problem.add_fluent(fluent)
+                default_value = problem.fluents_defaults.get(fluent, None)
+                new_problem.add_fluent(fluent, default_initial_value=default_value)
+                for f, v in problem.explicit_initial_values.items():
+                    if f.fluent() == fluent and v != default_value:
+                        new_problem.set_initial_value(fluent(*f.args), v)
 
         used_names = self._get_names_in_problem(problem)
         utf_remover = UsertypeFluentsWalker(fluents_map, used_names, env)
+
+        for old_axiom in problem.axioms:
+            params = OrderedDict(((p.name, p.type) for p in old_axiom.parameters))
+            new_axiom = Axiom(old_axiom.name, _parameters=params, _env=env)
+            for p in old_axiom.preconditions:
+                new_axiom.add_precondition(
+                    utf_remover.remove_usertype_fluents_from_condition(p)
+                )
+            for e in old_axiom.effects:
+                for ne in self._convert_effect(
+                    e, problem, fluents_map, em, utf_remover
+                ):
+                    new_axiom._add_effect_instance(ne)
+            if old_axiom.simulated_effect is not None:
+                new_axiom.set_simulated_effect(
+                    self._convert_simulated_effect(
+                        old_axiom.simulated_effect, fluents_map, em, problem
+                    )
+                )
+            new_problem.add_axiom(new_axiom)
+            new_to_old[new_axiom] = old_axiom
 
         for old_action in problem.actions:
             params = OrderedDict(((p.name, p.type) for p in old_action.parameters))
