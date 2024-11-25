@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="SshConfigs">
+    <configs>
+      <sshConfig authType="PASSWORD" connectionConfig="{&quot;proxyParams&quot;:{&quot;proxyHost&quot;:&quot;clusterlsi&quot;,&quot;proxyPort&quot;:40022,&quot;proxyType&quot;:&quot;HTTP&quot;,&quot;authData&quot;:{&quot;proxyAuthType&quot;:&quot;USER_AND_PASSWORD&quot;}}}" host="microimae2.udg.edu" id="70a2b73a-cc15-4e2b-978d-e5a9d81fb1c2" port="40022" nameFormat="DESCRIPTIVE" username="cdavesa" useOpenSSHConfig="true" />
+    </configs>
+  </component>
+</project>

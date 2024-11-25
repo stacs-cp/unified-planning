@@ -26,7 +26,7 @@ from unified_planning.engines.results import CompilerResult
 from unified_planning.model import (
     Problem,
     Action,
-    ProblemKind,
+    ProblemKind, Object,
 )
 from unified_planning.model.problem_kind_versioning import LATEST_PROBLEM_KIND_VERSION
 from unified_planning.engines.compilers.utils import (
@@ -150,12 +150,17 @@ class IntArraysBitsRemover(engines.engine.Engine, CompilerMixin):
 
         if node.fluent().type.is_int_type():
             indexes = [int(i) for i in re.findall(r'\[([0-9]+)]', node.fluent().name)]
-        assert indexes is not None
-        position_object_fluent = new_problem.object(f'p_{"_".join(map(str, indexes))}')
-        return [
-            new_problem.fluent(f"{name_fluent}_{i}")(*node.args, position_object_fluent)
-            for i in range(n_bits)
-        ]
+        if not indexes:
+            return [
+                new_problem.fluent(f"{name_fluent}_{i}")(*node.args)
+                for i in range(n_bits)
+            ]
+        else:
+            position_object_fluent = new_problem.object(f'p_{"_".join(map(str, indexes))}')
+            return [
+                new_problem.fluent(f"{name_fluent}_{i}")(*node.args, position_object_fluent)
+                for i in range(n_bits)
+            ]
 
     def _get_fluent_domain(
             self,
@@ -164,7 +169,6 @@ class IntArraysBitsRemover(engines.engine.Engine, CompilerMixin):
     ) -> Iterable[int]:
         domain = []
         inner_fluent = fluent.type
-        assert inner_fluent.is_array_type()
 
         while inner_fluent.is_array_type():
             domain.append(range(inner_fluent.size))
@@ -285,9 +289,9 @@ class IntArraysBitsRemover(engines.engine.Engine, CompilerMixin):
         """Convert integer value to binary list of n_bits."""
         return [b == '1' for b in bin(value)[2:].zfill(n_bits)]
 
-    def _set_fluent_bits(self, problem, fluent, k_args, object_ref, new_value, n_bits):
+    def _set_fluent_bits(self, problem, fluent, k_args, new_value, n_bits, object_ref: Optional[Object] = None):
         for bit_index in range(n_bits):
-            this_fluent = problem.fluent(f"{fluent.name}_{bit_index}")(*k_args, object_ref)
+            this_fluent = problem.fluent(f"{fluent.name}_{bit_index}")(*k_args, *(object_ref,) if object_ref is not None else ())
             problem.set_initial_value(this_fluent, new_value[bit_index])
 
     def _convert_fluent_and_value(
@@ -370,7 +374,7 @@ class IntArraysBitsRemover(engines.engine.Engine, CompilerMixin):
                             element_value = self._get_element_value(v, positions)
                             new_value = self._convert_value(element_value.constant_value(), n_bits)
                             object_ref = new_problem.object(f'p_{"_".join(map(str, positions))}')
-                            self._set_fluent_bits(new_problem, fluent, k.args, object_ref, new_value, n_bits)
+                            self._set_fluent_bits(new_problem, fluent, k.args, new_value, n_bits, object_ref)
 
                     # For sub-arrays (e.g., puzzle[0] = [8,7,6]) or specific elements (e.g., puzzle[0][0] = 8)
                     elif fluent_name == fluent.name:
@@ -384,7 +388,23 @@ class IntArraysBitsRemover(engines.engine.Engine, CompilerMixin):
                             if new_value != default_bits:
                                 combined_domain = explicit_domain + c if c else explicit_domain
                                 object_ref = new_problem.object(f'p_{"_".join(map(str, combined_domain))}')
-                                self._set_fluent_bits(new_problem, fluent, k.args, object_ref, new_value, n_bits)
+                                self._set_fluent_bits(new_problem, fluent, k.args, new_value, n_bits, object_ref)
+            elif fluent.type.is_int_type():
+                self._get_fluent_domain(fluent, True)
+                n_bits = self.n_bits[fluent.name]
+                # Default initial values
+                default_value = problem.fluents_defaults.get(fluent)
+                default_bits = self._convert_value(default_value.constant_value(), n_bits) if default_value \
+                    else [None] * n_bits
+                for i in range(n_bits):
+                    new_fluent = model.Fluent(f"{fluent.name}_{i}", _signature=fluent.signature,
+                                              environment=new_problem.environment)
+                    new_problem.add_fluent(new_fluent, default_initial_value=default_bits[i])
+                # Initial values
+                for k, v in problem.explicit_initial_values.items():
+                    if k.fluent() == fluent:
+                        new_value = self._convert_value(v.constant_value(), n_bits)
+                        self._set_fluent_bits(new_problem, fluent, k.args, new_value, n_bits)
             else:
                 default_value = problem.fluents_defaults.get(fluent)
                 new_problem.add_fluent(fluent, default_initial_value=default_value)

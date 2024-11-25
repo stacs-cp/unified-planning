@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="WebServers">
+    <option name="servers">
+      <webServer id="4d13a41e-7bcb-4198-ba77-8ad67d484f3a" name="ClusterUDG">
+        <fileTransfer accessType="SFTP" host="microimae2.udg.edu" port="40022" sshConfigId="70a2b73a-cc15-4e2b-978d-e5a9d81fb1c2" sshConfig="cdavesa@microimae2.udg.edu:40022 password">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" keepAliveTimeout="0" passiveMode="true" shareSSLContext="true" />
+          </advancedOptions>
+        </fileTransfer>
+      </webServer>
+    </option>
+  </component>
+</project>
