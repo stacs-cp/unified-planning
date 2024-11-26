@@ -146,7 +146,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             for ti in re.findall(pattern, new_name):
                 new_ti = ti
                 for key in int_parameters.keys():
-                    if key == ti:
+                    if key == ti or any(part.strip() == key for part in re.split(r'[\s+\-*/()]', new_ti)):
                         new_ti = new_ti.replace(key, str(c[int_parameters.get(key)]))
                 new_name = new_name.replace('[' + ti + ']', '[' + str(eval(new_ti)) + ']')
             return Fluent(new_name, fluent.type, fluent.signature, fluent.environment)(*fluent.signature)
