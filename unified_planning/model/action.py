@@ -325,7 +325,7 @@ class InstantaneousAction(Action):
         fluent: Union["up.model.fnode.FNode", "up.model.fluent.Fluent"],
         value: "up.model.expression.Expression",
         condition: "up.model.expression.BoolExpression" = True,
-        forall: Iterable["up.model.variable.Variable"] = tuple(),
+        forall: Iterable[Union["up.model.variable.Variable", "up.model.range_variable.RangeVariable"]] = tuple(),
     ):
         """
         Adds the given `assignment` to the `action's effects`.
@@ -334,7 +334,7 @@ class InstantaneousAction(Action):
         :param value: The `value` to assign to the given `fluent`.
         :param condition: The `condition` in which this `effect` is applied; the default
             value is `True`.
-        :param forall: The 'Variables' that are universally quantified in this
+        :param forall: The 'Variables' or 'RangeVariables' that are universally quantified in this
             effect; the default value is empty.
         """
         if fluent.type.is_array_type() and type(value) is list:

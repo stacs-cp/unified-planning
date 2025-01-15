@@ -35,10 +35,11 @@ BoolExpression = Union[
     "up.model.fluent.Fluent",
     "up.model.parameter.Parameter",
     "up.model.variable.Variable",
+    "up.model.range_variable.RangeVariable",
     bool,
 ]
 NumericConstant = Union[int, float, Fraction, str]
-NumericExpression = Union[NumericConstant, "up.model.fnode.FNode"]
+NumericExpression = Union[NumericConstant, "up.model.fnode.FNode",]
 ConstantExpression = Union[
     NumericExpression,
     "up.model.object.Object",
@@ -143,6 +144,11 @@ class ExpressionManager(object):
                     e.environment == self.environment
                 ), "Variable has a different environment of the expression manager"
                 res.append(self.VariableExp(e))
+            elif isinstance(e, up.model.range_variable.RangeVariable):
+                assert (
+                    e.environment == self.environment
+                ), "RangeVariable has a different environment of the expression manager"
+                res.append(self.RangeVariableExp(e))
             elif isinstance(e, up.model.object.Object):
                 assert (
                     e.environment == self.environment
@@ -185,6 +191,7 @@ class ExpressionManager(object):
                 "up.model.object.Object",
                 "up.model.parameter.Parameter",
                 "up.model.variable.Variable",
+                "up.model.range_variable.RangeVariable",
                 "up.model.timing.Timing",
                 str,
                 bool,
@@ -192,7 +199,7 @@ class ExpressionManager(object):
                 Fraction,
                 list,
                 tuple,
-                Tuple["up.model.variable.Variable", ...],
+                Tuple[Union["up.model.variable.Variable", "up.model.range_variable.RangeVariable"], ...],
             ]
         ] = None,
     ) -> "up.model.fnode.FNode":
@@ -376,7 +383,7 @@ class ExpressionManager(object):
         return self.create_node(node_type=OperatorKind.IFF, args=(left, right))
 
     def Exists(
-        self, expression: BoolExpression, *vars: "up.model.variable.Variable"
+        self, expression: BoolExpression, *vars: Union["unified_planning.model.Variable", "unified_planning.model.range_variable.RangeVariable"]
     ) -> "up.model.fnode.FNode":
         """
         Creates an expression of the form:
@@ -396,14 +403,14 @@ class ExpressionManager(object):
                 f"Exists of expression: {str(expression)} must be created with at least one variable, otherwise it is not needed."
             )
         for v in vars:
-            if not isinstance(v, up.model.variable.Variable):
-                raise UPTypeError("Expecting 'up.Variable', got %s", type(v))
+            if not (isinstance(v, up.model.variable.Variable) or isinstance(v, unified_planning.model.range_variable.RangeVariable)):
+                raise UPTypeError("Expecting 'up.Variable' or 'up.RangeVariable, got %s", type(v))
         return self.create_node(
             node_type=OperatorKind.EXISTS, args=expressions, payload=vars
         )
 
     def Forall(
-        self, expression: BoolExpression, *vars: "up.model.variable.Variable"
+        self, expression: BoolExpression, *vars: Union["unified_planning.model.Variable", "unified_planning.model.RangeVariable"]
     ) -> "up.model.fnode.FNode":
         """Creates an expression of the form:
             ``Forall (var[0]... var[n]) | expression``
@@ -422,8 +429,8 @@ class ExpressionManager(object):
                 f"Forall of expression: {str(expression)} must be created with at least one variable, otherwise it is not needed."
             )
         for v in vars:
-            if not isinstance(v, up.model.variable.Variable):
-                raise UPTypeError("Expecting 'up.Variable', got %s", type(v))
+            if not (isinstance(v, up.model.variable.Variable) or isinstance(v, unified_planning.model.range_variable.RangeVariable)):
+                raise UPTypeError("Expecting 'up.Variable' or 'up.RangeVariable, got %s", type(v))
         return self.create_node(
             node_type=OperatorKind.FORALL, args=expressions, payload=vars
         )
@@ -569,6 +576,18 @@ class ExpressionManager(object):
         assert var.environment == self.environment
         return self.create_node(
             node_type=OperatorKind.VARIABLE_EXP, args=tuple(), payload=var
+        )
+
+    def RangeVariableExp(self, var: "up.model.range_variable.RangeVariable") -> "up.model.fnode.FNode":
+        """
+        Returns an expression for the given ``RangeVariable``.
+
+        :param var: The ``Variable`` that must be promoted to ``FNode``.
+        :return: The ``FNode`` containing the given ``variable`` as his payload.
+        """
+        assert var.environment == self.environment
+        return self.create_node(
+            node_type=OperatorKind.RANGE_VARIABLE_EXP, args=tuple(), payload=var
         )
 
     def ObjectExp(self, obj: "up.model.object.Object") -> "up.model.fnode.FNode":

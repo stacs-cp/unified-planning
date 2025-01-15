@@ -81,6 +81,8 @@ class FNode(object):
             return self.parameter().name
         elif self.is_variable_exp():
             return self.variable().name
+        elif self.is_range_variable_exp():
+            return self.range_variable().name
         elif self.is_object_exp():
             return self.object().name
         elif self.is_timing_exp():
@@ -223,10 +225,20 @@ class FNode(object):
         assert self.is_variable_exp()
         return self._content.payload
 
-    def variables(self) -> List["unified_planning.model.variable.Variable"]:
+    def variables(self) -> List[Union["unified_planning.model.variable.Variable", "unified_planning.model.range_variable.RangeVariable"]]:
         """Return the `Variables` of the `Exists` or `Forall`."""
         assert self.is_exists() or self.is_forall()
         return list(self._content.payload)
+
+    def range_variable(self) -> "unified_planning.model.range_variable.RangeVariable":
+        """Return the variable of the RangeVariableExp."""
+        assert self.is_range_variable_exp()
+        return self._content.payload
+
+    def range_variables(self) -> "unified_planning.model.range_variable.RangeVariable":
+        """Return the variable of the RangeVariableExp."""
+        assert self.is_range_variable_exp()
+        return self._content.payload
 
     def object(self) -> "unified_planning.model.object.Object":
         """Return the `Object` stored in this expression."""
@@ -357,6 +369,10 @@ class FNode(object):
     def is_variable_exp(self) -> bool:
         """Test whether the node is a :class:`~unified_planning.model.Variable` Expression."""
         return self.node_type == OperatorKind.VARIABLE_EXP
+
+    def is_range_variable_exp(self) -> bool:
+        """Test whether the node is a :class:`~unified_planning.model.Variable` Expression."""
+        return self.node_type == OperatorKind.RANGE_VARIABLE_EXP
 
     def is_object_exp(self) -> bool:
         """Test whether the node is an :class:`~unified_planning.model.Object` Expression."""

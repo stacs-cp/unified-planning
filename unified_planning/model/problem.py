@@ -803,6 +803,8 @@ class _KindFactory:
             if t.is_int_type() or t.is_real_type():
                 self.kind.unset_problem_type("SIMPLE_NUMERIC_PLANNING")
         if e.is_forall():
+            if any(isinstance(f, up.model.range_variable.RangeVariable) for f in e.forall):
+                self.kind.set_conditions_kind("RANGE_VARIABLES")
             self.kind.set_effects_kind("FORALL_EFFECTS")
         if e.is_increase():
             self.kind.set_effects_kind("INCREASE_EFFECTS")
@@ -875,6 +877,16 @@ class _KindFactory:
                 if any(f not in self.static_fluents for f in fluents_in_value):
                     self.kind.set_effects_kind("FLUENTS_IN_OBJECT_ASSIGNMENTS")
 
+    def _has_range_vars(self, exp: "up.model.fnode.FNode"):
+        if exp.is_forall() or exp.is_exists():
+            if any(isinstance(f, up.model.range_variable.RangeVariable) for f in exp.variables()):
+                return True
+        else:
+            for a in exp.args:
+                if self._has_range_vars(a):
+                    return True
+        return False
+
     def update_problem_kind_expression(
         self,
         exp: "up.model.fnode.FNode",
@@ -889,6 +901,8 @@ class _KindFactory:
         if OperatorKind.EXISTS in ops:
             self.kind.set_conditions_kind("EXISTENTIAL_CONDITIONS")
         if OperatorKind.FORALL in ops:
+            if self._has_range_vars(exp):
+                self.kind.set_conditions_kind("RANGE_VARIABLES")
             self.kind.set_conditions_kind("UNIVERSAL_CONDITIONS")
         if OperatorKind.COUNT in ops:
             self.kind.set_conditions_kind("COUNTING")

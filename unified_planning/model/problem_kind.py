@@ -65,6 +65,7 @@ FEATURES = {
         "EXISTENTIAL_CONDITIONS",
         "UNIVERSAL_CONDITIONS",
         "COUNTING",
+        "RANGE_VARIABLES",
     ],
     "EFFECTS_KIND": [
         "CONDITIONAL_EFFECTS",

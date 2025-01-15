@@ -32,6 +32,7 @@ class OperatorKind(Enum):
     FLUENT_EXP = auto()
     PARAM_EXP = auto()
     VARIABLE_EXP = auto()
+    RANGE_VARIABLE_EXP = auto()
     OBJECT_EXP = auto()
     TIMING_EXP = auto()
     BOOL_CONSTANT = auto()
