@@ -46,11 +46,9 @@ class IntArraysBitsRemover(engines.engine.Engine, CompilerMixin):
     represent the numbers.
     """
 
-    def __init__(self, mode: str = 'strict'):
+    def __init__(self):
         engines.engine.Engine.__init__(self)
         CompilerMixin.__init__(self, CompilationKind.INT_ARRAYS_BITS_REMOVING)
-        self.lb = None
-        self.ub = None
         self.n_bits = OrderedDict()
 
     @property
@@ -421,6 +419,7 @@ class IntArraysBitsRemover(engines.engine.Engine, CompilerMixin):
                 new_precondition = self._get_new_expression(new_problem, precondition)
                 new_action.add_precondition(new_precondition)
             for effect in action.effects:
+                # increase and decrease ?
                 fluent = effect.fluent
                 value = effect.value
 

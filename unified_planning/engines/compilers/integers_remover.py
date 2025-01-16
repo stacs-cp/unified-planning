@@ -23,18 +23,18 @@ import unified_planning.engines as engines
 from unified_planning import model
 from unified_planning.engines.mixins.compiler import CompilationKind, CompilerMixin
 from unified_planning.engines.results import CompilerResult
-from unified_planning.exceptions import UPProblemDefinitionError, UPValueError
+from unified_planning.exceptions import UPProblemDefinitionError, UPValueError, UPConflictingEffectsException
 from unified_planning.model import (
     Problem,
     Action,
-    ProblemKind, Variable,
+    ProblemKind, Variable, MinimizeActionCosts, Effect, EffectKind,
 )
 from unified_planning.model.problem_kind_versioning import LATEST_PROBLEM_KIND_VERSION
 from unified_planning.engines.compilers.utils import (
     get_fresh_name,
-    replace_action,
+    replace_action, updated_minimize_action_costs,
 )
-from typing import Dict, Optional, OrderedDict
+from typing import Dict, Optional, OrderedDict, Set, Iterator
 from functools import partial
 from unified_planning.shortcuts import Exists, And, Or, Equals
 
@@ -134,7 +134,81 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
         new_kind.unset_parameters("BOUNDED_INT_FLUENT_PARAMETERS")
         return new_kind
 
-    def _get_new_fnode(
+    def _process_two_args_operation(self, first_arg, second_arg, target_value, operation, sub_operation, old_problem, new_problem):
+        if operation == 'equals':
+            return new_problem.fluent(sub_operation)(first_arg, second_arg, target_value)
+        else:
+            self._add_relationships(new_problem, 'lt')
+            intermediate_var = Variable('value', new_problem.environment.type_manager.UserType('Number'))
+            new_inner_expr = new_problem.fluent(sub_operation)(first_arg, second_arg, intermediate_var)
+            new_lt_expr = new_problem.fluent('lt')(intermediate_var, target_value)
+
+            if operation == 'lt':
+                return Exists(And(new_inner_expr, new_lt_expr), intermediate_var)
+            else:
+                new_eq_expr = Equals(intermediate_var, target_value)
+                return Exists(And(new_inner_expr, Or(new_lt_expr, new_eq_expr)), intermediate_var)
+
+    def _process_multi_args_operation(self, inner_expr, first_arg, target_value, operation, sub_operation, old_problem, new_problem):
+        and_node = []
+        intermediate_vars = []
+        n = 1
+
+        for arg in inner_expr.args[1:-1]:
+            next_arg = self._get_new_node(old_problem, new_problem, arg)
+            intermediate_var = Variable(f'{sub_operation}_{n}', new_problem.environment.type_manager.UserType('Number'))
+            intermediate_vars.append(intermediate_var)
+            and_node.append(new_problem.fluent(sub_operation)(first_arg, next_arg, intermediate_var))
+            first_arg = intermediate_var
+            n += 1
+
+        last_arg = self._get_new_node(old_problem, new_problem, inner_expr.arg(-1))
+
+        if operation == 'equals':
+            and_node.append(new_problem.fluent(sub_operation)(first_arg, last_arg, target_value))
+            return Exists(And(and_node), *intermediate_vars)
+        else:
+            self._add_relationships(new_problem, 'lt')
+            value_var = Variable('value', new_problem.environment.type_manager.UserType('Number'))
+            and_node.append(new_problem.fluent(sub_operation)(first_arg, last_arg, value_var))
+            new_lt_expr = new_problem.fluent('lt')(value_var, target_value)
+            if operation == 'lt':
+                return Exists(And(and_node, new_lt_expr), *intermediate_vars)
+            else:
+                new_eq_expr = Equals(value_var, target_value)
+                return Exists(And(and_node, Or(new_lt_expr, new_eq_expr)), *intermediate_vars)
+
+    def _handle_equals_lt_le(self, node, operation, operation_inner_map, old_problem, new_problem):
+        inner_expr, value, sub_operation = None, None, None
+        for i in range(2):
+            sub_operation = operation_inner_map.get(node.arg(i).node_type)
+            if sub_operation is not None:
+                inner_expr, value = (node.arg(i), node.arg(1 - i))
+                break
+
+        if sub_operation is not None:
+            target_value = self._get_new_node(old_problem, new_problem, value)
+            first_arg = self._get_new_node(old_problem, new_problem, inner_expr.arg(0))
+            self._add_relationships(new_problem, sub_operation)
+
+            if len(inner_expr.args) == 2:
+                second_arg = self._get_new_node(old_problem, new_problem, inner_expr.arg(1))
+                return self._process_two_args_operation(first_arg, second_arg, target_value, operation, sub_operation,
+                                                        old_problem, new_problem)
+            else:
+                return self._process_multi_args_operation(inner_expr, first_arg, target_value, operation, sub_operation,
+                                                          old_problem, new_problem)
+
+        # Operacions sense sub-operacions internes
+        new_args = [self._get_new_node(old_problem, new_problem, arg) for arg in node.args]
+        if operation == 'equals':
+            return new_problem.environment.expression_manager.create_node(node.node_type, tuple(new_args))
+        else:
+            self._add_relationships(new_problem, 'lt')
+            lt_expr = new_problem.fluent('lt')(*new_args)
+            return Or(Equals(*new_args), lt_expr) if operation == 'le' else lt_expr
+
+    def _get_new_node(
             self,
             old_problem: "up.model.AbstractProblem",
             new_problem: "up.model.AbstractProblem",
@@ -148,7 +222,7 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
             object_name = f'n{node.int_constant_value()}'
             new_number = model.Object(object_name, number_user_type)
             if not new_problem.has_object(object_name):
-                self._add_object_numbers(new_problem, node.int_constant_value(), node.int_constant_value())
+                raise NotImplementedError
             return em.ObjectExp(new_number)
         elif node.is_fluent_exp() and node.fluent().type.is_int_type():
             return new_problem.fluent(node.fluent().name)(*node.args)
@@ -167,86 +241,58 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                 OperatorKind.TIMES: 'mult',
             }
             operation = operation_map.get(node.node_type)
-            if operation is None:
-                operation_inner = operation_inner_map.get(node.node_type)
-                if operation_inner is not None:
-                    raise UPProblemDefinitionError(f"Operation {operation_inner} not supported as a external expression!")
-                new_args = [self._get_new_fnode(old_problem, new_problem, arg) for arg in node.args]
-                if node.is_exists() or node.is_forall():
-                    new_variables = []
-                    for v in node.variables():
-                        if v.type.is_int_type():
-                            self._add_object_numbers(new_problem, v.type.lower_bound, v.type.upper_bound)
-                            new_variables.append(model.Variable(v.name, tm.UserType('Number')))
-                        else:
-                            new_variables.append(v)
-                    return em.create_node(node.node_type, tuple(new_args), payload=tuple(new_variables))
-                return em.create_node(node.node_type, tuple(new_args))
 
-            arg_0 = node.arg(0)
-            arg_1 = node.arg(1)
-            # fer-ho generic
-            sub_operation_0 = operation_inner_map.get(arg_0.node_type)
-            sub_operation_1 = operation_inner_map.get(arg_1.node_type)
-            if (sub_operation_0 is not None) or (sub_operation_1 is not None):
-                inner_operation = sub_operation_0 if sub_operation_0 is not None else sub_operation_1
-                inner_expr, value = (arg_0, arg_1) if sub_operation_0 is not None else (arg_1, arg_0)
-                target_value = self._get_new_fnode(old_problem, new_problem, value)
-                first_arg = self._get_new_fnode(old_problem, new_problem, inner_expr.arg(0))
-                if sub_operation_0 is not None:
-                    self._add_relationships(new_problem, sub_operation_0)
-                if sub_operation_1 is not None:
-                    self._add_relationships(new_problem, sub_operation_1)
-                self._add_relationships(new_problem, operation)
+            if operation is not None:
+                return self._handle_equals_lt_le(node, operation, operation_inner_map, old_problem, new_problem)
 
-                if len(inner_expr.args) == 2:
-                    second_arg = self._get_new_fnode(old_problem, new_problem, inner_expr.arg(1))
+            # Plus/Minus/Div/Mult in an outer expression
+            operation_inner = operation_inner_map.get(node.node_type)
+            if operation_inner is not None:
+                raise UPProblemDefinitionError(
+                    f"Operation {operation_inner} not supported as an external expression!")
 
-                    if operation == 'equals':
-                        return new_problem.fluent(inner_operation)(first_arg, second_arg, target_value)
-                    else:
-                        intermediate_var = Variable('value', tm.UserType('Number'))
-                        new_inner_expr = new_problem.fluent(inner_operation)(first_arg, second_arg, intermediate_var)
-                        new_lt_expr = new_problem.fluent('lt')(intermediate_var, target_value)
-                        if operation == 'lt':
-                            return Exists(And(new_inner_expr, new_lt_expr), intermediate_var)
-                        else:
-                            new_eq_expr = Equals(intermediate_var, target_value)
-                            return Exists(And(new_inner_expr, Or(new_lt_expr, new_eq_expr)), intermediate_var)
-
-                else:
-                    n = 1
-                    and_node = []
-                    intermediate_vars = []
-                    for arg in inner_expr.args[1:-1]:
-                        next_arg = self._get_new_fnode(old_problem, new_problem, arg)
-                        intermediate_var = Variable(f'{inner_operation}_{n}', tm.UserType('Number'))
-                        intermediate_vars.append(intermediate_var)
-
-                        and_node.append(new_problem.fluent(inner_operation)(first_arg, next_arg, intermediate_var))
-                        first_arg = intermediate_var
-                        n += 1
-
-                    last_arg = self._get_new_fnode(old_problem, new_problem, inner_expr.arg(-1))
-
-                    if operation == 'equals':
-                        and_node.append(new_problem.fluent(inner_operation)(first_arg, last_arg, target_value))
-                        return Exists(And(and_node), *intermediate_vars)
-
-                    else:
-                        value_var = Variable('value', tm.UserType('Number'))
-                        intermediate_vars.append(value_var)
-                        and_node.append(new_problem.fluent(inner_operation)(first_arg, last_arg, value_var))
-                        new_lt_expr = new_problem.fluent('lt')(value_var, target_value)
-                        if operation == 'lt':
-                            return Exists(And(and_node, new_lt_expr), *intermediate_vars)
-                        else:
-                            new_eq_expr = Equals(value_var, target_value)
-                            return Exists(And(and_node, Or(new_lt_expr, new_eq_expr)), *intermediate_vars)
-
-            new_args = [self._get_new_fnode(old_problem, new_problem, arg) for arg in node.args]
+            # Other nodes
+            new_args = [self._get_new_node(old_problem, new_problem, arg) for arg in node.args]
+            if node.is_exists() or node.is_forall():
+                new_variables = [
+                    model.Variable(v.name, tm.UserType('Number')) if v.type.is_int_type() else v
+                    for v in node.variables()
+                ]
+                return em.create_node(node.node_type, tuple(new_args), payload=tuple(new_variables))
             return em.create_node(node.node_type, tuple(new_args))
 
+    def _convert_effect(
+            self,
+            effect: "up.model.Effect",
+            old_problem: "up.model.AbstractProblem",
+            new_problem: "up.model.AbstractProblem",
+    ) -> Iterator[Effect]:
+        em = new_problem.environment.expression_manager
+        returned_effects: Set[Effect] = set()
+
+        lower = effect.fluent.fluent().type.lower_bound
+        upper = effect.fluent.fluent().type.upper_bound
+
+        new_condition = self._get_new_node(old_problem, new_problem, effect.condition)
+        for i in range(lower, upper + 1):
+            next_value = (i + effect.value if effect.is_increase() else i - effect.value).simplify()
+            try:
+                old_obj_num = em.ObjectExp(new_problem.object(f'n{i}'))
+                new_obj_num = em.ObjectExp(new_problem.object(f'n{next_value}'))
+                new_fluent = new_problem.fluent(effect.fluent.fluent().name)(*effect.fluent.args)
+
+                new_effect = Effect(
+                    new_fluent,
+                    new_obj_num,
+                    And(Equals(new_fluent, old_obj_num), new_condition).simplify(),
+                    EffectKind.ASSIGN,
+                    effect.forall,
+                )
+                if new_effect not in returned_effects:
+                    yield new_effect
+                    returned_effects.add(new_effect)
+            except UPValueError:
+                continue
 
 
     def _add_object_numbers(
@@ -274,10 +320,8 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
     def _add_relationships(
             self,
             new_problem: "up.model.AbstractProblem",
-            relationship: str
+            relationship: str,
     ):
-        if relationship == 'le':
-            relationship = 'lt'
         ut_number = new_problem.user_type('Number')
         params = OrderedDict({'n1': ut_number, 'n2': ut_number})
         if not new_problem.has_fluent(relationship):
@@ -288,37 +332,36 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                 params['n3'] = ut_number
                 relationship_fluent = model.Fluent(relationship, _signature=params, environment=new_problem.environment)
                 new_problem.add_fluent(relationship_fluent, default_initial_value=False)
-        else:
-            relationship_fluent = new_problem.fluent(relationship)
+            else:
+                raise NotImplementedError
 
-        for i in range(self.lb, self.ub + 1):
-            ni = new_problem.object(f'n{i}')
-            for j in range(i, self.ub + 1):
-                nj = new_problem.object(f'n{j}')
-
-                if relationship == 'lt':
-                    if i < j:
-                        new_problem.set_initial_value(relationship_fluent(ni, nj), True)
-                    if j < i:
-                        new_problem.set_initial_value(relationship_fluent(nj, ni), True)
-                else:
-                    operation_map = {
-                        'plus': lambda a, b: a + b,
-                        'minus': lambda a, b: a - b,
-                        'div': lambda a, b: a / b if b > 0 else None,
-                        'mult': lambda a, b: a * b
-                    }
-                    if relationship in operation_map:
-                        for a, b in [(i, j), (j, i)]:
-                            result = operation_map[relationship](a, b)
-                            if result is not None:
-                                try:
-                                    result_obj = new_problem.object(f'n{result}')
-                                    new_problem.set_initial_value(
-                                        relationship_fluent(new_problem.object(f'n{a}'), new_problem.object(f'n{b}'),
-                                                            result_obj), True)
-                                except UPValueError:
-                                    continue
+            for i in range(self.lb, self.ub + 1):
+                ni = new_problem.object(f'n{i}')
+                for j in range(i, self.ub + 1):
+                    nj = new_problem.object(f'n{j}')
+                    if relationship == 'lt':
+                        if i < j:
+                            new_problem.set_initial_value(relationship_fluent(ni, nj), True)
+                        if j < i:
+                            new_problem.set_initial_value(relationship_fluent(nj, ni), True)
+                    else:
+                        operation_map = {
+                            'plus': lambda a, b: a + b,
+                            'minus': lambda a, b: a - b,
+                            'div': lambda a, b: a / b if b > 0 else None,
+                            'mult': lambda a, b: a * b
+                        }
+                        if relationship in operation_map:
+                            for a, b in [(i, j), (j, i)]:
+                                result = operation_map[relationship](a, b)
+                                if result is not None:
+                                    try:
+                                        result_obj = new_problem.object(f'n{result}')
+                                        new_problem.set_initial_value(
+                                            relationship_fluent(new_problem.object(f'n{a}'), new_problem.object(f'n{b}'),
+                                                                result_obj), True)
+                                    except UPValueError:
+                                        continue
 
     def _compile(
             self,
@@ -337,6 +380,7 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
         new_problem.clear_actions()
         new_problem.clear_goals()
         new_problem.initial_values.clear()
+        new_problem.clear_quality_metrics()
         env = new_problem.environment
         tm = env.type_manager
         ut_number = tm.UserType('Number')
@@ -376,37 +420,37 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
             new_action.clear_preconditions()
             new_action.clear_effects()
             for precondition in action.preconditions:
-                new_precondition = self._get_new_fnode(problem, new_problem, precondition)
+                new_precondition = self._get_new_node(problem, new_problem, precondition)
                 new_action.add_precondition(new_precondition)
             for effect in action.effects:
-                new_fnode = self._get_new_fnode(problem, new_problem, effect.fluent)
-                new_value = self._get_new_fnode(problem, new_problem, effect.value)
-                new_condition = self._get_new_fnode(problem, new_problem, effect.condition)
-                if effect.is_increase():
-                    print("Increase effects not supported yet.")
-                    exit(1)
-                #    try:
-                #        new_result_value = new_problem.fluent('plus')(new_fnode, new_value)
-                #    except UPValueError:
-                #        self._add_relationships(new_problem, 'plus')
-                #        new_result_value = new_problem.fluent('plus')(new_fnode, new_value)
-                #    new_action.add_effect(new_fnode, new_result_value, new_condition, effect.forall)
-                elif effect.is_decrease():
-                    print("Decrease effects not supported yet.")
-                    exit(1)
-                #    try:
-                #        new_result_value = new_problem.fluent('minus')(new_fnode, new_value)
-                #    except UPValueError:
-                #        self._add_relationships(new_problem, 'minus')
-                #        new_result_value = new_problem.fluent('minus')(new_fnode, new_value)
-                #    new_action.add_effect(new_fnode, new_result_value, new_condition, effect.forall)
+                if effect.is_increase() or effect.is_decrease():
+                    for ne in self._convert_effect(effect, problem, new_problem):
+                        new_action.add_effect(ne.fluent, ne.value, ne.condition, ne.forall)
+                        #new_action._add_effect_instance(ne)
+                        # new_action.add_effect(ne.fluent, ne.value, ne.condition)
                 else:
-                    new_action.add_effect(new_fnode, new_value, new_condition, effect.forall)
-            new_problem.add_action(new_action)
+                    new_node = self._get_new_node(problem, new_problem, effect.fluent)
+                    new_value = self._get_new_node(problem, new_problem, effect.value)
+                    new_condition = self._get_new_node(problem, new_problem, effect.condition)
+                    new_action.add_effect(new_node, new_value, new_condition, effect.forall)
+
             new_to_old[new_action] = action
+            new_problem.add_action(new_action)
 
         for goal in problem.goals:
-            new_problem.add_goal(self._get_new_fnode(problem, new_problem, goal))
+            new_problem.add_goal(self._get_new_node(problem, new_problem, goal))
+
+        for qm in problem.quality_metrics:
+            if qm.is_minimize_action_costs():
+                new_problem.add_quality_metric(
+                    updated_minimize_action_costs(
+                        qm, new_to_old, new_problem.environment
+                    )
+                )
+            # ...
+            else:
+                new_problem.add_quality_metric(qm)
+
 
         return CompilerResult(
             new_problem, partial(replace_action, map=new_to_old), self.name

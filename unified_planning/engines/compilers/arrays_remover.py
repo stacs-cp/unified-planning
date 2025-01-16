@@ -106,6 +106,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
         supported_kind.set_actions_cost_kind("FLUENTS_IN_ACTIONS_COST")
         supported_kind.set_quality_metrics("PLAN_LENGTH")
         supported_kind.set_quality_metrics("MAKESPAN")
+        supported_kind.set_quality_metrics("FINAL_VALUE")
         supported_kind.set_actions_cost_kind("INT_NUMBERS_IN_ACTIONS_COST")
         supported_kind.set_actions_cost_kind("REAL_NUMBERS_IN_ACTIONS_COST")
         supported_kind.set_oversubscription_kind("INT_NUMBERS_IN_OVERSUBSCRIPTION")
@@ -140,13 +141,17 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
         new_fluent = up.model.fluent.Fluent(new_name, fluent.type, fluent.signature, fluent.environment)
         return new_fluent
 
-    def _get_domain_and_type(self, fluent: "up.model.fnode.FNode"):
+    def _get_domain_and_type(self, fluent: "up.model.fluent.Fluent"):
         this_type = fluent.type
         domain = []
         while this_type.is_array_type():
             domain.append(range(this_type.size))
             this_type = this_type.elements_type
-        return tuple(product(*domain)), this_type
+        positions = list(product(*domain))
+        if fluent.undefined_positions is not None:
+            return [p for p in positions if p not in fluent.undefined_positions], this_type
+        else:
+            return positions, this_type
 
     def _process_arg(self, new_problem, arg, combination):
         """Process an argument depending on the type."""
@@ -184,14 +189,13 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                     exit(1)
                 else:
                     return [FALSE() if node.fluent().type.is_bool_type() else None]
-
         elif node.is_parameter_exp() or node.is_constant():
             return [node]
         # Arrays
         else:
             if node.arg(0).type.is_array_type():
                 assert all(arg.type.is_array_type() for arg in node.args), "Argument is not an array type"
-                domain, this_type = self._get_domain_and_type(node.arg(0))
+                domain, this_type = self._get_domain_and_type(node.arg(0).fluent())
                 new_nodes = []
                 for combination in domain:
                     new_args = [
@@ -236,6 +240,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
         new_problem.clear_goals()
         new_problem.clear_axioms()
         new_problem.initial_values.clear()
+        new_problem.clear_quality_metrics()
         assert self.mode == 'strict' or self.mode == 'permissive'
 
         for fluent in problem.fluents:
@@ -340,24 +345,14 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
             for ng in new_goals:
                 new_problem.add_goal(ng)
 
-        new_problem.clear_quality_metrics()
         for qm in problem.quality_metrics:
-            if qm.is_minimize_sequential_plan_length() or qm.is_minimize_makespan():
-                new_problem.add_quality_metric(qm)
-            elif qm.is_minimize_action_costs():
+            if qm.is_minimize_action_costs():
                 new_problem.add_quality_metric(
                     updated_minimize_action_costs(
                         qm, new_to_old, new_problem.environment
                     )
                 )
-            elif qm.is_minimize_expression_on_final_state():
-                new_expression = self._get_new_nodes(new_problem, qm.expression)
-                for ne in new_expression:
-                    new_problem.add_quality_metric(MinimizeExpressionOnFinalState(ne))
-            elif qm.is_maximize_expression_on_final_state():
-                new_expression = self._get_new_nodes(new_problem, qm.expression)
-                for ne in new_expression:
-                    new_problem.add_quality_metric(MaximizeExpressionOnFinalState(ne))
+            # ...
             else:
                 new_problem.add_quality_metric(qm)
 

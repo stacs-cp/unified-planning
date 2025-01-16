@@ -30,7 +30,7 @@ from unified_planning.model import (
 )
 from unified_planning.model.problem_kind_versioning import LATEST_PROBLEM_KIND_VERSION
 from unified_planning.engines.compilers.utils import (
-    replace_action,
+    replace_action, get_fresh_name, updated_minimize_action_costs,
 )
 from typing import Dict, Optional, Union
 from functools import partial
@@ -68,6 +68,7 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
         supported_kind.set_fluents_type("REAL_FLUENTS")
         supported_kind.set_fluents_type("OBJECT_FLUENTS")
         supported_kind.set_fluents_type("ARRAY_FLUENTS")
+        supported_kind.set_fluents_type("DERIVED_FLUENTS")
         supported_kind.set_conditions_kind("NEGATIVE_CONDITIONS")
         supported_kind.set_conditions_kind("DISJUNCTIVE_CONDITIONS")
         supported_kind.set_conditions_kind("EQUALITIES")
@@ -159,8 +160,7 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
         """Manage expressions type Count and generates new expressions."""
         if expression.is_fluent_exp() or expression.is_parameter_exp() or expression.is_constant():
             return expression
-
-        if expression.arg(0).is_count() or expression.arg(1).is_count():
+        if any(arg.is_count() for arg in expression.args):
             count_expression, value = (
                 (expression.arg(0), expression.arg(1).constant_value())
                 if expression.arg(0).is_count() else (expression.arg(1), expression.arg(0).constant_value())
@@ -176,6 +176,25 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
         new_args = [self._manage_counts(new_problem, arg, count_expressions) for arg in expression.args]
         return new_problem.environment.expression_manager.create_node(expression.node_type, tuple(new_args))
 
+    def _add_effect(self, action, effect_type: str, fluent, value, condition, forall):
+        """
+        Adds an effect to the specified action.
+
+        :param action: The action to which the effect will be added.
+        :param effect_type: A string indicating the type of the effect (e.g., "add", "delete", or "modify").
+        :param fluent: The fluent being affected by the effect.
+        :param value: The value to be assigned to the fluent as part of the effect.
+        :param condition: The condition under which the effect is applied. This can be a logical condition or a fluent expression.
+        :param forall: A list or iterable representing the variables that must satisfy the effect's condition (used for universally quantified effects).
+        :return: None. The effect is directly added to the action.
+        """
+        if effect_type == 'increase':
+            action.add_increase_effect(fluent, value, condition, forall)
+        elif effect_type == 'decrease':
+            action.add_decrease_effect(fluent, value, condition, forall)
+        else:
+            action.add_effect(fluent, value, condition, forall)
+
     def _compile(
         self,
         problem: "up.model.AbstractProblem",
@@ -188,13 +207,40 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
         new_problem = problem.clone()
         new_problem.name = f"{self.name}_{problem.name}"
         count_expressions: Dict[str, "up.model.fnode.FNode"] = {}
+        new_problem.clear_actions()
+        new_problem.clear_quality_metrics()
         for action in problem.actions:
-            new_to_old[action] = action
+            new_action = action.clone()
+            new_action.name = get_fresh_name(new_problem, action.name)
+            new_action.clear_preconditions()
+            new_action.clear_effects()
+            for precondition in action.preconditions:
+                new_precondition = self._manage_counts(new_problem, precondition, count_expressions)
+                new_action.add_precondition(new_precondition)
+            for effect in action.effects:
+                effect_type = 'increase' if effect.is_increase() else 'decrease' if effect.is_decrease() else 'none'
+                new_fluent = self._manage_counts(new_problem, effect.fluent, count_expressions)
+                new_value = self._manage_counts(new_problem, effect.value, count_expressions)
+                new_condition = self._manage_counts(new_problem, effect.condition, count_expressions)
+                self._add_effect(new_action, effect_type, new_fluent, new_value, new_condition, effect.forall)
+            new_problem.add_action(new_action)
+            new_to_old[new_action] = action
 
         new_problem.clear_goals()
         for goal in problem.goals:
             new_goal = self._manage_counts(new_problem, goal, count_expressions)
             new_problem.add_goal(new_goal)
+
+        for qm in problem.quality_metrics:
+            if qm.is_minimize_action_costs():
+                new_problem.add_quality_metric(
+                    updated_minimize_action_costs(
+                        qm, new_to_old, new_problem.environment
+                    )
+                )
+            # ...
+            else:
+                new_problem.add_quality_metric(qm)
 
         return CompilerResult(
             new_problem, partial(replace_action, map=new_to_old), self.name

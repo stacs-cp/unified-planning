@@ -17,13 +17,11 @@ import re
 from itertools import product
 
 from unified_planning.model.fnode import FNode
-
 import unified_planning as up
 import unified_planning.engines as engines
 from collections import OrderedDict
 from unified_planning.engines.mixins.compiler import CompilationKind, CompilerMixin
 from unified_planning.engines.results import CompilerResult
-from unified_planning.model.types import domain_size, domain_item
 from unified_planning.model import (
     Problem,
     InstantaneousAction,
@@ -31,15 +29,17 @@ from unified_planning.model import (
     Action,
     ProblemKind,
     Type,
-    Fluent, MinimizeExpressionOnFinalState, MinimizeActionCosts,
+    Fluent, MinimizeExpressionOnFinalState, MinimizeActionCosts, RangeVariable, Parameter, OperatorKind, Axiom,
 )
 from unified_planning.model.problem_kind_versioning import LATEST_PROBLEM_KIND_VERSION
 from unified_planning.engines.compilers.utils import (
     get_fresh_name,
     lift_action_instance,
 )
-from typing import Dict, List, Optional, Tuple, Any, OrderedDict
+from typing import Dict, List, Optional, Tuple, Any, OrderedDict, Union
 from functools import partial
+
+from unified_planning.shortcuts import Int, FALSE
 
 
 class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
@@ -80,6 +80,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
         supported_kind.set_conditions_kind("EXISTENTIAL_CONDITIONS")
         supported_kind.set_conditions_kind("UNIVERSAL_CONDITIONS")
         supported_kind.set_conditions_kind("COUNTING")
+        supported_kind.set_conditions_kind("RANGE_VARIABLES")
         supported_kind.set_effects_kind("CONDITIONAL_EFFECTS")
         supported_kind.set_effects_kind("INCREASE_EFFECTS")
         supported_kind.set_effects_kind("DECREASE_EFFECTS")
@@ -110,6 +111,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
         supported_kind.set_actions_cost_kind("FLUENTS_IN_ACTIONS_COST")
         supported_kind.set_quality_metrics("PLAN_LENGTH")
         supported_kind.set_quality_metrics("MAKESPAN")
+        supported_kind.set_quality_metrics("FINAL_VALUE")
         supported_kind.set_actions_cost_kind("INT_NUMBERS_IN_ACTIONS_COST")
         supported_kind.set_actions_cost_kind("REAL_NUMBERS_IN_ACTIONS_COST")
         supported_kind.set_oversubscription_kind("INT_NUMBERS_IN_OVERSUBSCRIPTION")
@@ -130,38 +132,155 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
     ) -> ProblemKind:
         new_kind = problem_kind.clone()
         new_kind.unset_parameters("BOUNDED_INT_ACTION_PARAMETERS")
+        new_kind.unset_conditions_kind("RANGE_VARIABLES")
         return new_kind
+
+    def _get_fluent_name(self, problem, fluent_name, integer_parameters: dict[str, int], instantiations) -> Union[str, None]:
+        pattern = r'\[(.*?)\]'
+        new_name = fluent_name
+        for access in re.findall(pattern, fluent_name):
+            new_access = access
+            for key, index in integer_parameters.items():
+                if key == access or any(part.strip() == key for part in re.split(r'[\s+\-*/()]', new_access)):
+                    new_access = new_access.replace(key, str(instantiations[index]))
+            new_name = new_name.replace('[' + access + ']', '[' + str(eval(new_access)) + ']')
+        original_fluent = problem.fluent(fluent_name.split('[')[0])
+        undefined_positions = original_fluent.undefined_positions
+        sizes = original_fluent.sizes
+        try:
+            indexes = re.findall(pattern, new_name)
+            index_0 = eval(indexes[0])
+            if type(sizes) == tuple:
+                index_1 = eval(indexes[1])
+                assert len(indexes) == 2, "Expected 2 indexes for double array."
+                assert 0 <= index_0 < sizes[0], "Index 0 out of bounds."
+                assert 0 <= index_1 < sizes[1], "Index 1 out of bounds."
+                if undefined_positions is not None:
+                    assert (index_0, index_1) not in undefined_positions, "This position is undefined."
+            else:
+                assert len(indexes) == 1
+                assert 0 <= index_0 < sizes, "Index out of bounds."
+                if undefined_positions is not None:
+                    assert index_0 not in undefined_positions, "This position is undefined."
+            return new_name
+        except AssertionError as e:
+            return None
 
     def _manage_node(
             self,
-            em: "up.model.expression.ExpressionManager",
+            new_problem: "up.model.AbstractProblem",
             node: "up.model.fnode.FNode",
-            int_parameters: dict[str, int],
-            c: Any
-    ) -> "up.model.fnode.FNode":
+            integer_parameters: Optional[dict[str, int]] = {},
+            instantiations: Optional[tuple] = ()
+    ) -> Union["up.model.fnode.FNode", None]:
+        em = new_problem.environment.expression_manager
         if node.is_fluent_exp():
-            fluent = node.fluent()
-            new_name = fluent.name
-            pattern = r'\[(.*?)\]'
-            for ti in re.findall(pattern, new_name):
-                new_ti = ti
-                for key in int_parameters.keys():
-                    if key == ti or any(part.strip() == key for part in re.split(r'[\s+\-*/()]', new_ti)):
-                        new_ti = new_ti.replace(key, str(c[int_parameters.get(key)]))
-                new_name = new_name.replace('[' + ti + ']', '[' + str(eval(new_ti)) + ']')
-            return Fluent(new_name, fluent.type, fluent.signature, fluent.environment)(*fluent.signature)
+            original_fluent = new_problem.fluent(node.fluent().name.split('[')[0])
+            if original_fluent.type.is_array_type():
+                fluent = node.fluent()
+                new_name = self._get_fluent_name(new_problem, fluent.name, integer_parameters, instantiations)
+                if new_name is None:
+                    return FALSE() if node.fluent().type.is_bool_type() else None
+                return Fluent(new_name, fluent.type, fluent.signature, fluent.environment)(*fluent.signature)
+            return node
         elif node.is_parameter_exp():
-            if int_parameters.get(node.parameter().name) is not None:
-                return c[int_parameters.get(node.parameter().name)]
-            else:
-                return node
+            if integer_parameters.get(node.parameter().name) is not None:
+                return Int(instantiations[integer_parameters.get(node.parameter().name)])
+            return node
         elif node.is_constant() or node.is_variable_exp() or node.is_timing_exp():
             return node
         else:
-            new_args = []
-            for arg in node.args:
-                new_args.append(self._manage_node(em, arg, int_parameters, c))
+            if node.is_forall() or node.is_exists():
+                new_forall, range_vars = self._process_forall(node.variables())
+                if not new_forall:
+                    this_integer_parameters = integer_parameters.copy()
+                    for key in range_vars.keys():
+                        this_integer_parameters[key] = len(this_integer_parameters)
+
+                    updated_range_vars = self._update_range_vars(range_vars, this_integer_parameters,
+                                                                 instantiations) if range_vars else {}
+                    ranges = [updated_range_vars[n] for n in updated_range_vars] if updated_range_vars else []
+                    instantiation_combinations = self._get_instantiations(ranges) if ranges else [()]
+                    new_args = []
+                    for ti in instantiation_combinations:
+                        this_instantiations = instantiations + ti
+                        for arg in node.args:
+                            new_args.append(self._manage_node(new_problem, arg, this_integer_parameters, this_instantiations))
+                    new_node_type = OperatorKind.AND if node.is_forall() else OperatorKind.OR
+                    if None in new_args:
+                        new_args = self._is_problematic(new_node_type, new_args)
+                    if new_args is None:
+                        return None
+                    return em.create_node(new_node_type, tuple(new_args)).simplify()
+            new_args = [self._manage_node(new_problem, arg, integer_parameters, instantiations) for arg in node.args]
+            if None in new_args:
+                new_args = self._is_problematic(node.node_type, new_args)
+            if new_args is None:
+                return None
             return em.create_node(node.node_type, tuple(new_args)).simplify()
+
+    def _is_problematic(self, node_type, args) -> Union[list[FNode], None]:
+        # OperatorKind.IMPLIES,
+        # OperatorKind.IFF,
+        # OperatorKind.EXISTS,
+        # OperatorKind.FORALL,
+        if node_type == OperatorKind.NOT or node_type == OperatorKind.EQUALS or node_type == OperatorKind.AND:
+            if None in args:
+                return None
+        elif node_type == OperatorKind.OR or node_type == OperatorKind.COUNT:
+            return [arg for arg in args if arg is not None]
+        return args
+
+    def _process_forall(self, forall):
+        new_forall = []
+        range_info = {}
+        for f in forall:
+            if isinstance(f, RangeVariable):
+                range_info[f.name] = (f.initial, f.last)
+            else:
+                new_forall.append(f)
+        return tuple(new_forall), range_info
+
+    def _update_range_vars(self, range_vars, int_parameters: dict[str, int], instantiations) -> dict[str, Tuple[int, int]]:
+        for n, r in range_vars.items():
+            new_r_0 = str(r[0])
+            new_r_1 = str(r[1])
+            for key, index in int_parameters.items():
+                if key in new_r_0:
+                    new_r_0 = str(new_r_0).replace(key, str(instantiations[index]))
+                if key in new_r_1:
+                    new_r_1 = str(new_r_1).replace(key, str(instantiations[index]))
+            range_vars[n] = (eval(new_r_0), eval(new_r_1))
+        return range_vars
+
+    def _get_instantiations(self, ranges: list[(int, int)]):
+        """
+        Generates all possible combinations given a list of ranges.
+
+        :param ranges: A list of tuples (start, end), where each tuple defines an inclusive range.
+        :return: A list of tuples with all the possible combinations.
+        """
+        ranges_as_iterables = [range(start, end + 1) for start, end in ranges]
+        return list(product(*ranges_as_iterables))
+
+    def _add_effect(self, action, effect_type: str, fluent, value, condition, forall):
+        """
+        Adds an effect to the specified action.
+
+        :param action: The action to which the effect will be added.
+        :param effect_type: A string indicating the type of the effect (e.g., "add", "delete", or "modify").
+        :param fluent: The fluent being affected by the effect.
+        :param value: The value to be assigned to the fluent as part of the effect.
+        :param condition: The condition under which the effect is applied. This can be a logical condition or a fluent expression.
+        :param forall: A list or iterable representing the variables that must satisfy the effect's condition (used for universally quantified effects).
+        :return: None. The effect is directly added to the action.
+        """
+        if effect_type == 'increase':
+            action.add_increase_effect(fluent, value, condition, forall)
+        elif effect_type == 'decrease':
+            action.add_decrease_effect(fluent, value, condition, forall)
+        else:
+            action.add_effect(fluent, value, condition, forall)
 
     def _compile(
         self,
@@ -169,37 +288,39 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
         compilation_kind: "up.engines.CompilationKind",
     ) -> CompilerResult:
         """
+        Takes an instance of a :class:`~unified_planning.model.Problem` and the `INT_PARAMETER_ACTIONS_REMOVING` `~unified_planning.engines.CompilationKind`
+        and returns a `CompilerResult` where the `Problem` does not have `Actions` with integer parameters.
+
+        :param problem: The instance of the `Problem` that must be returned without integer parameters.
+        :param compilation_kind: The `CompilationKind` that must be applied on the given problem;
+            only `INT_PARAMETER_ACTIONS_REMOVING` is supported by this compiler
+        :return: The resulting `CompilerResult` data structure.
         """
         assert isinstance(problem, Problem)
 
         trace_back_map: Dict[Action, Tuple[Action, List["up.model.fnode.FNode"]]] = {}
 
-        env = problem.environment
-        em = env.expression_manager
         new_problem = problem.clone()
         new_problem.name = f"{self.name}_{problem.name}"
         new_problem.clear_actions()
+        new_problem.clear_axioms()
+        new_problem.clear_goals()
+        new_problem.clear_quality_metrics()
 
         for action in problem.actions:
             new_parameters = OrderedDict()
-            int_parameters = {}
-            type_list: List[Type] = []
-            domain_sizes = []
+            integer_parameters = {}
+            integers_domains = []
             for old_parameter in action.parameters:
                 if old_parameter.type.is_user_type():
                     new_parameters.update({old_parameter.name: old_parameter.type})
                 else:
-                    assert old_parameter.type.is_int_type()
-                    type_list.append(old_parameter.type)
-                    domain_sizes.append(domain_size(problem, old_parameter.type))
-                    int_parameters[old_parameter.name] = len(int_parameters)
+                    assert old_parameter.type.is_int_type(), "Type of parameter not supported"
+                    integers_domains.append((old_parameter.type.lower_bound, old_parameter.type.upper_bound))
+                    integer_parameters[old_parameter.name] = len(integer_parameters)
 
-            items_list: List[List[FNode]] = []
-            for size, type in zip(domain_sizes, type_list):
-                items_list.append([domain_item(problem, type, j) for j in range(size)])
-
-            for c in product(*items_list):
-                new_action_name = get_fresh_name(new_problem, action.name, list(map(str, c)))
+            for instantiations in self._get_instantiations(integers_domains):
+                new_action_name = get_fresh_name(new_problem, action.name, list(map(str, instantiations)))
                 if isinstance(action, InstantaneousAction):
                     new_action = InstantaneousAction(new_action_name, new_parameters, action.environment)
                 elif isinstance(action, DurativeAction):
@@ -208,39 +329,37 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                     new_action = Action(new_action_name, new_parameters, action.environment)
                 remove_action = False
                 for precondition in action.preconditions:
-                    new_precondition = self._manage_node(em, precondition, int_parameters, c)
-                    new_action.add_precondition(new_precondition)
-                    # If a precondition is False, the action will never occur
-                    if new_precondition.is_false():
+                    new_precondition = self._manage_node(new_problem, precondition, integer_parameters, instantiations)
+                    if new_precondition is None or new_precondition == FALSE():
                         remove_action = True
+                        break
+                    new_action.add_precondition(new_precondition)
                 if not remove_action:
-                    try:
-                        for effect in action.effects:
-                            new_fnode = self._manage_node(em, effect.fluent, int_parameters, c)
-                            new_value = self._manage_node(em, effect.value, int_parameters, c)
-                            new_condition = self._manage_node(em, effect.condition, int_parameters, c)
-                            if new_condition.is_bool_constant():
-                                if new_condition.is_true():
-                                    if effect.is_increase():
-                                        new_action.add_increase_effect(new_fnode, new_value, forall=effect.forall)
-                                    elif effect.is_decrease():
-                                        new_action.add_decrease_effect(new_fnode, new_value, forall=effect.forall)
-                                    else:
-                                        new_action.add_effect(new_fnode, new_value, forall=effect.forall)
-                            else:
-                                if effect.is_increase():
-                                    new_action.add_increase_effect(new_fnode, new_value, new_condition, effect.forall)
-                                elif effect.is_decrease():
-                                    new_action.add_decrease_effect(new_fnode, new_value, new_condition, effect.forall)
-                                else:
-                                    new_action.add_effect(new_fnode, new_value, new_condition, effect.forall)
-                    except Exception:
-                        continue
-                    else:
-                        new_problem.add_action(new_action)
-                        trace_back_map[new_action] = (action, c)
+                    for effect in action.effects:
+                        effect_type = 'increase' if effect.is_increase() else 'decrease' if effect.is_decrease() else 'none'
+                        new_forall, range_vars = self._process_forall(effect.forall)
+                        this_integer_parameters = integer_parameters.copy()
+                        for key in range_vars.keys():
+                            this_integer_parameters[key] = len(this_integer_parameters)
 
-        new_problem.clear_quality_metrics()
+                        updated_range_vars = self._update_range_vars(range_vars, this_integer_parameters,
+                                                                     instantiations) if range_vars else {}
+                        ranges = [updated_range_vars[n] for n in updated_range_vars] if updated_range_vars else []
+                        instantiation_combinations = self._get_instantiations(ranges) if ranges else [()]
+
+                        for ti in instantiation_combinations:
+                            # ti = (1,0) -> a,b
+                            this_instantiations = instantiations + ti
+                            new_fluent = self._manage_node(new_problem, effect.fluent, this_integer_parameters, this_instantiations)
+                            new_value = self._manage_node(new_problem, effect.value, this_integer_parameters, this_instantiations)
+                            new_condition = self._manage_node(new_problem, effect.condition, this_integer_parameters, this_instantiations)
+                            if new_fluent is not None and new_value is not None: # condition ??
+                                self._add_effect(new_action, effect_type, new_fluent, new_value, new_condition, new_forall)
+                    #if new_action.effects:
+                    # CANVIAR PERO PROVAR PRIMER QUE S'ESBORRI LA PRECONDICIO
+                    new_problem.add_action(new_action)
+                    trace_back_map[new_action] = (action, instantiations)
+
         for qm in problem.quality_metrics:
             if qm.is_minimize_sequential_plan_length() or qm.is_minimize_makespan():
                 new_problem.add_quality_metric(qm)
@@ -254,6 +373,35 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                 new_problem.add_quality_metric(
                     MinimizeActionCosts(new_costs, environment=new_problem.environment)
                 )
+            else:
+                new_problem.add_quality_metric(qm)
+
+        for axiom in problem.axioms:
+            new_axiom = axiom.clone()
+            new_axiom.name = get_fresh_name(new_problem, new_axiom.name)
+            new_axiom.clear_preconditions()
+            new_axiom.clear_effects()
+            for precondition in axiom.preconditions:
+                new_precondition = self._manage_node(new_problem, precondition)
+                new_axiom.add_precondition(new_precondition)
+            for effect in axiom.effects:
+                new_fluent = self._manage_node(new_problem, effect.fluent)
+                new_value = self._manage_node(new_problem, effect.value)
+                new_condition = self._manage_node(new_problem, effect.condition)
+                if not new_condition.is_false() and new_fluent is not None:
+                    if effect.is_increase():
+                        new_axiom.add_increase_effect(new_fluent, new_value, new_condition, effect.forall)
+                    elif effect.is_decrease():
+                        new_axiom.add_decrease_effect(new_fluent, new_value, new_condition, effect.forall)
+                    else:
+                        new_axiom.add_effect(new_fluent, new_value, new_condition, effect.forall)
+
+            new_problem.add_axiom(new_axiom)
+            trace_back_map[new_axiom] = axiom
+
+        for g in problem.goals:
+            new_goal = self._manage_node(new_problem, g)
+            new_problem.add_goal(new_goal)
 
         return CompilerResult(
             new_problem,
