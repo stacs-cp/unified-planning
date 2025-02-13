@@ -1,135 +1,41 @@
-import os
 import subprocess
-import time
-from unified_planning.engines import PlanGenerationResultStatus
-from unified_planning.io import PDDLWriter
 from unified_planning.shortcuts import *
 
-compilation_kinds_to_apply = [
-    CompilationKind.INT_PARAMETER_ACTIONS_REMOVING,
-    # CompilationKind.ARRAYS_AND_INTEGERS_REMOVING,
-    CompilationKind.ARRAYS_REMOVING,
-    # CompilationKind.INT_ARRAYS_BITS_REMOVING,
-    # CompilationKind.COUNT_REMOVING,
-    CompilationKind.INTEGERS_REMOVING,
-    CompilationKind.USERTYPE_FLUENTS_REMOVING,
-]
+# ------------------------------------------------ Model -------------------------------------------------------------
+instance_name = '5x3-trivial'
+instance_path = f'read_instance.py'
+instance = subprocess.run(['python3', instance_path, instance_name], text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+print(instance)
+output = instance.stdout.split("---")
+initial_state = eval(output[0].strip())
+undefined  = eval(output[1].strip())
+rows = eval(output[2].strip())
+columns = eval(output[3].strip())
 
-def compile_plan(old_problem):
-    problem = old_problem
-    results = []
-    for ck in compilation_kinds_to_apply:
-        print("Compiling", ck)
-        params = {}
-        if ck == CompilationKind.ARRAYS_REMOVING:
-            # 'mode' should be 'strict' or 'permissive'
-            params = {'mode': 'permissive'}
-        # To get the Compiler from the factory we can use the Compiler operation mode.
-        # It takes a problem_kind and a compilation_kind, and returns a compiler with the capabilities we need
-        with Compiler(
-                problem_kind=problem.kind,
-                compilation_kind=ck,
-                params=params
-        ) as compiler:
-            result = compiler.compile(
-                problem,
-                ck
-            )
-            results.append(result)
-            problem = result.problem
-    return problem, results
+n_blocks = rows*columns - len(undefined)
 
-def execute_plan(problem, planner_name, results):
-    with OneshotPlanner(name=planner_name) as planner:
-        result = planner.solve(problem)
-        plan = result.plan
-
-        if plan is None:
-            error_message = "No plan found."
-            print(result.log_messages)
-            if not planner.supports(problem.kind):
-                for pk in problem.kind.features:
-                    if pk not in planner.supported_kind().features:
-                        error_message += f"{pk} is not supported by the planner"
-            return error_message
-        compiled_plan = plan
-        for result in reversed(results):
-            compiled_plan = compiled_plan.replace_action_instances(
-                result.map_back_action_instance
-            )
-
-        return compiled_plan.actions
-
-def execute_pddl(problem, problem_name, heuristics):
-    domain_file = f'{problem_name}_domain.pddl'
-    problem_file = f'{problem_name}_problem.pddl'
-    if os.path.exists(domain_file):
-        os.remove(domain_file)
-    if os.path.exists(problem_file):
-        os.remove(problem_file)
-
-    w = PDDLWriter(problem, rewrite_bool_assignments=True)
-    w.write_domain(domain_file)
-    w.write_problem(problem_file)
-
-    command = [
-        f"/Users/cds26/PycharmProjects/unified-planning/venv/lib/python3.9/site-packages/up_fast_downward/downward/fast-downward.py",
-        domain_file, problem_file, "--search", f"astar({heuristics}())"]
-    result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
-    stdout_lines = result.stdout.splitlines()
-    print(stdout_lines)
-    plan_lines = [line for line in stdout_lines if "move_block" in line]
-    if plan_lines:
-        return plan_lines
-    else:
-        return "Plan not found.", result.stderr
-
-
-# ------------------------------------------------ Problem -------------------------------------------------------------
-puzznic_problem = Problem('puzznic_problem')
+puzznic_problem = unified_planning.model.Problem('puzznic_problem')
 Pattern = UserType('Pattern')
-
-F = Object('F', Pattern)  # Free
-B = Object('B', Pattern)  # Blue
-Y = Object('Y', Pattern)  # Yellow
-G = Object('G', Pattern)  # Green
-R = Object('R', Pattern)  # Red
-L = Object('L', Pattern)  # Lightblue
-O = Object('O', Pattern)  # Orange
-V = Object('V', Pattern)  # Violet
-P = Object('P', Pattern)  # Pink
-C = Object('C', Pattern)  # Coal
+F = Object('F', Pattern) # Free
+B = Object('B', Pattern) # Blue
+Y = Object('Y', Pattern) # Yellow
+G = Object('G', Pattern) # Green
+R = Object('R', Pattern) # Red
+L = Object('L', Pattern) # Lightblue
+O = Object('O', Pattern) # Orange
+V = Object('V', Pattern) # Violet
+P = Object('P', Pattern) # Pink
+C = Object('C', Pattern) # Coal
 
 T = Object('T', Pattern)  # Ready to count
 M = Object('M', Pattern)  # Ready to match
-puzznic_problem.add_objects([F, B, Y, G, R, L, O, V, P, T, M])
+puzznic_problem.add_objects([F, B, Y, G, R, L, O, V, P, C, T, M])
 
-#R R#
-#P B#
-## ##
-#   #
-#B P#
-#initial_state = {(0,0): R, (0,2): R, (1,0): P, (1,2): B, (4,0): B, (4,2): P}
-#rows = 5
-#columns = 3
-#undefined = [(2,0),(2,2)]
-
-#R R#
-initial_state = {(0,0): R, (0,2): R}
-rows = 1
-columns = 3
-undefined = []
-n_blocks = rows*columns - len(undefined)
-
-# ------------------------------------------------ Fluents -------------------------------------------------------------
 patterned = Fluent('patterned', ArrayType(rows, ArrayType(columns, Pattern)), undefined_positions=undefined)
 puzznic_problem.add_fluent(patterned, default_initial_value=F)
 
 for p in initial_state:
-    puzznic_problem.set_initial_value(patterned[p[0]][p[1]], initial_state[p])
-
-#score = Fluent('score', IntType(0, 20))
-#puzznic_problem.add_fluent(score, default_initial_value=0)
+    puzznic_problem.set_initial_value(patterned[p[0]][p[1]], eval(initial_state[p]))
 
 step = Fluent('step', IntType(1, 4))
 puzznic_problem.add_fluent(step, default_initial_value=1)
@@ -145,7 +51,6 @@ counting_flag = Fluent('counting_flag', DerivedBoolType())
 puzznic_problem.add_fluent(counting_flag, default_initial_value=False)
 scoring_flag = Fluent('scoring_flag', DerivedBoolType())
 puzznic_problem.add_fluent(scoring_flag, default_initial_value=False)
-
 
 # ------------------------------------------------ Axioms -------------------------------------------------------------
 # Falling
@@ -261,28 +166,11 @@ count_block.add_effect(patterned[r][c], T)
 count_block.add_increase_effect(blocks_matched, 1)
 puzznic_problem.add_action(count_block)
 
-# to modify the blocks
+# --------------------------------------- Calculate Score ----------------------------------------------------------------------
+# to modify the M blocks
 r = RangeVariable('r', 0, rows-1)
 c = RangeVariable('c', 0, columns-1)
-# Count Block - with Count Expression
-#count_block = InstantaneousAction('count_block', n=IntType(2, n_blocks))
-#n = count_block.parameter('n')
-#count_block.add_precondition(Not(falling_flag))
-#count_block.add_precondition(Not(matching_flag))
-#count_block.add_precondition(counting_flag)
-#n_count = []
-#for i in range(rows):
-#    for j in range(columns):
-#        if (i,j) not in undefined:
-#            n_count.append(Equals(patterned[i][j], M))
-#count_block.add_precondition(Equals(Count(n_count), n))
-#count_block.add_effect(patterned[r][c], T, condition=Equals(patterned[r][c], M), forall=[r,c])
-#count_block.add_increase_effect(blocks_matched, n)
-#puzznic_problem.add_action(count_block)
 
-# ----------------------------------------------------------------------------------------------------------------------
-
-# Calculate Score
     # Step 1 Matching 2
 score_blocks_1_2 = InstantaneousAction('score_blocks_1_2')
 score_blocks_1_2.add_precondition(Not(matching_flag))
@@ -462,99 +350,6 @@ if n_blocks >= 8:
     score_blocks_1_8.add_effect(blocks_matched, 0)
     puzznic_problem.add_action(score_blocks_1_8)
 
-# ----------------------------------------------------------------------------------------------------------------------
-    # Step 1
-#score_blocks1 = InstantaneousAction('score_blocks1', n=IntType(2, n_blocks))
-#n = score_blocks1.parameter('n')
-#score_blocks1.add_precondition(Not(matching_flag))
-#score_blocks1.add_precondition(Not(counting_flag))
-#score_blocks1.add_precondition(scoring_flag)
-#score_blocks1.add_precondition(Equals(step, 1))
-#score_blocks1.add_precondition(Equals(blocks_matched, n))
-#score_blocks1.add_increase_effect(score, 1, Equals(n, 2))
-#score_blocks1.add_increase_effect(score, 2, Equals(n, 3))
-#score_blocks1.add_increase_effect(score, 4, Equals(n, 4))
-#score_blocks1.add_increase_effect(score, 6, Equals(n, 5))
-#score_blocks1.add_increase_effect(score, 10, Equals(n, 6))
-#score_blocks1.add_increase_effect(score, 12, Equals(n, 7))
-#score_blocks1.add_increase_effect(score, 20, GE(n, 8))
-#score_blocks1.add_effect(patterned[r][c], F, condition=Equals(patterned[r][c], C), forall=[r,c])
-#score_blocks1.add_effect(step, 2)
-#score_blocks1.add_effect(blocks_matched, 0)
-#puzznic_problem.add_action(score_blocks1)
-#
-#    # Step 2
-#score_blocks2 = InstantaneousAction('score_blocks2', n=IntType(2, n_blocks))
-#n = score_blocks2.parameter('n')
-#score_blocks2.add_precondition(Not(matching_flag))
-#score_blocks2.add_precondition(Not(counting_flag))
-#score_blocks2.add_precondition(scoring_flag)
-#score_blocks2.add_precondition(Equals(step, 2))
-#score_blocks2.add_precondition(Equals(blocks_matched, n))
-#score_blocks2.add_increase_effect(score, 6, Equals(n, 2))
-#score_blocks2.add_increase_effect(score, 10, Or(Equals(n, 3), Equals(n, 4)))
-#score_blocks2.add_increase_effect(score, 12, Equals(n, 5))
-#score_blocks2.add_increase_effect(score, 20, GE(n, 6))
-#score_blocks2.add_effect(patterned[r][c], F, condition=Equals(patterned[r][c], C), forall=[r,c])
-#score_blocks2.add_effect(step, 3)
-#score_blocks2.add_effect(blocks_matched, 0)
-#puzznic_problem.add_action(score_blocks2)
-#
-#    # Step 3
-#score_blocks3 = InstantaneousAction('score_blocks3', n=IntType(2, n_blocks))
-#n = score_blocks3.parameter('n')
-#score_blocks3.add_precondition(Not(matching_flag))
-#score_blocks3.add_precondition(Not(counting_flag))
-#score_blocks3.add_precondition(scoring_flag)
-#score_blocks3.add_precondition(Equals(step, 3))
-#score_blocks3.add_precondition(Equals(blocks_matched, n))
-#score_blocks3.add_increase_effect(score, 10, Equals(n, 2))
-#score_blocks3.add_increase_effect(score, 12, Equals(n, 3))
-#score_blocks3.add_increase_effect(score, 20, GE(n, 4))
-#score_blocks3.add_effect(patterned[r][c], F, condition=Equals(patterned[r][c], C), forall=[r,c])
-#score_blocks3.add_effect(step, 4)
-#score_blocks3.add_effect(blocks_matched, 0)
-#puzznic_problem.add_action(score_blocks3)
-#
-#    # Step 4
-#score_blocks4 = InstantaneousAction('score_blocks4')
-#score_blocks4.add_precondition(Not(matching_flag))
-#score_blocks4.add_precondition(Not(counting_flag))
-#score_blocks4.add_precondition(scoring_flag)
-#score_blocks4.add_precondition(Equals(step, 4))
-#score_blocks4.add_increase_effect(score, 20)
-#score_blocks4.add_effect(patterned[r][c], F, condition=Equals(patterned[r][c], C), forall=[r,c])
-#score_blocks4.add_effect(blocks_matched, 0)
-#puzznic_problem.add_action(score_blocks4)
-#
-
-# ----------------------------------------------------------------------------------------------------------------------
-# all at once...
-#score_blocks = InstantaneousAction('score_blocks', n=IntType(2, n_blocks))
-#n = score_blocks.parameter('n')
-#score_blocks.add_precondition(Not(counting_flag))
-#score_blocks.add_precondition(scoring_flag)
-#score_blocks.add_precondition(Equals(blocks_matched, n))
-#score_blocks.add_increase_effect(score, 1, And(Equals(step, 1), Equals(n, 2)))
-#score_blocks.add_increase_effect(score, 2, And(Equals(step, 1), Equals(n, 3)))
-#score_blocks.add_increase_effect(score, 4, And(Equals(step, 1), Equals(n, 4)))
-#score_blocks.add_increase_effect(score, 6, Or(And(Equals(step, 1), Equals(n, 5)),
-#                                              And(Equals(step, 2), Equals(n, 2))))
-#score_blocks.add_increase_effect(score, 10, Or(And(Equals(step, 1), Equals(n, 6)),
-#                                               And(Equals(step, 2), Or(Equals(n, 3), Equals(n, 4))),
-#                                               And(Equals(step, 3), Equals(n, 2))))
-#score_blocks.add_increase_effect(score, 12, Or(And(Equals(step, 1), Equals(n, 7)),
-#                                               And(Equals(step, 2), Equals(n, 5)),
-#                                               And(Equals(step, 3), Equals(n, 3))))
-#score_blocks.add_increase_effect(score, 20, Or(And(Equals(step, 1), GE(n, 8)),
-#                                               And(Equals(step, 2), GE(n, 6)),
-#                                               And(Equals(step, 3), GE(n, 4)),
-#                                               GE(step, 4)))
-#score_blocks.add_effect(patterned[r][c], F, condition=Equals(patterned[r][c], C), forall=[r,c])
-#score_blocks.add_increase_effect(step, 1)
-#score_blocks.add_effect(blocks_matched, 0)
-#puzznic_problem.add_action(score_blocks)
-
 # ------------------------------------------------ Goal -------------------------------------------------------------
 for i in range(rows):
     for j in range(columns):
@@ -592,7 +387,8 @@ if n_blocks >= 5:
 if n_blocks >= 6:
     costs.update({
         score_blocks_1_6: maximum_cost - Int(10),
-        score_blocks_2_6: maximum_cost - Int(20)})
+        score_blocks_2_6: maximum_cost - Int(20)
+    })
 if n_blocks >= 7:
     costs.update({score_blocks_1_7: maximum_cost - Int(12)})
 if n_blocks >= 8:
@@ -600,16 +396,36 @@ if n_blocks >= 8:
 
 puzznic_problem.add_quality_metric(MinimizeActionCosts(costs))
 
-#maximize_score = MaximizeExpressionOnFinalState(score)
-#puzznic_problem.add_quality_metric(maximize_score)
+# -------------------------------------------------- Compilation -------------------------------------------------------
 
-# ---------------------------------------------- Compilation -----------------------------------------------------------
-problem, results = compile_plan(puzznic_problem)
-print(problem)
-# ------------------------------------------------ Solving -------------------------------------------------------------
+compilation_kinds_to_apply = [
+    CompilationKind.INT_PARAMETER_ACTIONS_REMOVING,
+    CompilationKind.ARRAYS_REMOVING,
+    CompilationKind.INTEGERS_REMOVING,
+    CompilationKind.USERTYPE_FLUENTS_REMOVING,
+]
+problem = puzznic_problem
+results = []
+for ck in compilation_kinds_to_apply:
+    params = {}
+    if ck == CompilationKind.ARRAYS_REMOVING:
+        params = {'mode': 'permissive'}
+    with Compiler(
+            problem_kind=problem.kind,
+            compilation_kind=ck,
+            params=params
+        ) as compiler:
+        result = compiler.compile(
+            problem,
+            ck
+        )
+        results.append(result)
+        problem = result.problem
+up.shortcuts.get_environment().credits_stream = None
 
-solving = 'fast-downward'
+# ----------------------------------------------------- Solving --------------------------------------------------------
 
+solving = 'symk'
 if solving.split('_')[0] == 'any':
     solving = solving.split('_')[1]
     with AnytimePlanner(name=solving) as planner:
@@ -618,48 +434,25 @@ if solving.split('_')[0] == 'any':
 else:
     with OneshotPlanner(name=solving) as planner:
         result = planner.solve(problem)
-        if result.status == PlanGenerationResultStatus.SOLVED_SATISFICING:
-            print(f'Plan found.\n{result.plan}')
+        plan = result.plan
+        print(result)
+        if plan is not None:
+            compiled_plan = plan
+            for result in reversed(results):
+                compiled_plan = compiled_plan.replace_action_instances(
+                    result.map_back_action_instance
+                )
+
+            total_score = maximum_cost
+            for a in compiled_plan.actions:
+                if str(a).split('_')[0] == 'score':
+                    score_action = puzznic_problem.action(str(a))
+                    for qm in puzznic_problem.quality_metrics:
+                        total_score -= qm.get_action_cost(score_action).simplify()
+
+            print(f'Steps: {len(compiled_plan.actions)}')
+            print(f'Actions: {compiled_plan.actions}')
+            print(f'Score: {total_score.simplify()}')
+
         else:
-            print("No plan found.")
-            print(result)
-
-
-#solv_start = time.time()
-#solver = 'symk'
-#print("Solving...")
-#if solver == 'pddl':
-#    plan = execute_pddl(problem, 'puzznic', 'blind')
-#    print(f"Moves: {len(plan)}")
-#    print(f"Plan: {plan}")
-#
-#    domain_path = "puzznic_domain.pddl"
-#    problem_path = "puzznic_problem.pddl"
-#
-#else:
-#    compiled_actions = execute_plan(problem, planner_name=solver, results=results)
-#    if isinstance(compiled_actions, str):
-#        print(compiled_actions)
-#    else:
-#        print("Compiled plan: ", compiled_actions)
-#        total_score = maximum_cost
-#        for a in compiled_actions:
-#            if str(a).split('_')[0] == 'score':
-#                score_action = puzznic_problem.action(str(a))
-#                for qm in puzznic_problem.quality_metrics:
-#                    total_score -= qm.get_action_cost(score_action).simplify()
-#
-#        print(f"Total score: {total_score.simplify()}")
-#
-#solv_end = time.time()
-#print(f"Solving time: {solv_end-solv_start:.3f} seconds")
-
-#for result in reversed(results):
-#    #print(result.plan.replace_action_instances())
-#    print("from??:", result.map_back_action_instance)
-#
-
-#for action in plan:
-#    print(f"Applying action: {action}")
-#    state = puzznic_problem.apply_action(state, action)
-#    print(f"Score after action: {state.get_value(score)}")
+            print("Plan not found")
