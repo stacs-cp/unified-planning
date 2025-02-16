@@ -173,10 +173,10 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
             and_node.append(new_problem.fluent(sub_operation)(first_arg, last_arg, value_var))
             new_lt_expr = new_problem.fluent('lt')(value_var, target_value)
             if operation == 'lt':
-                return Exists(And(and_node, new_lt_expr), *intermediate_vars)
+                return Exists(And(and_node, new_lt_expr), *(intermediate_vars + [value_var]))
             else:
                 new_eq_expr = Equals(value_var, target_value)
-                return Exists(And(and_node, Or(new_lt_expr, new_eq_expr)), *intermediate_vars)
+                return Exists(And(and_node, Or(new_lt_expr, new_eq_expr)), *(intermediate_vars + [value_var]))
 
     def _handle_equals_lt_le(self, node, operation, operation_inner_map, old_problem, new_problem):
         inner_expr, value, sub_operation = None, None, None
@@ -189,6 +189,13 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
         if sub_operation is not None:
             target_value = self._get_new_node(old_problem, new_problem, value)
             first_arg = self._get_new_node(old_problem, new_problem, inner_expr.arg(0))
+            if sub_operation == 'plus':
+                max_value = 0
+                for a in inner_expr.args:
+                    max_value += a.type.upper_bound
+                self._add_object_numbers(new_problem, 0, max_value)
+            else:
+                print(f"Operation {sub_operation} not supported yet!")
             self._add_relationships(new_problem, sub_operation)
 
             if len(inner_expr.args) == 2:
@@ -222,7 +229,7 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
             object_name = f'n{node.int_constant_value()}'
             new_number = model.Object(object_name, number_user_type)
             if not new_problem.has_object(object_name):
-                raise NotImplementedError
+                self._add_object_numbers(new_problem, node.int_constant_value(), node.int_constant_value())
             return em.ObjectExp(new_number)
         elif node.is_fluent_exp() and node.fluent().type.is_int_type():
             return new_problem.fluent(node.fluent().name)(*node.args)
