@@ -304,7 +304,6 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
         new_problem.name = f"{self.name}_{problem.name}"
         new_problem.clear_actions()
         new_problem.clear_axioms()
-        new_problem.clear_goals()
         new_problem.clear_quality_metrics()
 
         for action in problem.actions:
@@ -398,10 +397,6 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
 
             new_problem.add_axiom(new_axiom)
             trace_back_map[new_axiom] = axiom
-
-        for g in problem.goals:
-            new_goal = self._manage_node(new_problem, g)
-            new_problem.add_goal(new_goal)
 
         return CompilerResult(
             new_problem,

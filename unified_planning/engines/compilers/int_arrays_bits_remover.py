@@ -26,7 +26,7 @@ from unified_planning.engines.results import CompilerResult
 from unified_planning.model import (
     Problem,
     Action,
-    ProblemKind, Object,
+    ProblemKind, Object, MinimizeActionCosts,
 )
 from unified_planning.model.problem_kind_versioning import LATEST_PROBLEM_KIND_VERSION
 from unified_planning.engines.compilers.utils import (
@@ -206,9 +206,9 @@ class IntArraysBitsRemover(engines.engine.Engine, CompilerMixin):
         if operation is not None:
             fluent = node.arg(0)
             value = node.arg(1)
-            new_fluents, new_values = self._convert_fluent_and_value(new_problem, fluent, value)
 
             if fluent.type.is_int_type():
+                new_fluents, new_values = self._convert_fluent_and_value(new_problem, fluent, value)
                 if operation == 'equals':
                     and_node = []
                     for f, v in zip(new_fluents, new_values):
@@ -273,6 +273,7 @@ class IntArraysBitsRemover(engines.engine.Engine, CompilerMixin):
                 #elif operation == 'mult':
 
             elif fluent.type.is_array_type() and operation == 'equals':
+                new_fluents, new_values = self._convert_fluent_and_value(new_problem, fluent, value)
                 and_node = []
                 for i in range(len(new_fluents)):
                     for f, v in zip(new_fluents[i], new_values[i]):
@@ -341,6 +342,7 @@ class IntArraysBitsRemover(engines.engine.Engine, CompilerMixin):
         new_problem.clear_fluents()
         new_problem.clear_actions()
         new_problem.clear_goals()
+        new_problem.clear_quality_metrics()
         new_problem.initial_values.clear()
 
         for fluent in problem.fluents:
@@ -444,6 +446,22 @@ class IntArraysBitsRemover(engines.engine.Engine, CompilerMixin):
 
         for goal in problem.goals:
             new_problem.add_goal(self._get_new_expression(new_problem, goal))
+
+        for qm in problem.quality_metrics:
+            if qm.is_minimize_sequential_plan_length() or qm.is_minimize_makespan():
+                new_problem.add_quality_metric(qm)
+            elif qm.is_minimize_action_costs():
+                assert isinstance(qm, MinimizeActionCosts)
+                new_costs: Dict["up.model.Action", "up.model.Expression"] = {}
+                for new_act, old_act in new_to_old.items():
+                    if old_act is None:
+                        continue
+                    new_costs[new_act] = qm.get_action_cost(old_act)
+                new_problem.add_quality_metric(
+                    MinimizeActionCosts(new_costs, environment=new_problem.environment)
+                )
+            else:
+                new_problem.add_quality_metric(qm)
 
         return CompilerResult(
             new_problem, partial(replace_action, map=new_to_old), self.name
