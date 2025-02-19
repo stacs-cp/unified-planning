@@ -1,6 +1,4 @@
 from unified_planning.shortcuts import *
-import time
-start = time.time()
 
 compilation = 'ut-integers'
 solving = 'fast-downward'
@@ -119,9 +117,6 @@ for ck in compilation_kinds_to_apply:
         )
         results.append(result)
         problem = result.problem
-
-mid = time.time()
-print("Preprocessing", mid - start)
 
 # ---------------------------------------------------- Solving ---------------------------------------------------------
 
