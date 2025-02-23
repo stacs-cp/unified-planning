@@ -368,7 +368,17 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                 for new_act, old_act in trace_back_map.items():
                     if old_act is None:
                         continue
-                    new_costs[new_act] = qm.get_action_cost(old_act[0])
+                    new_cost = qm.get_action_cost(old_act[0])
+                    if new_cost.is_parameter_exp():
+                        i = 0
+                        for p in old_act[0].parameters:
+                            if p.name == str(new_cost):
+                                break
+                            if p.type.is_int_type():
+                                i += 1
+                        new_costs[new_act] = old_act[1][i]
+                    else:
+                        new_costs[new_act] = new_cost
                 new_problem.add_quality_metric(
                     MinimizeActionCosts(new_costs, environment=new_problem.environment)
                 )
