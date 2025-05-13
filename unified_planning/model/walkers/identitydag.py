@@ -69,6 +69,9 @@ class IdentityDagWalker(walkers.dag.DagWalker):
     def walk_plus(self, expression: FNode, args: List[FNode], **kwargs):
         return self.manager.Plus(args)
 
+    def walk_count(self, expression: FNode, args: List[FNode], **kwargs):
+        return self.manager.Count(args)
+
     def walk_times(self, expression: FNode, args: List[FNode], **kwargs):
         return self.manager.Times(args)
 
@@ -99,6 +102,11 @@ class IdentityDagWalker(walkers.dag.DagWalker):
     ) -> FNode:
         return self.manager.Real(expression.real_constant_value())
 
+    def walk_list_constant(
+        self, expression: FNode, args: List[FNode], **kwargs
+    ) -> FNode:
+        return self.manager.List(expression.list_constant_value())
+
     def walk_param_exp(self, expression: FNode, args: List[FNode], **kwargs) -> FNode:
         return self.manager.ParameterExp(expression.parameter())
 
@@ -106,6 +114,11 @@ class IdentityDagWalker(walkers.dag.DagWalker):
         self, expression: FNode, args: List[FNode], **kwargs
     ) -> FNode:
         return self.manager.VariableExp(expression.variable())
+
+    def walk_range_variable_exp(
+        self, expression: FNode, args: List[FNode], **kwargs
+    ) -> FNode:
+        return self.manager.RangeVariableExp(expression.range_variable())
 
     def walk_object_exp(self, expression: FNode, args: List[FNode], **kwargs) -> FNode:
         return self.manager.ObjectExp(expression.object())

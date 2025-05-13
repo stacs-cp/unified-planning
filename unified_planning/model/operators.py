@@ -32,11 +32,13 @@ class OperatorKind(Enum):
     FLUENT_EXP = auto()
     PARAM_EXP = auto()
     VARIABLE_EXP = auto()
+    RANGE_VARIABLE_EXP = auto()
     OBJECT_EXP = auto()
     TIMING_EXP = auto()
     BOOL_CONSTANT = auto()
     INT_CONSTANT = auto()
     REAL_CONSTANT = auto()
+    LIST_CONSTANT = auto()
     PLUS = auto()
     MINUS = auto()
     TIMES = auto()
@@ -50,6 +52,7 @@ class OperatorKind(Enum):
     SOMETIME_AFTER = auto()
     AT_MOST_ONCE = auto()
     DOT = auto()
+    COUNT = auto()
 
 
 BOOL_OPERATORS = frozenset(
@@ -61,11 +64,12 @@ BOOL_OPERATORS = frozenset(
         OperatorKind.IFF,
         OperatorKind.EXISTS,
         OperatorKind.FORALL,
+        OperatorKind.COUNT,
     ]
 )
 
 CONSTANTS = frozenset(
-    [OperatorKind.BOOL_CONSTANT, OperatorKind.REAL_CONSTANT, OperatorKind.INT_CONSTANT]
+    [OperatorKind.BOOL_CONSTANT, OperatorKind.REAL_CONSTANT, OperatorKind.INT_CONSTANT, OperatorKind.LIST_CONSTANT]
 )
 
 IRA_RELATIONS = frozenset([OperatorKind.LE, OperatorKind.LT])

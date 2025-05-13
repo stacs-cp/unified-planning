@@ -95,6 +95,34 @@ DEFAULT_ENGINES = {
         "unified_planning.engines.compilers.quantifiers_remover",
         "QuantifiersRemover",
     ),
+    "up_count_remover": (
+        "unified_planning.engines.compilers.count_remover",
+        "CountRemover",
+    ),
+    "up_count_int_remover": (
+        "unified_planning.engines.compilers.count_int_remover",
+        "CountIntRemover",
+    ),
+    "up_arrays_remover": (
+        "unified_planning.engines.compilers.arrays_remover",
+        "ArraysRemover",
+    ),
+    "up_arrays_user_types_remover": (
+        "unified_planning.engines.compilers.arrays_user_types_remover",
+        "ArraysUserTypesRemover",
+    ),
+    "up_int_parameter_actions_remover": (
+        "unified_planning.engines.compilers.int_parameter_actions_remover",
+        "IntParameterActionsRemover",
+    ),
+    "up_integers_remover": (
+        "unified_planning.engines.compilers.integers_remover",
+        "IntegersRemover",
+    ),
+    "up_int_arrays_bits_remover": (
+        "unified_planning.engines.compilers.int_arrays_bits_remover",
+        "IntArraysBitsRemover",
+    ),
     "up_usertype_fluents_remover": (
         "unified_planning.engines.compilers.usertype_fluents_remover",
         "UsertypeFluentsRemover",
@@ -151,6 +179,13 @@ DEFAULT_ENGINES_PREFERENCE_LIST = [
     "up_ma_conditional_effects_remover",
     "up_negative_conditions_remover",
     "up_quantifiers_remover",
+    "up_count_remover",
+    "up_count_int_remover",
+    "up_arrays_remover",
+    "up_arrays_user_types_remover",
+    "up_int_parameter_actions_remover",
+    "up_integers_remover",
+    "up_int_arrays_bits_remover",
     "up_state_invariants_remover",
     "up_usertype_fluents_remover",
     "tarski_grounder",

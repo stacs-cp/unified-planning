@@ -197,6 +197,10 @@ class ConverterToANMLString(walkers.DagWalker):
         frac = cast(Fraction, expression.constant_value())
         return f"({frac.numerator}/{frac.denominator})"
 
+    def walk_list_constant(self, expression, args):
+        assert len(args) == 0
+        return expression.list_constant_value()
+
     def walk_int_constant(self, expression, args):
         assert len(args) == 0
         return str(expression.constant_value())

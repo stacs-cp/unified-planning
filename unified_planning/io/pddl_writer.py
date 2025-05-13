@@ -296,6 +296,10 @@ class ConverterToPDDLString(walkers.DagWalker):
             f"Found expression {expression} in PDDL"
         )
 
+    def walk_list_constant(self, expression, args):
+        assert len(args) == 0
+        return str(expression.constant_value())
+
     def walk_real_constant(self, expression, args):
         assert len(args) == 0
         frac = expression.constant_value()

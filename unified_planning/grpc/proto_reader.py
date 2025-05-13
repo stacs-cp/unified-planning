@@ -58,6 +58,8 @@ def convert_type_str(s: str, problem: Problem) -> model.types.Type:
             lower_bound=fractions.Fraction(s.split("[")[1].split(",")[0]),
             upper_bound=fractions.Fraction(s.split(",")[1].split("]")[0]),
         )
+    elif s == "up:list":
+        return problem.environment.type_manager.ArrayType()
     else:
         assert not s.startswith("up:"), f"Unhandled builtin type: {s}"
         return problem.user_type(s)
@@ -79,6 +81,8 @@ def op_to_node_type(op: str) -> OperatorKind:
         return OperatorKind.LE
     elif op == "up:lt":
         return OperatorKind.LT
+    if op == "up:count":
+        return OperatorKind.COUNT
     elif op == "up:and":
         return OperatorKind.AND
     elif op == "up:or":
@@ -258,6 +262,8 @@ class ProtobufReader(Converter):
             return problem.environment.expression_manager.Real(
                 fractions.Fraction(value.numerator, value.denominator)
             )
+        elif field == "list":
+            return problem.environment.expression_manager.ArrayType(value)
         elif field == "boolean":
             return problem.environment.expression_manager.Bool(value)
         else:

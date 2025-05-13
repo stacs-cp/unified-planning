@@ -227,7 +227,8 @@ class Simplifier(walkers.dag.DagWalker):
         free_vars: FrozenSet[
             "up.model.variable.Variable"
         ] = self.environment.free_vars_oracle.get_free_variables(args[0])
-        vars = tuple(var for var in expression.variables() if var in free_vars)
+        vars = tuple(var for var in expression.variables()
+                     if var in free_vars or isinstance(var, up.model.range_variable.RangeVariable))
         if len(vars) == 0:
             return args[0]
         return self.manager.Forall(args[0], *vars)
@@ -333,6 +334,24 @@ class Simplifier(walkers.dag.DagWalker):
     def walk_dot(self, expression: FNode, args: List[FNode]) -> FNode:
         return self.manager.Dot(expression.agent(), args[0])
 
+    def walk_count(self, expression: FNode, args: List[FNode]) -> FNode:
+        new_args_count: List[FNode] = list()
+        for a in args:
+            if a.is_false():
+                pass
+            elif a.is_count():
+                for s in a.args:
+                    if s.is_false():
+                        pass
+                    else:
+                        new_args_count.append(s)
+            else:
+                new_args_count.append(a)
+        if len(new_args_count) == 0:
+            return self.manager.Int(0)
+        else:
+            return self.manager.Count(new_args_count)
+
     def walk_plus(self, expression: FNode, args: List[FNode]) -> FNode:
         new_args_plus: List[FNode] = list()
         accumulator: Union[int, Fraction] = 0
@@ -435,6 +454,7 @@ class Simplifier(walkers.dag.DagWalker):
     @walkers.handles(
         op.OperatorKind.PARAM_EXP,
         op.OperatorKind.VARIABLE_EXP,
+        op.OperatorKind.RANGE_VARIABLE_EXP,
         op.OperatorKind.OBJECT_EXP,
         op.OperatorKind.TIMING_EXP,
     )

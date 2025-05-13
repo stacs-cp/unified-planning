@@ -55,6 +55,8 @@ def map_operator(op: int) -> str:
         return "up:lt"
     elif op == OperatorKind.EQUALS:
         return "up:equals"
+    if op == OperatorKind.COUNT:
+        return "up:count"
     elif op == OperatorKind.AND:
         return "up:and"
     elif op == OperatorKind.OR:
@@ -89,6 +91,8 @@ def proto_type(tpe: model.Type) -> str:
         return "up:time"
     elif tpe.is_int_type() or tpe.is_real_type():
         return f"up:{tpe}"
+    elif tpe.is_array_type():
+        return "up:list"
     elif isinstance(tpe, model.types._UserType):
         return str(tpe.name)
 
@@ -110,6 +114,14 @@ def real_expression(value: fractions.Fraction) -> proto.Expression:
             )
         ),
         type="up:real",
+        kind=proto.ExpressionKind.Value("CONSTANT"),
+    )
+
+
+def list_expression(value: list) -> proto.Expression:
+    return proto.Expression(
+        atom=proto.Atom(list=value),
+        type="up:list",
         kind=proto.ExpressionKind.Value("CONSTANT"),
     )
 
@@ -152,6 +164,12 @@ class FNode2Protobuf(walkers.DagWalker):
         self, expression: model.FNode, args: List[proto.Expression]
     ) -> proto.Expression:
         return real_expression(expression.real_constant_value())
+
+    def walk_list_constant(
+        self, expression: model.FNode, args: List[proto.Expression]
+    ) -> proto.Expression:
+        return list_expression(expression.list_constant_value())
+
 
     def walk_param_exp(
         self, expression: model.FNode, args: List[proto.Expression]

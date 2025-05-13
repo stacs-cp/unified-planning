@@ -822,6 +822,8 @@ class _KindFactory:
             if t.is_int_type() or t.is_real_type():
                 self.kind.unset_problem_type("SIMPLE_NUMERIC_PLANNING")
         if e.is_forall():
+            if any(isinstance(f, up.model.range_variable.RangeVariable) for f in e.forall):
+                self.kind.set_conditions_kind("RANGE_VARIABLES")
             self.kind.set_effects_kind("FORALL_EFFECTS")
         if e.is_increase():
             self.kind.set_effects_kind("INCREASE_EFFECTS")
@@ -898,6 +900,16 @@ class _KindFactory:
         elif e.is_continuous_decrease():
             self.kind.unset_problem_type("SIMPLE_NUMERIC_PLANNING")
 
+    def _has_range_vars(self, exp: "up.model.fnode.FNode"):
+        if exp.is_forall() or exp.is_exists():
+            if any(isinstance(f, up.model.range_variable.RangeVariable) for f in exp.variables()):
+                return True
+        else:
+            for a in exp.args:
+                if self._has_range_vars(a):
+                    return True
+        return False
+
     def update_problem_kind_expression(
         self,
         exp: "up.model.fnode.FNode",
@@ -912,7 +924,11 @@ class _KindFactory:
         if OperatorKind.EXISTS in ops:
             self.kind.set_conditions_kind("EXISTENTIAL_CONDITIONS")
         if OperatorKind.FORALL in ops:
+            if self._has_range_vars(exp):
+                self.kind.set_conditions_kind("RANGE_VARIABLES")
             self.kind.set_conditions_kind("UNIVERSAL_CONDITIONS")
+        if OperatorKind.COUNT in ops:
+            self.kind.set_conditions_kind("COUNTING")
         is_linear, _, _ = self.linear_checker.get_fluents(exp)
         if not is_linear:
             self.kind.unset_problem_type("SIMPLE_NUMERIC_PLANNING")
@@ -944,6 +960,8 @@ class _KindFactory:
                     self.kind.set_fluents_type("REAL_FLUENTS")
         elif type.is_user_type():
             self.kind.set_fluents_type("OBJECT_FLUENTS")
+        elif type.is_array_type():
+            self.kind.set_fluents_type("ARRAY_FLUENTS")
         for param in fluent.signature:
             pt = param.type
             self.update_problem_kind_type(pt)

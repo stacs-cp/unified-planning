@@ -71,6 +71,8 @@ class FNode(object):
             return str(self.constant_value())
         elif self.is_real_constant():
             return str(self.constant_value())
+        elif self.is_list_constant():
+            return str(list(self.constant_value()))
         elif self.is_fluent_exp():
             return self.fluent().name + self.get_nary_expression_string(", ", self.args)
         elif self.is_dot():
@@ -79,6 +81,8 @@ class FNode(object):
             return self.parameter().name
         elif self.is_variable_exp():
             return self.variable().name
+        elif self.is_range_variable_exp():
+            return self.range_variable().name
         elif self.is_object_exp():
             return self.object().name
         elif self.is_timing_exp():
@@ -113,6 +117,9 @@ class FNode(object):
             return f"Forall ({s}) {str(self.arg(0))}"
         elif self.is_plus():
             return self.get_nary_expression_string(" + ", self.args)
+        elif self.is_count():
+            a = ", ".join(str(a) for a in self.args)
+            return f"Count(" + a + ")"
         elif self.is_minus():
             return self.get_nary_expression_string(" - ", self.args)
         elif self.is_times():
@@ -172,12 +179,15 @@ class FNode(object):
             self.node_type == OperatorKind.BOOL_CONSTANT
             or self.node_type == OperatorKind.INT_CONSTANT
             or self.node_type == OperatorKind.REAL_CONSTANT
+            or self.node_type == OperatorKind.LIST_CONSTANT
             or self.node_type == OperatorKind.OBJECT_EXP
         )
 
-    def constant_value(self) -> Union[bool, int, Fraction]:
+    def constant_value(self) -> Union[bool, int, Fraction, list, tuple]:
         """Returns the constant value stored in this expression."""
         assert self.is_constant()
+        if self.node_type == OperatorKind.LIST_CONSTANT:
+            return list(self._content.payload)
         return self._content.payload
 
     def bool_constant_value(self) -> bool:
@@ -194,6 +204,11 @@ class FNode(object):
         """Return constant `real` value stored in this expression."""
         assert self.is_real_constant()
         return self._content.payload
+
+    def list_constant_value(self) -> List:
+        """Returns the `list` constant value stored in this expression."""
+        assert self.is_list_constant()
+        return list(self._content.payload)
 
     def fluent(self) -> "unified_planning.model.fluent.Fluent":
         """Return the `Fluent` stored in this expression."""
@@ -214,6 +229,16 @@ class FNode(object):
         """Return the `Variables` of the `Exists` or `Forall`."""
         assert self.is_exists() or self.is_forall()
         return list(self._content.payload)
+
+    def range_variable(self) -> "unified_planning.model.range_variable.RangeVariable":
+        """Return the variable of the RangeVariableExp."""
+        assert self.is_range_variable_exp()
+        return self._content.payload
+
+    def range_variables(self) -> "unified_planning.model.range_variable.RangeVariable":
+        """Return the variable of the RangeVariableExp."""
+        assert self.is_range_variable_exp()
+        return self._content.payload
 
     def object(self) -> "unified_planning.model.object.Object":
         """Return the `Object` stored in this expression."""
@@ -269,6 +294,10 @@ class FNode(object):
         """Test whether the expression is a `real` constant."""
         return self.node_type == OperatorKind.REAL_CONSTANT
 
+    def is_list_constant(self) -> bool:
+        """Test whether the expression is a `real` constant."""
+        return self.node_type == OperatorKind.LIST_CONSTANT
+
     def is_true(self) -> bool:
         """Test whether the expression is the `True` Boolean constant."""
         return self.is_bool_constant() and self.constant_value() == True
@@ -276,6 +305,10 @@ class FNode(object):
     def is_false(self) -> bool:
         """Test whether the expression is the `False` Boolean constant."""
         return self.is_bool_constant() and self.constant_value() == False
+
+    def is_count(self) -> bool:
+        """Test whether the node is the `Count` operator."""
+        return self.node_type == OperatorKind.COUNT
 
     def is_and(self) -> bool:
         """Test whether the node is the `And` operator."""
@@ -336,6 +369,10 @@ class FNode(object):
     def is_variable_exp(self) -> bool:
         """Test whether the node is a :class:`~unified_planning.model.Variable` Expression."""
         return self.node_type == OperatorKind.VARIABLE_EXP
+
+    def is_range_variable_exp(self) -> bool:
+        """Test whether the node is a :class:`~unified_planning.model.Variable` Expression."""
+        return self.node_type == OperatorKind.RANGE_VARIABLE_EXP
 
     def is_object_exp(self) -> bool:
         """Test whether the node is an :class:`~unified_planning.model.Object` Expression."""
@@ -434,6 +471,9 @@ class FNode(object):
 
     def And(self, *other):
         return self._env.expression_manager.And(self, *other)
+
+    def Count(self, *other):
+        return self._env.expression_manager.Count(self, *other)
 
     def __and__(self, *other):
         return self._env.expression_manager.And(self, *other)

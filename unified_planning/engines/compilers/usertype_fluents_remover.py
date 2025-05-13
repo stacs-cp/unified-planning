@@ -195,7 +195,11 @@ class UsertypeFluentsRemover(engines.engine.Engine, CompilerMixin):
                 fluents_map[fluent] = new_fluent
                 new_problem.add_fluent(new_fluent)
             else:
-                new_problem.add_fluent(fluent)
+                default_value = problem.fluents_defaults.get(fluent, None)
+                new_problem.add_fluent(fluent, default_initial_value=default_value)
+                for f, v in problem.explicit_initial_values.items():
+                    if f.fluent() == fluent and v != default_value:
+                        new_problem.set_initial_value(fluent(*f.args), v)
 
         used_names = self._get_names_in_problem(problem)
         utf_remover = UsertypeFluentsWalker(fluents_map, used_names, env)

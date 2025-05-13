@@ -66,6 +66,8 @@ FEATURES = {
         "EQUALITIES",
         "EXISTENTIAL_CONDITIONS",
         "UNIVERSAL_CONDITIONS",
+        "COUNTING",
+        "RANGE_VARIABLES",
     ],
     "EFFECTS_KIND": [
         "CONDITIONAL_EFFECTS",
@@ -94,6 +96,7 @@ FEATURES = {
     "FLUENTS_TYPE": [
         "INT_FLUENTS",
         "REAL_FLUENTS",
+        "ARRAY_FLUENTS",
         "OBJECT_FLUENTS",
         "NUMERIC_FLUENTS",  # deprecated
     ],

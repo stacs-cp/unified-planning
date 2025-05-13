@@ -22,7 +22,7 @@ import unified_planning as up
 from unified_planning.model.types import domain_size, domain_item, _IntType
 from unified_planning.environment import get_environment, Environment
 from unified_planning.exceptions import UPTypeError
-from typing import List, OrderedDict, Optional, Union, Iterator, cast
+from typing import List, OrderedDict, Optional, Union, Iterator, cast, Tuple
 
 
 class Fluent:
@@ -39,6 +39,7 @@ class Fluent:
             ]
         ] = None,
         environment: Optional[Environment] = None,
+        undefined_positions: Optional[List[Union[int, Tuple[int, int]]]] = None,
         **kwargs: "up.model.types.Type",
     ):
         self._env = get_environment(environment)
@@ -50,6 +51,21 @@ class Fluent:
                 typename
             ), "type of parameter does not belong to the same environment of the fluent"
             self._typename = typename
+        self._undefined_positions = undefined_positions
+        sizes = None
+        if undefined_positions is not None:
+            assert typename.is_array_type(), "'undefined_positions' parameter is only allowed with ArrayType Fluents."
+            if typename.elements_type.is_array_type():
+                for position in undefined_positions:
+                    assert type(position) == tuple, f"Position {position} not in the correct format: tuple"
+            else:
+                for position in undefined_positions:
+                    assert type(position) == int, f"Position {position} not in the correct format: int"
+        if self._typename.is_array_type():
+            sizes = typename.size
+            if typename.elements_type.is_array_type():
+                sizes = (sizes, typename.elements_type.size)
+        self._sizes: Optional[Union[int, Tuple[int, int]]] = sizes
         self._signature: List["up.model.parameter.Parameter"] = []
         if _signature is not None:
             assert len(kwargs) == 0
@@ -88,7 +104,9 @@ class Fluent:
         if self.arity > 0:
             sign_items = [f"{p.name}={str(p.type)}" for p in self.signature]
             sign = f'[{", ".join(sign_items)}]'
-        return f"{str(self.type)} {self.name}{sign}"
+        return f"{str(self.type)} {self.name}{sign} - excluding: {self.undefined_positions}" \
+            if self.undefined_positions is not None \
+            else f"{str(self.type)} {self.name}{sign}"
 
     def __eq__(self, oth: object) -> bool:
         if isinstance(oth, Fluent):
@@ -107,6 +125,15 @@ class Fluent:
             res += hash(p)
         return res ^ hash(self._name)
 
+    def __getitem__(self, index: Union["up.model.parameter.Parameter", "up.model.fnode.FNode", "up.model.range_variable.RangeVariable", int]):
+        assert self.type.is_array_type(), "The Fluent has no array type"
+        if isinstance(index, up.model.fnode.FNode):
+            return Fluent(self.name+'['+str(index)+']', self.type.elements_type, self.signature, self.environment)
+        if type(index) is int:
+            index = up.model.parameter.Parameter(str(index), self._env.type_manager.IntType(index,index), self.environment)
+        assert index.type.is_int_type() or index is up.model.range_variable.RangeVariable, "The parameter has no integer type "
+        return Fluent(self.name+'['+str(index.name)+']', self.type.elements_type, self.signature, self.environment)
+
     @property
     def name(self) -> str:
         """Returns the `Fluent` `name`."""
@@ -116,6 +143,16 @@ class Fluent:
     def type(self) -> "up.model.types.Type":
         """Returns the `Fluent` `Type`."""
         return self._typename
+
+    @property
+    def undefined_positions(self) -> Optional[List[Union[int, Tuple[int, int]]]]:
+        """Returns the `Fluent` `Type`."""
+        return self._undefined_positions
+
+    @property
+    def sizes(self) -> Optional[Union[int, Tuple[int, int]]]:
+        """Returns the `Fluent` `Type`."""
+        return self._sizes
 
     @property
     def signature(self) -> List["up.model.parameter.Parameter"]:

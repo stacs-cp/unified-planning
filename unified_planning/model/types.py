@@ -36,6 +36,10 @@ class Type(ABC):
         """Returns `True` iff is `real` `Type`."""
         return False
 
+    def is_array_type(self) -> bool:
+        """Returns true iff is a list type."""
+        return False
+
     def is_int_type(self) -> bool:
         """Returns `True` iff is `integer Type`."""
         return False
@@ -225,6 +229,31 @@ class _RealType(Type):
         return True
 
 
+class _ArrayType(Type):
+    """Represents an array composed with a number (size) of elements of a given type (elements_type)."""
+    def __init__(self, size: int, elements_type: Type):
+        Type.__init__(self)
+        self._size = size
+        self._elements_type = elements_type
+
+    def __repr__(self) -> str:
+        return f"array[{self._size}, {self._elements_type}]"
+
+    def is_array_type(self) -> bool:
+        """Returns true iff is a list type."""
+        return True
+
+    @property
+    def elements_type(self) -> Type:
+        """Returns the type of elements in this list."""
+        return self._elements_type
+
+    @property
+    def size(self) -> int:
+        """Returns the type of elements in this list."""
+        return self._size
+
+
 BOOL = _BoolType()
 TIME = _TimeType()
 
@@ -303,6 +332,13 @@ def is_compatible_type(
         assert isinstance(t_left, _UserType) and isinstance(t_right, _UserType)
         # compatible if t_right is a subclass of t_left
         return t_left in t_right.ancestors
+    if t_left.is_array_type() or t_right.is_array_type():
+        if t_right.is_array_type() and t_right.is_array_type():
+            assert isinstance(t_left, _ArrayType) and isinstance(t_right, _ArrayType)
+            assert t_left.size == t_right.size
+            return is_compatible_type(t_left.elements_type, t_right.elements_type)
+        else:
+            return False
     if not (
         (t_left.is_int_type() and t_right.is_int_type())
         or (t_left.is_real_type() and t_right.is_real_type())

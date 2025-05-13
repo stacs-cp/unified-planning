@@ -146,9 +146,20 @@ class FluentsSetMixin:
                 warn(msg)
         self._fluents.append(fluent)
         if not default_initial_value is None:
+            assert not (type(default_initial_value) == list), \
+                f"The default initial value must match the type of the deepest elements in the array structure."
             (v_exp,) = self.environment.expression_manager.auto_promote(
                 default_initial_value
             )
+            if fluent.type.is_array_type():
+                this_fluent = fluent.type
+                domain = []
+                while this_fluent.is_array_type():
+                    domain.append(list(range(this_fluent.size)))
+                    this_fluent = this_fluent.elements_type
+                assert this_fluent.is_compatible(v_exp.type), \
+                    (f"Default initial value: {default_initial_value} does not match the type of the deepest elements "
+                     f"in the array structure.")
             self._fluents_defaults[fluent] = v_exp
         elif fluent.type in self._initial_defaults:
             self._fluents_defaults[fluent] = self._initial_defaults[fluent.type]

@@ -20,6 +20,7 @@ from unified_planning.model.types import (
     Type,
     _IntType,
     _RealType,
+    _ArrayType,
     _UserType,
     BOOL,
     TIME,
@@ -41,6 +42,7 @@ class TypeManager:
         self._bool = BOOL
         self._ints: Dict[Tuple[Optional[int], Optional[int]], Type] = {}
         self._reals: Dict[Tuple[Optional[Fraction], Optional[Fraction]], Type] = {}
+        self._arrays: Dict[Tuple[int, Type], Type] = {}
         self._user_types: Dict[Tuple[str, Optional[Type]], Type] = {}
         self._movable_types: Dict[Tuple[str, Optional[Type]], Type] = {}
         self._configuration_types: Dict[Tuple[str, OccupancyMap, int], Type] = {}
@@ -60,6 +62,9 @@ class TypeManager:
         elif type.is_real_type():
             assert isinstance(type, _RealType)
             return self._reals.get((type.lower_bound, type.upper_bound), None) == type
+        elif type.is_array_type():
+            assert isinstance(type, _ArrayType)
+            return self._arrays.get((type.size, type.elements_type), None) == type
         elif type.is_time_type():
             return type == TIME
         elif type.is_movable_type():
@@ -130,6 +135,23 @@ class TypeManager:
             rt = _RealType(lower_bound, upper_bound)
             self._reals[k] = rt
             return rt
+
+    def ArrayType(
+            self,
+            size: int,
+            elements_type: Type = None
+    ) -> Type:
+        """Returns the list type with a specific element type."""
+        #assert size > 1, "Size of ArrayType must be greater than 1."
+        if elements_type is None:
+            elements_type = self.BoolType()
+        k = (size, elements_type)
+        if k in self._arrays:
+            return self._arrays[k]
+        else:
+            at = _ArrayType(size, elements_type)
+            self._arrays[k] = at
+            return at
 
     def UserType(self, name: str, father: Optional[Type] = None) -> Type:
         """

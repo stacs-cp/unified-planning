@@ -62,7 +62,7 @@ class Effect:
         value: "up.model.fnode.FNode",
         condition: "up.model.fnode.FNode",
         kind: EffectKind = EffectKind.ASSIGN,
-        forall: Iterable["up.model.variable.Variable"] = tuple(),
+        forall: Iterable[Union["up.model.variable.Variable", "up.model.range_variable.RangeVariable"]] = tuple(),
     ):
         fve = fluent.environment.free_vars_extractor
         fluents_in_fluent = set(fve.get(fluent))
@@ -76,15 +76,15 @@ class Effect:
         self._condition = condition
         self._kind = kind
         fvo = fluent.environment.free_vars_oracle
-        free_vars: Set["up.model.variable.Variable"] = set(
+        free_vars: Set[Union["up.model.variable.Variable", "up.model.range_variable.RangeVariable"]] = set(
             fvo.get_free_variables(fluent)
         )
         free_vars.update(fvo.get_free_variables(value))
         free_vars.update(fvo.get_free_variables(condition))
 
-        def free_vars_without_duplicates() -> Iterator["up.model.variable.Variable"]:
+        def free_vars_without_duplicates() -> Iterator[Union["up.model.variable.Variable", "up.model.range_variable.RangeVariable"]]:
             # store seen variables to avoid duplicates
-            seen: Set["up.model.variable.Variable"] = set()
+            seen: Set[Union["up.model.variable.Variable", "up.model.range_variable.RangeVariable"]] = set()
             for v in forall:
                 if v in free_vars and v not in seen:
                     seen.add(v)
@@ -98,7 +98,7 @@ class Effect:
                     f"Some variables in the effect are unbounded: {unbounded_vars}"
                 )
 
-        self._forall: Tuple["up.model.variable.Variable", ...] = tuple(
+        self._forall: Tuple[Union["up.model.variable.Variable", "up.model.range_variable.RangeVariable"], ...] = tuple(
             free_vars_without_duplicates()
         )
         assert (
@@ -205,7 +205,7 @@ class Effect:
         return self._kind
 
     @property
-    def forall(self) -> Tuple["up.model.variable.Variable", ...]:
+    def forall(self) -> Tuple[Union["up.model.variable.Variable", "up.model.range_variable.RangeVariable"], ...]:
         """Returns the `Variables` that are universally quantified in this `Effect`."""
         return self._forall
 
