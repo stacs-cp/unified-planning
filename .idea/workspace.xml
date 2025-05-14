@@ -5,37 +5,7 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="7c60bccf-105d-46ba-a2c0-79b47893c82f" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/unified_planning/engines/compilers/count_int_remover.py" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/unified_planning/engines/compilers/count_remover.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/unified_planning/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/unified_planning/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/unified_planning/engines/compilers/usertype_fluents_remover.py" beforeDir="false" afterPath="$PROJECT_DIR$/unified_planning/engines/compilers/usertype_fluents_remover.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/unified_planning/engines/compilers/utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/unified_planning/engines/compilers/utils.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/unified_planning/engines/factory.py" beforeDir="false" afterPath="$PROJECT_DIR$/unified_planning/engines/factory.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/unified_planning/engines/mixins/compiler.py" beforeDir="false" afterPath="$PROJECT_DIR$/unified_planning/engines/mixins/compiler.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/unified_planning/grpc/proto_reader.py" beforeDir="false" afterPath="$PROJECT_DIR$/unified_planning/grpc/proto_reader.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/unified_planning/grpc/proto_writer.py" beforeDir="false" afterPath="$PROJECT_DIR$/unified_planning/grpc/proto_writer.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/unified_planning/grpc/unified_planning.proto" beforeDir="false" afterPath="$PROJECT_DIR$/unified_planning/grpc/unified_planning.proto" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/unified_planning/interop/to_tarski.py" beforeDir="false" afterPath="$PROJECT_DIR$/unified_planning/interop/to_tarski.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/unified_planning/io/anml_writer.py" beforeDir="false" afterPath="$PROJECT_DIR$/unified_planning/io/anml_writer.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/unified_planning/io/pddl_writer.py" beforeDir="false" afterPath="$PROJECT_DIR$/unified_planning/io/pddl_writer.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/unified_planning/model/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/unified_planning/model/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/unified_planning/model/effect.py" beforeDir="false" afterPath="$PROJECT_DIR$/unified_planning/model/effect.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/unified_planning/model/expression.py" beforeDir="false" afterPath="$PROJECT_DIR$/unified_planning/model/expression.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/unified_planning/model/fluent.py" beforeDir="false" afterPath="$PROJECT_DIR$/unified_planning/model/fluent.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/unified_planning/model/fnode.py" beforeDir="false" afterPath="$PROJECT_DIR$/unified_planning/model/fnode.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/unified_planning/model/mixins/fluents_set.py" beforeDir="false" afterPath="$PROJECT_DIR$/unified_planning/model/mixins/fluents_set.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/unified_planning/model/mixins/initial_state.py" beforeDir="false" afterPath="$PROJECT_DIR$/unified_planning/model/mixins/initial_state.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/unified_planning/model/multi_agent/ma_problem.py" beforeDir="false" afterPath="$PROJECT_DIR$/unified_planning/model/multi_agent/ma_problem.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/unified_planning/model/operators.py" beforeDir="false" afterPath="$PROJECT_DIR$/unified_planning/model/operators.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/unified_planning/model/problem.py" beforeDir="false" afterPath="$PROJECT_DIR$/unified_planning/model/problem.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/unified_planning/model/problem_kind.py" beforeDir="false" afterPath="$PROJECT_DIR$/unified_planning/model/problem_kind.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/unified_planning/model/type_manager.py" beforeDir="false" afterPath="$PROJECT_DIR$/unified_planning/model/type_manager.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/unified_planning/model/types.py" beforeDir="false" afterPath="$PROJECT_DIR$/unified_planning/model/types.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/unified_planning/model/walkers/identitydag.py" beforeDir="false" afterPath="$PROJECT_DIR$/unified_planning/model/walkers/identitydag.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/unified_planning/model/walkers/names_extractor.py" beforeDir="false" afterPath="$PROJECT_DIR$/unified_planning/model/walkers/names_extractor.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/unified_planning/model/walkers/simplifier.py" beforeDir="false" afterPath="$PROJECT_DIR$/unified_planning/model/walkers/simplifier.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/unified_planning/model/walkers/type_checker.py" beforeDir="false" afterPath="$PROJECT_DIR$/unified_planning/model/walkers/type_checker.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/unified_planning/shortcuts.py" beforeDir="false" afterPath="$PROJECT_DIR$/unified_planning/shortcuts.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -185,7 +155,7 @@
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "WebServerToolWindowFactoryState": "false",
     "git-widget-placeholder": "extensions",
-    "last_opened_file_path": "/Users/cds26/PycharmProjects/unified-planning/unified_planning/model",
+    "last_opened_file_path": "/Users/cds26/PycharmProjects/unified-planning/experiments",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.tslint": "true",
     "node.js.selected.package.eslint": "(autodetect)",
@@ -198,11 +168,11 @@
 }]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/experiments" />
       <recent name="$PROJECT_DIR$/unified_planning/model" />
       <recent name="$PROJECT_DIR$/unified_planning/engines/compilers" />
       <recent name="$PROJECT_DIR$/experiments/sokoban" />
       <recent name="$PROJECT_DIR$/experiments/rush-hour" />
-      <recent name="$PROJECT_DIR$/experiments/plotting" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
       <recent name="$PROJECT_DIR$/experiments/puzznic/instances" />
@@ -415,7 +385,7 @@
       <workItem from="1747050812053" duration="13522000" />
       <workItem from="1747143916494" duration="1455000" />
       <workItem from="1747150543301" duration="952000" />
-      <workItem from="1747151507936" duration="4337000" />
+      <workItem from="1747151507936" duration="5916000" />
     </task>
     <servers />
   </component>
@@ -486,8 +456,8 @@
     <SUITE FILE_PATH="coverage/unified_planning$Sokoban2.coverage" NAME="Sokoban2 Coverage Results" MODIFIED="1746570014440" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/sokoban" />
     <SUITE FILE_PATH="coverage/unified_planning$type_checker.coverage" NAME="type_checker Coverage Results" MODIFIED="1727708688725" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/unified_planning/model/walkers" />
     <SUITE FILE_PATH="coverage/unified_planning$test2.coverage" NAME="test2 Coverage Results" MODIFIED="1729169186856" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/test" />
-    <SUITE FILE_PATH="coverage/unified_planning$factory.coverage" NAME="factory Coverage Results" MODIFIED="1739183528930" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/unified_planning/engines" />
     <SUITE FILE_PATH="coverage/unified_planning$8Puzzle.coverage" NAME="8Puzzle Coverage Results" MODIFIED="1739196737316" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/8-puzzle" />
+    <SUITE FILE_PATH="coverage/unified_planning$factory.coverage" NAME="factory Coverage Results" MODIFIED="1739183528930" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/unified_planning/engines" />
     <SUITE FILE_PATH="coverage/unified_planning$count_remover.coverage" NAME="count_remover Coverage Results" MODIFIED="1735145065158" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/unified_planning/engines/compilers" />
     <SUITE FILE_PATH="coverage/unified_planning$int_parameter_actions_remover.coverage" NAME="int_parameter_actions_remover Coverage Results" MODIFIED="1746542964415" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/unified_planning/engines/compilers" />
     <SUITE FILE_PATH="coverage/unified_planning$pddl_writer.coverage" NAME="pddl_writer Coverage Results" MODIFIED="1729711188839" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/unified_planning/io" />
@@ -516,7 +486,7 @@
     <SUITE FILE_PATH="coverage/unified_planning$baba_is_you.coverage" NAME="baba-is-you Coverage Results" MODIFIED="1727278959827" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/baba-is-you" />
     <SUITE FILE_PATH="coverage/unified_planning$8Puzzle_numeric.coverage" NAME="8Puzzle_numeric Coverage Results" MODIFIED="1739280578581" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/8-puzzle" />
     <SUITE FILE_PATH="coverage/unified_planning$PancakeSortPlus.coverage" NAME="PancakeSortPlus Coverage Results" MODIFIED="1739729057608" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/pancake-sort-plus" />
-    <SUITE FILE_PATH="coverage/unified_planning$Sokoban.coverage" NAME="Sokoban Coverage Results" MODIFIED="1746613208290" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/sokoban" />
+    <SUITE FILE_PATH="coverage/unified_planning$Sokoban.coverage" NAME="Sokoban Coverage Results" MODIFIED="1747241860940" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/sokoban" />
     <SUITE FILE_PATH="coverage/unified_planning$expression.coverage" NAME="expression Coverage Results" MODIFIED="1727702628689" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/unified_planning/model" />
     <SUITE FILE_PATH="coverage/unified_planning$Puzznic_pddl.coverage" NAME="Puzznic_pddl Coverage Results" MODIFIED="1730836239867" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/puzznic" />
     <SUITE FILE_PATH="coverage/unified_planning$RushHour.coverage" NAME="RushHour Coverage Results" MODIFIED="1739900430234" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/rush-hour" />
