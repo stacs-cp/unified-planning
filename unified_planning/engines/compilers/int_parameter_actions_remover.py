@@ -223,10 +223,9 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             return em.create_node(node.node_type, tuple(new_args)).simplify()
 
     def _is_problematic(self, node_type, args) -> Union[list[FNode], None]:
-        # OperatorKind.IFF,
         # OperatorKind.EXISTS,
         # OperatorKind.FORALL,
-        if node_type in {OperatorKind.NOT, OperatorKind.EQUALS, OperatorKind.AND}:
+        if node_type in {OperatorKind.NOT, OperatorKind.EQUALS, OperatorKind.IFF, OperatorKind.AND}:
             if None in args:
                 return None
         elif node_type in {OperatorKind.OR, OperatorKind.COUNT}:
