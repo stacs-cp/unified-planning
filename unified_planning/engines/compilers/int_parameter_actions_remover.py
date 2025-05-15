@@ -39,7 +39,7 @@ from unified_planning.engines.compilers.utils import (
 from typing import Dict, List, Optional, Tuple, Any, OrderedDict, Union
 from functools import partial
 
-from unified_planning.shortcuts import Int, FALSE
+from unified_planning.shortcuts import Int, FALSE, TRUE, Not
 
 
 class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
@@ -214,21 +214,22 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                         return None
                     return em.create_node(new_node_type, tuple(new_args)).simplify()
             new_args = [self._manage_node(new_problem, arg, integer_parameters, instantiations) for arg in node.args]
-            if None in new_args:
+            if node.node_type in {OperatorKind.IMPLIES} and new_args[1] is None:
+                return Not(new_args[0])
+            elif None in new_args:
                 new_args = self._is_problematic(node.node_type, new_args)
             if new_args is None:
                 return None
             return em.create_node(node.node_type, tuple(new_args)).simplify()
 
     def _is_problematic(self, node_type, args) -> Union[list[FNode], None]:
-        # OperatorKind.IMPLIES,
         # OperatorKind.IFF,
         # OperatorKind.EXISTS,
         # OperatorKind.FORALL,
-        if node_type == OperatorKind.NOT or node_type == OperatorKind.EQUALS or node_type == OperatorKind.AND:
+        if node_type in {OperatorKind.NOT, OperatorKind.EQUALS, OperatorKind.AND}:
             if None in args:
                 return None
-        elif node_type == OperatorKind.OR or node_type == OperatorKind.COUNT:
+        elif node_type in {OperatorKind.OR, OperatorKind.COUNT}:
             return [arg for arg in args if arg is not None]
         return args
 
