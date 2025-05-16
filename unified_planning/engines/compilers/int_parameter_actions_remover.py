@@ -214,9 +214,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                         return None
                     return em.create_node(new_node_type, tuple(new_args)).simplify()
             new_args = [self._manage_node(new_problem, arg, integer_parameters, instantiations) for arg in node.args]
-            if node.node_type in {OperatorKind.IMPLIES} and new_args[1] is None:
-                return Not(new_args[0])
-            elif None in new_args:
+            if None in new_args:
                 new_args = self._is_problematic(node.node_type, new_args)
             if new_args is None:
                 return None
@@ -230,6 +228,9 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                 return None
         elif node_type in {OperatorKind.OR, OperatorKind.COUNT}:
             return [arg for arg in args if arg is not None]
+        elif node_type in {OperatorKind.IMPLIES}:
+            if args[1] is None:
+                return [args[0], FALSE()]
         return args
 
     def _process_forall(self, forall):
