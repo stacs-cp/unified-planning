@@ -36,7 +36,8 @@ from unified_planning.engines.compilers.utils import (
 )
 from typing import Dict, Optional, OrderedDict, Set, Iterator
 from functools import partial
-from unified_planning.shortcuts import Exists, And, Or, Equals
+from unified_planning.shortcuts import Exists, And, Or, Equals, Int
+
 
 class IntegersRemover(engines.engine.Engine, CompilerMixin):
     """
@@ -188,13 +189,13 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
         if sub_operation is not None:
             target_value = self._get_new_node(old_problem, new_problem, value)
             first_arg = self._get_new_node(old_problem, new_problem, inner_expr.arg(0))
+            print("in construction...")
             if sub_operation == 'plus':
+                sub_operation = 'minus'
                 max_value = 0
                 for a in inner_expr.args:
                     max_value += a.type.upper_bound
                 self._add_object_numbers(new_problem, 0, max_value)
-            else:
-                print(f"Operation {sub_operation} not supported yet!")
             self._add_relationships(new_problem, sub_operation)
 
             if len(inner_expr.args) == 2:
@@ -228,6 +229,7 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
             object_name = f'n{node.int_constant_value()}'
             new_number = model.Object(object_name, number_user_type)
             if not new_problem.has_object(object_name):
+                #return None
                 self._add_object_numbers(new_problem, node.int_constant_value(), node.int_constant_value())
             return em.ObjectExp(new_number)
         elif node.is_fluent_exp() and node.fluent().type.is_int_type():
@@ -265,6 +267,8 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                     for v in node.variables()
                 ]
                 return em.create_node(node.node_type, tuple(new_args), payload=tuple(new_variables))
+            if None in new_args:
+                return None
             return em.create_node(node.node_type, tuple(new_args))
 
     def _convert_effect(
@@ -421,6 +425,7 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                         new_problem.set_initial_value(k, v)
 
         for action in problem.actions:
+            remove_action = False
             new_action = action.clone()
             new_action.name = get_fresh_name(new_problem, action.name)
             new_action.clear_preconditions()
@@ -432,16 +437,44 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                 if effect.is_increase() or effect.is_decrease():
                     for ne in self._convert_effect(effect, problem, new_problem):
                         new_action.add_effect(ne.fluent, ne.value, ne.condition, ne.forall)
-                        #new_action._add_effect_instance(ne)
-                        # new_action.add_effect(ne.fluent, ne.value, ne.condition)
                 else:
                     new_node = self._get_new_node(problem, new_problem, effect.fluent)
-                    new_value = self._get_new_node(problem, new_problem, effect.value)
                     new_condition = self._get_new_node(problem, new_problem, effect.condition)
-                    new_action.add_effect(new_node, new_value, new_condition, effect.forall)
 
-            new_to_old[new_action] = action
-            new_problem.add_action(new_action)
+                    #operation_map = {
+                    #    OperatorKind.PLUS: (lambda a, b: a + b),
+                    #    OperatorKind.MINUS: (lambda a, b: a - b),
+                    #    OperatorKind.DIV: (lambda a, b: a / b),
+                    #    OperatorKind.TIMES: (lambda a, b: a * b),
+                    #}
+                    #op_func = operation_map.get(effect.value.node_type)
+                    #if op_func is not None:
+                    #    arg0, arg1 = effect.value.arg(0), effect.value.arg(1)
+                    #    if arg0.is_fluent_exp():
+                    #        variable, constant = arg0, arg1
+                    #        op = lambda val: op_func(val, constant)
+                    #    else:
+                    #        variable, constant = arg1, arg0
+                    #        op = lambda val: op_func(constant, val)
+#
+                    #    for v in range(variable.type.lower_bound, variable.type.upper_bound + 1):
+                    #        new_value = op(v).simplify()
+                    #        assert new_value.is_int_constant(), f"Operation not supported as an external expression!"
+                    #        # if the value is inside the defined integer fluent range, if not, that instantiation of the effect is deleted!
+                    #        if effect.fluent.type.lower_bound <= new_value.constant_value() <= effect.fluent.type.upper_bound:
+                    #            new_variable = self._get_new_node(problem, new_problem, new_value)
+                    #            if new_variable is not None:
+                    #                new_sub_condition = And(new_condition, Equals(self._get_new_node(problem, new_problem, variable), self._get_new_node(problem, new_problem, Int(v)))).simplify()
+                    #                new_action.add_effect(new_node, new_variable, new_sub_condition, effect.forall)
+                    #            else:
+                    #                remove_action = True
+                    #                break
+                    #else:
+                    new_value = self._get_new_node(problem, new_problem, effect.value)
+                    new_action.add_effect(new_node, new_value, new_condition, effect.forall)
+            if not remove_action:
+                new_to_old[new_action] = action
+                new_problem.add_action(new_action)
 
         for goal in problem.goals:
             new_problem.add_goal(self._get_new_node(problem, new_problem, goal))

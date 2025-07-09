@@ -54,7 +54,6 @@ TimeExpression = Union[
 ]
 ListExpression = Union[
     list,
-    List,
     List["Expression"],
 ]
 Expression = Union[

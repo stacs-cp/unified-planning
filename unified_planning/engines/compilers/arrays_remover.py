@@ -189,10 +189,10 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                     print(f"Fluent {new_fluent.name} out of range!")
                     exit(1)
                 else:
-                    return [FALSE() if node.fluent().type.is_bool_type() else None]
+                    print(f"Unexpected error - {new_fluent.name} out of range!")
+                    exit(1)
         elif node.is_parameter_exp() or node.is_constant():
             return [node]
-        # Arrays
         else:
             if node.arg(0).type.is_array_type():
                 assert all(arg.type.is_array_type() for arg in node.args), "Argument is not an array type"
@@ -203,18 +203,17 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                         self._process_arg(new_problem, arg, combination)
                         for arg in node.args
                     ]
-                    if None in new_args:
-                        new_nodes.append(FALSE() if node.type.is_bool_type() else None)
-                    else:
-                        new_nodes.append(em.create_node(node.node_type, tuple(new_args)).simplify())
+                    new_nodes.append(em.create_node(node.node_type, tuple(new_args)).simplify())
                 return new_nodes
             else:
                 new_args = [
                     nla for arg in node.args for nla in self._get_new_nodes(new_problem, arg)
                 ]
-                if None in new_args:
-                    return [FALSE() if node.type.is_bool_type() else None]
-                return [em.create_node(node.node_type, tuple(new_args)).simplify()]
+                if node.is_exists() or node.is_forall():
+                    return [em.create_node(node.node_type, tuple(new_args), tuple(node.variables())).simplify()]
+                else:
+                    return [em.create_node(node.node_type, tuple(new_args)).simplify()]
+
 
     def get_element_value(self, v, combination):
         """Obtain the value of the element for a given combination of access."""
@@ -293,7 +292,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
             for precondition in action.preconditions:
                 new_preconditions = self._get_new_nodes(new_problem, precondition)
                 if FALSE() in new_preconditions:
-                    #print(f"Action {action.name} removed as it will never be applied.")
+                    print(f"Action {action.name} removed as it will never be applied.")
                     break
                 for np in new_preconditions:
                     new_action.add_precondition(np)
@@ -310,7 +309,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                         else:
                             new_action.add_effect(new_fnode, new_value, new_condition, effect.forall)
                     else:
-                        # print(f"Effect {effect} not added.")
+                        print(f"Effect {effect} not added.")
                         continue
                 else:
                     new_problem.add_action(new_action)

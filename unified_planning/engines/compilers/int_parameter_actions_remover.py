@@ -181,8 +181,8 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                 fluent = node.fluent()
                 new_name = self._get_fluent_name(new_problem, fluent.name, integer_parameters, instantiations)
                 if new_name is None:
-                    return FALSE() if node.fluent().type.is_bool_type() else None
-                return Fluent(new_name, fluent.type, fluent.signature, fluent.environment)(*fluent.signature)
+                    return None
+                return Fluent(new_name, fluent.type, fluent.signature, fluent.environment)(*node.args)
             return node
         elif node.is_parameter_exp():
             if integer_parameters.get(node.parameter().name) is not None:
@@ -213,25 +213,29 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                     if new_args is None:
                         return None
                     return em.create_node(new_node_type, tuple(new_args)).simplify()
+                else:
+                    new_args = [self._manage_node(new_problem, arg, integer_parameters, instantiations) for arg in
+                                node.args]
+                    if None in new_args:
+                        new_args = self._is_problematic(node.node_type, new_args)
+                    if new_args is None or new_args is []:
+                        return None
+                    return em.create_node(node.node_type, tuple(new_args), new_forall).simplify()
             new_args = [self._manage_node(new_problem, arg, integer_parameters, instantiations) for arg in node.args]
             if None in new_args:
                 new_args = self._is_problematic(node.node_type, new_args)
-            if new_args is None:
+            if new_args is None or new_args is []:
                 return None
             return em.create_node(node.node_type, tuple(new_args)).simplify()
 
     def _is_problematic(self, node_type, args) -> Union[list[FNode], None]:
-        # OperatorKind.EXISTS,
-        # OperatorKind.FORALL,
-        if node_type in {OperatorKind.NOT, OperatorKind.EQUALS, OperatorKind.IFF, OperatorKind.AND}:
-            if None in args:
-                return None
-        elif node_type in {OperatorKind.OR, OperatorKind.COUNT}:
+        if node_type in {OperatorKind.OR, OperatorKind.COUNT, OperatorKind.EXISTS}:
             return [arg for arg in args if arg is not None]
         elif node_type in {OperatorKind.IMPLIES}:
-            if args[1] is None:
-                return [args[0], FALSE()]
-        return args
+            return [args[0], FALSE()] if args[1] is None else args[1]
+        # LE, LT, NOT, EQUALS, FORALL, IFF, AND, ARITHMETIC OPERATIONS ...
+        else:
+            return None if None in args else args
 
     def _process_forall(self, forall):
         new_forall = []
@@ -348,16 +352,21 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                         instantiation_combinations = self._get_instantiations(ranges) if ranges else [()]
 
                         for ti in instantiation_combinations:
-                            # ti = (1,0) -> a,b
                             this_instantiations = instantiations + ti
                             new_fluent = self._manage_node(new_problem, effect.fluent, this_integer_parameters, this_instantiations)
                             new_value = self._manage_node(new_problem, effect.value, this_integer_parameters, this_instantiations)
                             new_condition = self._manage_node(new_problem, effect.condition, this_integer_parameters, this_instantiations)
-                            if new_fluent is not None and new_value is not None: # condition ??
-                                self._add_effect(new_action, effect_type, new_fluent, new_value, new_condition, new_forall)
-                    #if new_action.effects:
-                    new_problem.add_action(new_action)
-                    trace_back_map[new_action] = (action, instantiations)
+                            if new_condition not in (None, FALSE()):
+                                if None not in (new_fluent, new_value):
+                                    self._add_effect(new_action, effect_type, new_fluent, new_value, new_condition, new_forall)
+                                else:
+                                    remove_action = True
+                                    break
+                        if remove_action:
+                            break
+                    if not remove_action and new_action.effects != []:
+                        new_problem.add_action(new_action)
+                        trace_back_map[new_action] = (action, instantiations)
 
         for qm in problem.quality_metrics:
             if qm.is_minimize_sequential_plan_length() or qm.is_minimize_makespan():
