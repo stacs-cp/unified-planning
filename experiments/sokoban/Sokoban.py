@@ -1,11 +1,16 @@
 import subprocess
-
 from experiments import compilation_solving
 from unified_planning.shortcuts import *
-from unified_planning.engines import CompilationKind
+import argparse
 
-compilation = 'up'
-solving = 'fast-downward'
+# Parser
+parser = argparse.ArgumentParser(description="Solve Sokoban")
+parser.add_argument('--compilation', type=str, help='Compilation strategy to apply')
+parser.add_argument('--solving', type=str, help='Planner to use')
+
+args = parser.parse_args()
+compilation = args.compilation
+solving = args.solving
 
 instance = subprocess.run(['python3', 'read_instance.py', 'i_1'], text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 output = instance.stdout.split("---")
@@ -17,7 +22,7 @@ rows = eval(output[3].strip())
 columns = eval(output[4].strip())
 
 # ---------------------------------------------------- Problem ---------------------------------------------------------
-
+# Sokoban model with an action per direction of movement.
 sokoban_problem = Problem('sokoban_problem')
 
 Pattern = UserType('Pattern')
@@ -121,13 +126,6 @@ costs: Dict[Action, Expression] = {
 }
 sokoban_problem.add_quality_metric(MinimizeActionCosts(costs))
 
-if compilation == 'up':
-    compilation_kinds_to_apply = [
-        CompilationKind.INT_PARAMETER_ACTIONS_REMOVING,
-        CompilationKind.ARRAYS_REMOVING,
-        CompilationKind.USERTYPE_FLUENTS_REMOVING,
-    ]
-else:
-    raise ValueError(f"Unsupported compilation type: {compilation}")
+assert compilation in ['up'], f"Unsupported compilation type: {compilation}"
 
-compilation_solving.compile_and_solve(sokoban_problem, solving, compilation_kinds_to_apply=compilation_kinds_to_apply)
+compilation_solving.compile_and_solve(sokoban_problem, solving, compilation)

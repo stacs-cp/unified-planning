@@ -1,9 +1,15 @@
 from unified_planning.shortcuts import *
-from unified_planning.engines import CompilationKind
 from experiments import compilation_solving
+import argparse
 
-compilation = 'count'
-solving = 'fast-downward'
+# Parser
+parser = argparse.ArgumentParser(description="Solve Plotting")
+parser.add_argument('--compilation', type=str, help='Compilation strategy to apply')
+parser.add_argument('--solving', type=str, help='Planner to use')
+
+args = parser.parse_args()
+compilation = args.compilation
+solving = args.solving
 
 n = 5
 instance = ['RRRG','RGGG']
@@ -67,14 +73,14 @@ plotting_problem.add_action(shoot_partial_row)
 
 
 shoot_column = InstantaneousAction('shoot_column', p=Colour, c=IntType(0, columns-1),
-                                   l=IntType(0, rows-1))
+                                   l=IntType(0, rows))
 p = shoot_column.parameter('p')
 c = shoot_column.parameter('c')
 l = shoot_column.parameter('l')
 
 shoot_column.add_precondition(Not(Or(Equals(p, W), Equals(p, N))))
 shoot_column.add_precondition(Or(Equals(p, hand), Equals(W, hand)))
-shoot_column.add_precondition(Or(Equals(l, lr),And(Not(Equals(blocks[l+1][c], p)),
+shoot_column.add_precondition(Or(Equals(l, lr), And(Not(Equals(blocks[l+1][c], p)),
                                                    Not(Equals(blocks[l+1][c], N)))))
 b = RangeVariable('b', 0, l)
 shoot_column.add_precondition(Forall(Or(Equals(blocks[b][c], p), Equals(blocks[b][c], N)), b))
@@ -116,8 +122,8 @@ shoot_row_and_column.add_effect(blocks[0][c], N, forall=[c])
 shoot_row_and_column.add_effect(blocks[a][c], blocks[a-1][c], forall=[a,c])
 b = RangeVariable('b', 0, r-1)
 shoot_row_and_column.add_effect(blocks[l-b][lc], blocks[b][lc], forall=[b])
-n = RangeVariable('n', 0, l-r)
-shoot_row_and_column.add_effect(blocks[n][lc], N, forall=[n])
+x = RangeVariable('x', 0, l-r)
+shoot_row_and_column.add_effect(blocks[x][lc], N, forall=[x])
 
 plotting_problem.add_action(shoot_row_and_column)
 
@@ -156,37 +162,6 @@ costs: Dict[Action, Expression] = {
 }
 plotting_problem.add_quality_metric(MinimizeActionCosts(costs))
 
-if compilation == 'count':
-    compilation_kinds_to_apply = [
-        CompilationKind.INT_PARAMETER_ACTIONS_REMOVING,
-        CompilationKind.ARRAYS_REMOVING,
-        CompilationKind.COUNT_REMOVING,
-        CompilationKind.USERTYPE_FLUENTS_REMOVING,
-    ]
-elif compilation == 'count-int':
-    compilation_kinds_to_apply = [
-        CompilationKind.INT_PARAMETER_ACTIONS_REMOVING,
-        CompilationKind.ARRAYS_REMOVING,
-        CompilationKind.COUNT_INT_REMOVING,
-        CompilationKind.INTEGERS_REMOVING,
-        CompilationKind.USERTYPE_FLUENTS_REMOVING,
-    ]
-elif compilation == 'count-int-numeric':
-    compilation_kinds_to_apply = [
-        CompilationKind.INT_PARAMETER_ACTIONS_REMOVING,
-        CompilationKind.ARRAYS_REMOVING,
-        CompilationKind.COUNT_INT_REMOVING,
-        CompilationKind.USERTYPE_FLUENTS_REMOVING,
-    ]
-elif compilation == 'logaritmic':
-    compilation_kinds_to_apply = [
-        CompilationKind.INT_PARAMETER_ACTIONS_REMOVING,
-        CompilationKind.ARRAYS_REMOVING,
-        CompilationKind.COUNT_INT_REMOVING,
-        CompilationKind.USERTYPE_FLUENTS_REMOVING,
-        CompilationKind.INT_ARRAYS_BITS_REMOVING,
-    ]
-else:
-    raise ValueError(f"Unsupported compilation type: {compilation}")
+assert compilation in ['count', 'count-int', 'count-int-numeric'], f"Unsupported compilation type: {compilation}"
 
-compilation_solving.compile_and_solve(plotting_problem, solving, compilation_kinds_to_apply=compilation_kinds_to_apply)
+compilation_solving.compile_and_solve(plotting_problem, solving, compilation)

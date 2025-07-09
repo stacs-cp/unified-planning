@@ -1,9 +1,15 @@
 from unified_planning.shortcuts import *
-from unified_planning.engines import CompilationKind
 from experiments import compilation_solving
+import argparse
 
-compilation = 'ut-integers'
-solving = 'fast-downward'
+# Parser
+parser = argparse.ArgumentParser(description="Solve Pancake Sorting Numeric")
+parser.add_argument('--compilation', type=str, help='Compilation strategy to apply')
+parser.add_argument('--solving', type=str, help='Planner to use')
+
+args = parser.parse_args()
+compilation = args.compilation
+solving = args.solving
 
 n = 5
 lower_bound = 0
@@ -32,24 +38,6 @@ costs: Dict[Action, Expression] = {
 }
 pancake_problem.add_quality_metric(MinimizeActionCosts(costs))
 
-if compilation == 'ut-integers':
-    compilation_kinds_to_apply = [
-        CompilationKind.INT_PARAMETER_ACTIONS_REMOVING,
-        CompilationKind.ARRAYS_REMOVING,
-        CompilationKind.INTEGERS_REMOVING,
-        CompilationKind.USERTYPE_FLUENTS_REMOVING,
-    ]
-elif compilation == 'logaritmic':
-    compilation_kinds_to_apply = [
-        CompilationKind.INT_PARAMETER_ACTIONS_REMOVING,
-        CompilationKind.INT_ARRAYS_BITS_REMOVING,
-    ]
-elif compilation == 'integers':
-    compilation_kinds_to_apply = [
-        CompilationKind.INT_PARAMETER_ACTIONS_REMOVING,
-        CompilationKind.ARRAYS_REMOVING,
-    ]
-else:
-    raise ValueError(f"Unsupported compilation type: {compilation}")
+assert compilation in ['integers', 'ut-integers', 'logarithmic'], f"Unsupported compilation type: {compilation}"
 
-compilation_solving.compile_and_solve(pancake_problem, solving, compilation_kinds_to_apply=compilation_kinds_to_apply)
+compilation_solving.compile_and_solve(pancake_problem, solving, compilation)

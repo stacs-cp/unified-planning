@@ -5,7 +5,21 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="7c60bccf-105d-46ba-a2c0-79b47893c82f" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/unified_planning/engines/compilers/utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/unified_planning/engines/compilers/utils.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/unified-planning.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/unified-planning.iml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/15-puzzle/15Puzzle.py" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/15-puzzle/15Puzzle.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/15-puzzle/15PuzzleNumeric.py" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/15-puzzle/15PuzzleNumeric.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/compilation_solving.py" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/compilation_solving.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/pancake-sorting/PancakeSorting.py" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/pancake-sorting/PancakeSorting.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/pancake-sorting/PancakeSortingNumeric.py" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/pancake-sorting/PancakeSortingNumeric.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/plotting/Plotting.py" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/plotting/Plotting.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/puzznic/Puzznic.py" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/puzznic/Puzznic.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/rush-hour/RushHour-subtyping.py" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/rush-hour/RushHour-subtyping.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/experiments/sokoban/Sokoban.py" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/sokoban/Sokoban.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/unified_planning/engines/compilers/arrays_remover.py" beforeDir="false" afterPath="$PROJECT_DIR$/unified_planning/engines/compilers/arrays_remover.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/unified_planning/engines/compilers/int_parameter_actions_remover.py" beforeDir="false" afterPath="$PROJECT_DIR$/unified_planning/engines/compilers/int_parameter_actions_remover.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/unified_planning/engines/compilers/integers_remover.py" beforeDir="false" afterPath="$PROJECT_DIR$/unified_planning/engines/compilers/integers_remover.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/unified_planning/model/expression.py" beforeDir="false" afterPath="$PROJECT_DIR$/unified_planning/model/expression.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -83,7 +97,6 @@
   &quot;associatedIndex&quot;: 8
 }</component>
   <component name="ProjectId" id="2YU5AraaukCMBQHOf5hit0YGmq2" />
-  <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
@@ -97,6 +110,7 @@
     "Python.8Puzzle.executor": "Run",
     "Python.8Puzzle_numeric.executor": "Run",
     "Python.Counters.executor": "Run",
+    "Python.KnightTour.executor": "Run",
     "Python.NPuzzle.executor": "Run",
     "Python.NPuzzleExplicit.executor": "Run",
     "Python.NPuzzleImplicit.executor": "Run",
@@ -115,9 +129,12 @@
     "Python.PuzznicPDDL.executor": "Run",
     "Python.Puzznic_pddl.executor": "Run",
     "Python.Puzznic_scoring.executor": "Run",
+    "Python.RushHour-bool-example.executor": "Run",
     "Python.RushHour-general.executor": "Run",
     "Python.RushHour-old.executor": "Run",
+    "Python.RushHour-subtyping.executor": "Run",
     "Python.RushHour.executor": "Run",
+    "Python.RushHour2.executor": "Run",
     "Python.RushHour_general_1.executor": "Run",
     "Python.RushHour_specific_1.executor": "Run",
     "Python.RushHour_specific_all.executor": "Run",
@@ -130,18 +147,22 @@
     "Python.arrays_and_integers_remover.executor": "Run",
     "Python.arrays_remover.executor": "Run",
     "Python.baba-is-you.executor": "Run",
+    "Python.compilation_solving.executor": "Run",
     "Python.count_remover.executor": "Run",
     "Python.dag.executor": "Run",
     "Python.effect.executor": "Run",
+    "Python.example.executor": "Run",
     "Python.expression.executor": "Run",
     "Python.factory.executor": "Run",
     "Python.int_arrays_bits_remover.executor": "Run",
     "Python.int_parameter_actions_remover.executor": "Run",
     "Python.integers_remover.executor": "Run",
     "Python.level0.executor": "Run",
+    "Python.pddl.executor": "Run",
     "Python.pddl_reader.executor": "Debug",
     "Python.pddl_writer.executor": "Run",
     "Python.prova.executor": "Run",
+    "Python.python experiments/<Domain>/<Domain>.py --compilation <Compilation> --solving <Solving>.executor": "Run",
     "Python.read_instance.executor": "Run",
     "Python.simplifier.executor": "Run",
     "Python.simulator.executor": "Run",
@@ -153,33 +174,34 @@
     "Python.usertype_fluents_remover.executor": "Run",
     "RunOnceActivity.OpenProjectViewOnStart": "true",
     "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.git.unshallow": "true",
     "WebServerToolWindowFactoryState": "false",
     "git-widget-placeholder": "extensions",
-    "last_opened_file_path": "/Users/cds26/PycharmProjects/unified-planning/experiments",
+    "last_opened_file_path": "/Users/cds26/PycharmProjects/unified-planning/experiments/folding",
     "node.js.detected.package.eslint": "true",
     "node.js.detected.package.tslint": "true",
     "node.js.selected.package.eslint": "(autodetect)",
     "node.js.selected.package.tslint": "(autodetect)",
     "nodejs_package_manager_path": "npm",
     "run.code.analysis.last.selected.profile": "pProject Default",
-    "settings.editor.selected.configurable": "project.propVCSSupport.DirectoryMappings",
+    "settings.editor.selected.configurable": "preferences.lookFeel",
     "vue.rearranger.settings.migration": "true"
   }
 }]]></component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/experiments/folding" />
       <recent name="$PROJECT_DIR$/experiments" />
-      <recent name="$PROJECT_DIR$/unified_planning/model" />
-      <recent name="$PROJECT_DIR$/unified_planning/engines/compilers" />
-      <recent name="$PROJECT_DIR$/experiments/sokoban" />
-      <recent name="$PROJECT_DIR$/experiments/rush-hour" />
+      <recent name="$PROJECT_DIR$/experiments/kight-tour" />
+      <recent name="$PROJECT_DIR$/experiments/15-puzzle" />
+      <recent name="$PROJECT_DIR$/experiments/puzznic" />
     </key>
     <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/experiments/folding" />
       <recent name="$PROJECT_DIR$/experiments/puzznic/instances" />
       <recent name="$PROJECT_DIR$/pytamer" />
       <recent name="$PROJECT_DIR$/experiments/test" />
       <recent name="$PROJECT_DIR$/experiments/test/levels" />
-      <recent name="$PROJECT_DIR$/venv/lib/python3.9/site-packages" />
     </key>
   </component>
   <component name="RunManager">
@@ -206,8 +228,32 @@
       <option name="INPUT_FILE" value="" />
       <method v="2" />
     </configuration>
+    <configuration name="python experiments/&lt;Domain&gt;/&lt;Domain&gt;.py --compilation &lt;Compilation&gt; --solving &lt;Solving&gt;" type="PythonConfigurationType" factoryName="Python" temporary="true">
+      <module name="unified-planning" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/experiments" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="SCRIPT_NAME" value="experiments/&lt;Domain&gt;/&lt;Domain&gt;.py" />
+      <option name="PARAMETERS" value="--compilation &lt;Compilation&gt; --solving &lt;Solving&gt;" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
     <recent_temporary>
       <list>
+        <item itemvalue="Python.python experiments/&lt;Domain&gt;/&lt;Domain&gt;.py --compilation &lt;Compilation&gt; --solving &lt;Solving&gt;" />
         <item itemvalue="Python.Puzznic" />
         <item itemvalue="Python.Puzznic" />
       </list>
@@ -216,8 +262,8 @@
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="bundled-js-predefined-d6986cc7102b-5c90d61e3bab-JavaScript-PY-242.23726.102" />
-        <option value="bundled-python-sdk-5e1850174b45-399fe30bd8c1-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-242.23726.102" />
+        <option value="bundled-js-predefined-d6986cc7102b-6a121458b545-JavaScript-PY-251.25410.159" />
+        <option value="bundled-python-sdk-e0ed3721d81e-36ea0e71a18c-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-251.25410.159" />
       </set>
     </attachedChunks>
   </component>
@@ -385,7 +431,16 @@
       <workItem from="1747050812053" duration="13522000" />
       <workItem from="1747143916494" duration="1455000" />
       <workItem from="1747150543301" duration="952000" />
-      <workItem from="1747151507936" duration="5916000" />
+      <workItem from="1747151507936" duration="6412000" />
+      <workItem from="1747308181821" duration="7247000" />
+      <workItem from="1747321203835" duration="4014000" />
+      <workItem from="1747389417411" duration="48736000" />
+      <workItem from="1747846091859" duration="2112000" />
+      <workItem from="1747911344707" duration="15000" />
+      <workItem from="1747911377182" duration="22629000" />
+      <workItem from="1748460497699" duration="9000" />
+      <workItem from="1749802879394" duration="27268000" />
+      <workItem from="1751203503862" duration="103819000" />
     </task>
     <servers />
   </component>
@@ -438,66 +493,74 @@
     </option>
   </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
-    <SUITE FILE_PATH="coverage/unified_planning$test.coverage" NAME="test Coverage Results" MODIFIED="1729257880357" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/test" />
-    <SUITE FILE_PATH="coverage/unified_planning$PlottingOld.coverage" NAME="PlottingOld Coverage Results" MODIFIED="1740154985736" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/plotting" />
-    <SUITE FILE_PATH="coverage/unified_planning$Counters.coverage" NAME="Counters Coverage Results" MODIFIED="1730391928093" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/counters" />
-    <SUITE FILE_PATH="coverage/unified_planning$usertype_fluents_remover.coverage" NAME="usertype_fluents_remover Coverage Results" MODIFIED="1730746389997" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/unified_planning/engines/compilers" />
-    <SUITE FILE_PATH="coverage/unified_planning$int_arrays_bits_remover.coverage" NAME="int_arrays_bits_remover Coverage Results" MODIFIED="1746022181553" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/unified_planning/engines/compilers" />
-    <SUITE FILE_PATH="coverage/unified_planning$prova.coverage" NAME="prova Coverage Results" MODIFIED="1741880217918" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/plotting" />
-    <SUITE FILE_PATH="coverage/unified_planning$PuzznicPDDL.coverage" NAME="PuzznicPDDL Coverage Results" MODIFIED="1730912924386" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/puzznic" />
-    <SUITE FILE_PATH="coverage/unified_planning$pytest_in_test_ada_py.coverage" NAME="pytest in test_ada.py Coverage Results" MODIFIED="1727712027512" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/test" />
-    <SUITE FILE_PATH="coverage/unified_planning$Plotting.coverage" NAME="Plotting Coverage Results" MODIFIED="1746022183880" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/plotting" />
-    <SUITE FILE_PATH="coverage/unified_planning$level0.coverage" NAME="level0 Coverage Results" MODIFIED="1729505957209" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/test" />
-    <SUITE FILE_PATH="coverage/unified_planning$NPuzzleExplicit.coverage" NAME="NPuzzleExplicit Coverage Results" MODIFIED="1741609325903" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/n-puzzle" />
-    <SUITE FILE_PATH="coverage/unified_planning$NPuzzleNumeric.coverage" NAME="NPuzzleNumeric Coverage Results" MODIFIED="1745602992735" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/n-puzzle" />
-    <SUITE FILE_PATH="coverage/unified_planning$PDDLPuzznic.coverage" NAME="PDDLPuzznic Coverage Results" MODIFIED="1731409160182" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/puzznic" />
-    <SUITE FILE_PATH="coverage/unified_planning$pddl_reader.coverage" NAME="pddl_reader Coverage Results" MODIFIED="1711031905669" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/unified_planning/io" />
-    <SUITE FILE_PATH="coverage/unified_planning$PlottingSamePDDL.coverage" NAME="PlottingSamePDDL Coverage Results" MODIFIED="1742827575804" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/plotting" />
-    <SUITE FILE_PATH="coverage/unified_planning$Sokoban2.coverage" NAME="Sokoban2 Coverage Results" MODIFIED="1746570014440" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/sokoban" />
-    <SUITE FILE_PATH="coverage/unified_planning$type_checker.coverage" NAME="type_checker Coverage Results" MODIFIED="1727708688725" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/unified_planning/model/walkers" />
-    <SUITE FILE_PATH="coverage/unified_planning$test2.coverage" NAME="test2 Coverage Results" MODIFIED="1729169186856" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/test" />
-    <SUITE FILE_PATH="coverage/unified_planning$8Puzzle.coverage" NAME="8Puzzle Coverage Results" MODIFIED="1739196737316" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/8-puzzle" />
-    <SUITE FILE_PATH="coverage/unified_planning$factory.coverage" NAME="factory Coverage Results" MODIFIED="1739183528930" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/unified_planning/engines" />
-    <SUITE FILE_PATH="coverage/unified_planning$count_remover.coverage" NAME="count_remover Coverage Results" MODIFIED="1735145065158" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/unified_planning/engines/compilers" />
-    <SUITE FILE_PATH="coverage/unified_planning$int_parameter_actions_remover.coverage" NAME="int_parameter_actions_remover Coverage Results" MODIFIED="1746542964415" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/unified_planning/engines/compilers" />
-    <SUITE FILE_PATH="coverage/unified_planning$pddl_writer.coverage" NAME="pddl_writer Coverage Results" MODIFIED="1729711188839" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/unified_planning/io" />
-    <SUITE FILE_PATH="coverage/unified_planning$NPuzzleImplicit.coverage" NAME="NPuzzleImplicit Coverage Results" MODIFIED="1741873489859" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/n-puzzle" />
     <SUITE FILE_PATH="coverage/unified_planning$arrays_and_integers_remover.coverage" NAME="arrays_and_integers_remover Coverage Results" MODIFIED="1727965353909" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/unified_planning/engines/compilers" />
-    <SUITE FILE_PATH="coverage/unified_planning$Puzznic.coverage" NAME="Puzznic Coverage Results" MODIFIED="1746613165314" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/puzznic" />
-    <SUITE FILE_PATH="coverage/unified_planning$integers_remover.coverage" NAME="integers_remover Coverage Results" MODIFIED="1739195301499" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/unified_planning/engines/compilers" />
-    <SUITE FILE_PATH="coverage/unified_planning$dag.coverage" NAME="dag Coverage Results" MODIFIED="1727444042706" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/unified_planning/model/walkers" />
-    <SUITE FILE_PATH="coverage/unified_planning$RushHour_old.coverage" NAME="RushHour-old Coverage Results" MODIFIED="1739900347106" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/rush-hour" />
-    <SUITE FILE_PATH="coverage/unified_planning$RushHour_specific_1.coverage" NAME="RushHour_specific_1 Coverage Results" MODIFIED="1744963030072" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/rush-hour" />
-    <SUITE FILE_PATH="coverage/unified_planning$read_instance.coverage" NAME="read_instance Coverage Results" MODIFIED="1746564822432" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/sokoban" />
-    <SUITE FILE_PATH="coverage/unified_planning$NPuzzle.coverage" NAME="NPuzzle Coverage Results" MODIFIED="1739966515185" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/n-puzzle" />
-    <SUITE FILE_PATH="coverage/unified_planning$15PuzzleNumeric.coverage" NAME="15PuzzleNumeric Coverage Results" MODIFIED="1739965584226" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/15-puzzle" />
-    <SUITE FILE_PATH="coverage/unified_planning$SimulatorUP.coverage" NAME="SimulatorUP Coverage Results" MODIFIED="1743757651347" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/sokoban" />
-    <SUITE FILE_PATH="coverage/unified_planning$arrays_remover.coverage" NAME="arrays_remover Coverage Results" MODIFIED="1730837185412" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/unified_planning/engines/compilers" />
-    <SUITE FILE_PATH="coverage/unified_planning$Puzznic_scoring.coverage" NAME="Puzznic_scoring Coverage Results" MODIFIED="1740125607649" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/puzznic" />
-    <SUITE FILE_PATH="coverage/unified_planning$RushHour_specific_all.coverage" NAME="RushHour_specific_all Coverage Results" MODIFIED="1740390815086" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/rush-hour" />
-    <SUITE FILE_PATH="coverage/unified_planning$solving.coverage" NAME="solving Coverage Results" MODIFIED="1746613210456" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/sokoban" />
-    <SUITE FILE_PATH="coverage/unified_planning$type_manager.coverage" NAME="type_manager Coverage Results" MODIFIED="1727708647453" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/unified_planning/model" />
-    <SUITE FILE_PATH="coverage/unified_planning$RushHour_general.coverage" NAME="RushHour-general Coverage Results" MODIFIED="1739899278760" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/rush-hour" />
-    <SUITE FILE_PATH="coverage/unified_planning$PancakeSorting2.coverage" NAME="PancakeSorting2 Coverage Results" MODIFIED="1742768701337" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/pancake-sorting" />
-    <SUITE FILE_PATH="coverage/unified_planning$Simulator.coverage" NAME="Simulator Coverage Results" MODIFIED="1742835207533" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/plotting" />
-    <SUITE FILE_PATH="coverage/unified_planning$Doctests_in_builtins.coverage" NAME="Doctests in builtins Coverage Results" MODIFIED="1727426804088" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$USER_HOME$/Library/Caches/JetBrains/PyCharm2023.3/python_stubs/1043479131" />
-    <SUITE FILE_PATH="coverage/unified_planning$RushHour_general_1.coverage" NAME="RushHour_general_1 Coverage Results" MODIFIED="1740329755102" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/rush-hour" />
     <SUITE FILE_PATH="coverage/unified_planning$anml.coverage" NAME="anml Coverage Results" MODIFIED="1745941123781" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/n-puzzle" />
-    <SUITE FILE_PATH="coverage/unified_planning$baba_is_you.coverage" NAME="baba-is-you Coverage Results" MODIFIED="1727278959827" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/baba-is-you" />
-    <SUITE FILE_PATH="coverage/unified_planning$8Puzzle_numeric.coverage" NAME="8Puzzle_numeric Coverage Results" MODIFIED="1739280578581" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/8-puzzle" />
-    <SUITE FILE_PATH="coverage/unified_planning$PancakeSortPlus.coverage" NAME="PancakeSortPlus Coverage Results" MODIFIED="1739729057608" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/pancake-sort-plus" />
-    <SUITE FILE_PATH="coverage/unified_planning$Sokoban.coverage" NAME="Sokoban Coverage Results" MODIFIED="1747241860940" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/sokoban" />
-    <SUITE FILE_PATH="coverage/unified_planning$expression.coverage" NAME="expression Coverage Results" MODIFIED="1727702628689" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/unified_planning/model" />
-    <SUITE FILE_PATH="coverage/unified_planning$Puzznic_pddl.coverage" NAME="Puzznic_pddl Coverage Results" MODIFIED="1730836239867" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/puzznic" />
-    <SUITE FILE_PATH="coverage/unified_planning$RushHour.coverage" NAME="RushHour Coverage Results" MODIFIED="1739900430234" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/rush-hour" />
-    <SUITE FILE_PATH="coverage/unified_planning$PancakeSorting.coverage" NAME="PancakeSorting Coverage Results" MODIFIED="1743789680266" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/pancake-sorting" />
-    <SUITE FILE_PATH="coverage/unified_planning$SimulatorPDDL.coverage" NAME="SimulatorPDDL Coverage Results" MODIFIED="1743154485205" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/plotting" />
+    <SUITE FILE_PATH="coverage/unified_planning$RushHour2.coverage" NAME="RushHour2 Coverage Results" MODIFIED="1747323010198" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/rush-hour" />
+    <SUITE FILE_PATH="coverage/unified_planning$RushHour_bool_example.coverage" NAME="RushHour-bool-example Coverage Results" MODIFIED="1747596186812" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/rush-hour" />
+    <SUITE FILE_PATH="coverage/unified_planning$pddl_writer.coverage" NAME="pddl_writer Coverage Results" MODIFIED="1729711188839" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/unified_planning/io" />
+    <SUITE FILE_PATH="coverage/unified_planning$int_arrays_bits_remover.coverage" NAME="int_arrays_bits_remover Coverage Results" MODIFIED="1746022181553" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/unified_planning/engines/compilers" />
+    <SUITE FILE_PATH="coverage/unified_planning$solving.coverage" NAME="solving Coverage Results" MODIFIED="1746613210456" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/sokoban" />
+    <SUITE FILE_PATH="coverage/unified_planning$read_instance.coverage" NAME="read_instance Coverage Results" MODIFIED="1746564822432" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/sokoban" />
     <SUITE FILE_PATH="coverage/unified_planning$effect.coverage" NAME="effect Coverage Results" MODIFIED="1733931089864" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/unified_planning/model" />
-    <SUITE FILE_PATH="coverage/unified_planning$Doctests_in_fluents_set.coverage" NAME="Doctests in fluents_set Coverage Results" MODIFIED="1727788437193" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/unified_planning/model/mixins" />
-    <SUITE FILE_PATH="coverage/unified_planning$PancakeSortPlus_Ints.coverage" NAME="PancakeSortPlus_Ints Coverage Results" MODIFIED="1739704769126" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/pancake-sort-plus" />
+    <SUITE FILE_PATH="coverage/unified_planning$python_experiments__Domain___Domain__py___compilation__Compilation____solving__Solving_.coverage" NAME="python experiments/&lt;Domain&gt;/&lt;Domain&gt;.py --compilation &lt;Compilation&gt; --solving &lt;Solving&gt; Coverage Results" MODIFIED="1747924196092" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments" />
+    <SUITE FILE_PATH="coverage/unified_planning$NPuzzle.coverage" NAME="NPuzzle Coverage Results" MODIFIED="1739966515185" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/n-puzzle" />
+    <SUITE FILE_PATH="coverage/unified_planning$test2.coverage" NAME="test2 Coverage Results" MODIFIED="1729169186856" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/test" />
+    <SUITE FILE_PATH="coverage/unified_planning$integers_remover.coverage" NAME="integers_remover Coverage Results" MODIFIED="1739195301499" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/unified_planning/engines/compilers" />
+    <SUITE FILE_PATH="coverage/unified_planning$type_manager.coverage" NAME="type_manager Coverage Results" MODIFIED="1727708647453" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/unified_planning/model" />
+    <SUITE FILE_PATH="coverage/unified_planning$example.coverage" NAME="example Coverage Results" MODIFIED="1749811071431" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/15-puzzle" />
+    <SUITE FILE_PATH="coverage/unified_planning$NPuzzleExplicit.coverage" NAME="NPuzzleExplicit Coverage Results" MODIFIED="1741609325903" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/n-puzzle" />
+    <SUITE FILE_PATH="coverage/unified_planning$usertype_fluents_remover.coverage" NAME="usertype_fluents_remover Coverage Results" MODIFIED="1730746389997" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/unified_planning/engines/compilers" />
+    <SUITE FILE_PATH="coverage/unified_planning$KnightTour.coverage" NAME="KnightTour Coverage Results" MODIFIED="1747929115713" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/kight-tour" />
+    <SUITE FILE_PATH="coverage/unified_planning$PlottingOld.coverage" NAME="PlottingOld Coverage Results" MODIFIED="1740154985736" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/plotting" />
+    <SUITE FILE_PATH="coverage/unified_planning$NPuzzleImplicit.coverage" NAME="NPuzzleImplicit Coverage Results" MODIFIED="1741873489859" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/n-puzzle" />
+    <SUITE FILE_PATH="coverage/unified_planning$dag.coverage" NAME="dag Coverage Results" MODIFIED="1727444042706" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/unified_planning/model/walkers" />
+    <SUITE FILE_PATH="coverage/unified_planning$expression.coverage" NAME="expression Coverage Results" MODIFIED="1727702628689" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/unified_planning/model" />
+    <SUITE FILE_PATH="coverage/unified_planning$Sokoban.coverage" NAME="Sokoban Coverage Results" MODIFIED="1747665514221" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/sokoban" />
+    <SUITE FILE_PATH="coverage/unified_planning$test.coverage" NAME="test Coverage Results" MODIFIED="1729257880357" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/test" />
+    <SUITE FILE_PATH="coverage/unified_planning$int_parameter_actions_remover.coverage" NAME="int_parameter_actions_remover Coverage Results" MODIFIED="1747665286188" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/unified_planning/engines/compilers" />
+    <SUITE FILE_PATH="coverage/unified_planning$level0.coverage" NAME="level0 Coverage Results" MODIFIED="1729505957209" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/test" />
+    <SUITE FILE_PATH="coverage/unified_planning$PlottingSamePDDL.coverage" NAME="PlottingSamePDDL Coverage Results" MODIFIED="1742827575804" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/plotting" />
+    <SUITE FILE_PATH="coverage/unified_planning$count_remover.coverage" NAME="count_remover Coverage Results" MODIFIED="1735145065158" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/unified_planning/engines/compilers" />
+    <SUITE FILE_PATH="coverage/unified_planning$Puzznic_pddl.coverage" NAME="Puzznic_pddl Coverage Results" MODIFIED="1730836239867" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/puzznic" />
+    <SUITE FILE_PATH="coverage/unified_planning$RushHour_specific_1.coverage" NAME="RushHour_specific_1 Coverage Results" MODIFIED="1744963030072" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/rush-hour" />
+    <SUITE FILE_PATH="coverage/unified_planning$pytest_in_test_ada_py.coverage" NAME="pytest in test_ada.py Coverage Results" MODIFIED="1727712027512" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/test" />
+    <SUITE FILE_PATH="coverage/unified_planning$pddl_reader.coverage" NAME="pddl_reader Coverage Results" MODIFIED="1711031905669" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/unified_planning/io" />
+    <SUITE FILE_PATH="coverage/unified_planning$PDDLPuzznic.coverage" NAME="PDDLPuzznic Coverage Results" MODIFIED="1731409160182" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/puzznic" />
+    <SUITE FILE_PATH="coverage/unified_planning$PuzznicPDDL.coverage" NAME="PuzznicPDDL Coverage Results" MODIFIED="1730912924386" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/puzznic" />
     <SUITE FILE_PATH="coverage/unified_planning$PlottingPDDL.coverage" NAME="PlottingPDDL Coverage Results" MODIFIED="1742933776800" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/plotting" />
-    <SUITE FILE_PATH="coverage/unified_planning$simulator.coverage" NAME="simulator Coverage Results" MODIFIED="1746546621193" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/sokoban" />
+    <SUITE FILE_PATH="coverage/unified_planning$Doctests_in_builtins.coverage" NAME="Doctests in builtins Coverage Results" MODIFIED="1727426804088" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$USER_HOME$/Library/Caches/JetBrains/PyCharm2023.3/python_stubs/1043479131" />
+    <SUITE FILE_PATH="coverage/unified_planning$15PuzzleNumeric.coverage" NAME="15PuzzleNumeric Coverage Results" MODIFIED="1739965584226" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/15-puzzle" />
+    <SUITE FILE_PATH="coverage/unified_planning$baba_is_you.coverage" NAME="baba-is-you Coverage Results" MODIFIED="1727278959827" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/baba-is-you" />
+    <SUITE FILE_PATH="coverage/unified_planning$Simulator.coverage" NAME="Simulator Coverage Results" MODIFIED="1742835207533" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/plotting" />
+    <SUITE FILE_PATH="coverage/unified_planning$SimulatorPDDL.coverage" NAME="SimulatorPDDL Coverage Results" MODIFIED="1743154485205" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/plotting" />
     <SUITE FILE_PATH="coverage/unified_planning$simplifier.coverage" NAME="simplifier Coverage Results" MODIFIED="1734017278432" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/unified_planning/model/walkers" />
+    <SUITE FILE_PATH="coverage/unified_planning$factory.coverage" NAME="factory Coverage Results" MODIFIED="1739183528930" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/unified_planning/engines" />
+    <SUITE FILE_PATH="coverage/unified_planning$Puzznic_scoring.coverage" NAME="Puzznic_scoring Coverage Results" MODIFIED="1740125607649" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/puzznic" />
+    <SUITE FILE_PATH="coverage/unified_planning$PancakeSortPlus_Ints.coverage" NAME="PancakeSortPlus_Ints Coverage Results" MODIFIED="1739704769126" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/pancake-sort-plus" />
+    <SUITE FILE_PATH="coverage/unified_planning$prova.coverage" NAME="prova Coverage Results" MODIFIED="1741880217918" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/plotting" />
+    <SUITE FILE_PATH="coverage/unified_planning$PancakeSorting2.coverage" NAME="PancakeSorting2 Coverage Results" MODIFIED="1742768701337" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/pancake-sorting" />
+    <SUITE FILE_PATH="coverage/unified_planning$RushHour_subtyping.coverage" NAME="RushHour-subtyping Coverage Results" MODIFIED="1747323233337" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/rush-hour" />
+    <SUITE FILE_PATH="coverage/unified_planning$PancakeSorting.coverage" NAME="PancakeSorting Coverage Results" MODIFIED="1747666086780" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/pancake-sorting" />
+    <SUITE FILE_PATH="coverage/unified_planning$pddl.coverage" NAME="pddl Coverage Results" MODIFIED="1752061930648" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/folding" />
+    <SUITE FILE_PATH="coverage/unified_planning$RushHour_general_1.coverage" NAME="RushHour_general_1 Coverage Results" MODIFIED="1740329755102" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/rush-hour" />
+    <SUITE FILE_PATH="coverage/unified_planning$RushHour_general.coverage" NAME="RushHour-general Coverage Results" MODIFIED="1739899278760" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/rush-hour" />
+    <SUITE FILE_PATH="coverage/unified_planning$8Puzzle_numeric.coverage" NAME="8Puzzle_numeric Coverage Results" MODIFIED="1739280578581" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/8-puzzle" />
+    <SUITE FILE_PATH="coverage/unified_planning$Sokoban2.coverage" NAME="Sokoban2 Coverage Results" MODIFIED="1747391853054" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/sokoban" />
+    <SUITE FILE_PATH="coverage/unified_planning$compilation_solving.coverage" NAME="compilation_solving Coverage Results" MODIFIED="1747572632567" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments" />
+    <SUITE FILE_PATH="coverage/unified_planning$type_checker.coverage" NAME="type_checker Coverage Results" MODIFIED="1727708688725" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/unified_planning/model/walkers" />
+    <SUITE FILE_PATH="coverage/unified_planning$8Puzzle.coverage" NAME="8Puzzle Coverage Results" MODIFIED="1739196737316" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/8-puzzle" />
+    <SUITE FILE_PATH="coverage/unified_planning$RushHour_specific_all.coverage" NAME="RushHour_specific_all Coverage Results" MODIFIED="1740390815086" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/rush-hour" />
+    <SUITE FILE_PATH="coverage/unified_planning$PancakeSortPlus.coverage" NAME="PancakeSortPlus Coverage Results" MODIFIED="1739729057608" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/pancake-sort-plus" />
+    <SUITE FILE_PATH="coverage/unified_planning$NPuzzleNumeric.coverage" NAME="NPuzzleNumeric Coverage Results" MODIFIED="1745602992735" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/n-puzzle" />
+    <SUITE FILE_PATH="coverage/unified_planning$SimulatorUP.coverage" NAME="SimulatorUP Coverage Results" MODIFIED="1743757651347" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/sokoban" />
+    <SUITE FILE_PATH="coverage/unified_planning$RushHour.coverage" NAME="RushHour Coverage Results" MODIFIED="1747584426118" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/rush-hour" />
+    <SUITE FILE_PATH="coverage/unified_planning$simulator.coverage" NAME="simulator Coverage Results" MODIFIED="1746546621193" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/sokoban" />
+    <SUITE FILE_PATH="coverage/unified_planning$Counters.coverage" NAME="Counters Coverage Results" MODIFIED="1730391928093" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/counters" />
+    <SUITE FILE_PATH="coverage/unified_planning$Plotting.coverage" NAME="Plotting Coverage Results" MODIFIED="1747672561598" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/plotting" />
+    <SUITE FILE_PATH="coverage/unified_planning$Puzznic.coverage" NAME="Puzznic Coverage Results" MODIFIED="1746613165314" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/puzznic" />
+    <SUITE FILE_PATH="coverage/unified_planning$RushHour_old.coverage" NAME="RushHour-old Coverage Results" MODIFIED="1739900347106" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/rush-hour" />
+    <SUITE FILE_PATH="coverage/unified_planning$arrays_remover.coverage" NAME="arrays_remover Coverage Results" MODIFIED="1747595091497" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/unified_planning/engines/compilers" />
+    <SUITE FILE_PATH="coverage/unified_planning$Doctests_in_fluents_set.coverage" NAME="Doctests in fluents_set Coverage Results" MODIFIED="1727788437193" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="true" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/unified_planning/model/mixins" />
     <SUITE FILE_PATH="coverage/unified_planning$NPuzzleImplicitNumeric.coverage" NAME="NPuzzleImplicitNumeric Coverage Results" MODIFIED="1741873588835" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/experiments/n-puzzle" />
   </component>
 </project>

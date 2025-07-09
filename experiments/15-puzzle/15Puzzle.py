@@ -1,9 +1,15 @@
 from experiments import compilation_solving
 from unified_planning.shortcuts import *
-from unified_planning.engines import CompilationKind
+import argparse
 
-compilation = 'up'
-solving = 'fast-downward'
+# Parser
+parser = argparse.ArgumentParser(description="Solve 15-Puzzle")
+parser.add_argument('--compilation', type=str, help='Compilation strategy to apply')
+parser.add_argument('--solving', type=str, help='Planner to use')
+
+args = parser.parse_args()
+compilation = args.compilation
+solving = args.solving
 
 # Example 15Puzzle
 initial_blocks = [[7,11,8,3],[14,0,6,15],[1,4,13,9],[5,12,2,10]]
@@ -37,7 +43,9 @@ npuzzle_problem.set_initial_value(puzzle, initial_blocks)
 move_up = unified_planning.model.InstantaneousAction('move_up', r=IntType(1,n-1), c=IntType(0,n-1))
 c = move_up.parameter('c')
 r = move_up.parameter('r')
-move_up.add_precondition(Equals(puzzle[r-1][c], n0))
+move_up.add_precondition(Equals(puzzle[r][c], n0))
+rv = RangeVariable('rv', 0, r)
+move_up.add_precondition(Not(Exists(Not(Equals(puzzle[rv][c], n0)), rv)))
 move_up.add_effect(puzzle[r-1][c], puzzle[r][c])
 move_up.add_effect(puzzle[r][c], n0)
 
@@ -73,13 +81,6 @@ costs: Dict[Action, Expression] = {
 }
 npuzzle_problem.add_quality_metric(MinimizeActionCosts(costs))
 
-if compilation == 'up':
-    compilation_kinds_to_apply = [
-        CompilationKind.INT_PARAMETER_ACTIONS_REMOVING,
-        CompilationKind.ARRAYS_REMOVING,
-        CompilationKind.USERTYPE_FLUENTS_REMOVING,
-    ]
-else:
-    raise ValueError(f"Unsupported compilation type: {compilation}")
+assert compilation in ['up'], f"Unsupported compilation type: {compilation}"
 
-compilation_solving.compile_and_solve(npuzzle_problem, solving, compilation_kinds_to_apply=compilation_kinds_to_apply)
+compilation_solving.compile_and_solve(npuzzle_problem, solving, compilation)

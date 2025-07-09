@@ -1,9 +1,15 @@
 from experiments import compilation_solving
 from unified_planning.shortcuts import *
-from unified_planning.engines import CompilationKind
+import argparse
 
-compilation = 'ut-integers'
-solving = 'fast-downward'
+# Parser
+parser = argparse.ArgumentParser(description="Solve 15-Puzzle Numeric")
+parser.add_argument('--compilation', type=str, help='Compilation strategy to apply')
+parser.add_argument('--solving', type=str, help='Planner to use')
+
+args = parser.parse_args()
+compilation = args.compilation
+solving = args.solving
 
 # Example 15Puzzle
 initial_blocks = [[7,11,8,3],[14,0,6,15],[1,4,13,9],[5,12,2,10]]
@@ -60,24 +66,6 @@ npuzzle_problem.add_quality_metric(MinimizeActionCosts(costs))
 
 # -------------------------------------------------- Compilation -------------------------------------------------------
 
-if compilation == 'integers':
-    compilation_kinds_to_apply = [
-        CompilationKind.INT_PARAMETER_ACTIONS_REMOVING,
-        CompilationKind.ARRAYS_REMOVING,
-    ]
-elif compilation == 'ut-integers':
-    compilation_kinds_to_apply = [
-        CompilationKind.INT_PARAMETER_ACTIONS_REMOVING,
-        CompilationKind.ARRAYS_REMOVING,
-        CompilationKind.INTEGERS_REMOVING,
-        CompilationKind.USERTYPE_FLUENTS_REMOVING,
-    ]
-elif compilation == 'logarithmic':
-    compilation_kinds_to_apply = [
-        CompilationKind.INT_PARAMETER_ACTIONS_REMOVING,
-        CompilationKind.INT_ARRAYS_BITS_REMOVING,
-    ]
-else:
-    raise ValueError(f"Unsupported compilation type: {compilation}")
+assert compilation in ['integers', 'ut-integers', 'logarithmic'], f"Unsupported compilation type: {compilation}"
 
-compilation_solving.compile_and_solve(npuzzle_problem, solving, compilation_kinds_to_apply=compilation_kinds_to_apply)
+compilation_solving.compile_and_solve(npuzzle_problem, solving, compilation)
