@@ -6,13 +6,14 @@ from unified_planning.shortcuts import *
 from unified_planning.io import PDDLReader
 
 domain_filename = 'domain.pddl'
-problem_filename = 'p02.pddl'
+problem_filename = 'p01.pddl'
 
 reader = PDDLReader()
 problem = reader.parse_problem(domain_filename, problem_filename)
 
 params = {
     'fast_downward_alias': 'seq-sat-fdss-2',
+    'fast_downward_search_time_limit': '300'
 }
 with OneshotPlanner(name='fast-downward', params=params) as planner:
     result = planner.solve(problem)

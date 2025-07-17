@@ -27,7 +27,7 @@ COMPILATION_PIPELINES = {
     ],
     'logarithmic': [
         CompilationKind.INT_PARAMETER_ACTIONS_REMOVING,
-        CompilationKind.INT_ARRAYS_BITS_REMOVING,
+        CompilationKind.ARRAYS_LOGARITHMIC_REMOVING,
     ],
     'count': [
         CompilationKind.INT_PARAMETER_ACTIONS_REMOVING,

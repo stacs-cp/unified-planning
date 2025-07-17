@@ -1,6 +1,6 @@
 # Experiments
 
-This directory contains a collection of classical planning problems implemented using the Unified Planning framework with our proposed extensions. 
+This directory contains a collection of planning problems implemented using the Unified Planning framework with our proposed extensions. 
 Each folder corresponds to a specific domain and includes:
 - A **handcrafted model** (in PDDL)
 - One or more **extended models** (in Python) using different compilation strategies

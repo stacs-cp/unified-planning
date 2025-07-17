@@ -44,8 +44,6 @@ move_up = unified_planning.model.InstantaneousAction('move_up', r=IntType(1,n-1)
 c = move_up.parameter('c')
 r = move_up.parameter('r')
 move_up.add_precondition(Equals(puzzle[r][c], n0))
-rv = RangeVariable('rv', 0, r)
-move_up.add_precondition(Not(Exists(Not(Equals(puzzle[rv][c], n0)), rv)))
 move_up.add_effect(puzzle[r-1][c], puzzle[r][c])
 move_up.add_effect(puzzle[r][c], n0)
 

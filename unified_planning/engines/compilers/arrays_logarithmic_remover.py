@@ -39,16 +39,16 @@ from unified_planning.shortcuts import And, Not, Iff, Equals, Or
 import re
 
 
-class IntArraysBitsRemover(engines.engine.Engine, CompilerMixin):
+class ArraysLogarithmicRemover(engines.engine.Engine, CompilerMixin):
     """
-    Integers Arrays Remover class:
+    Arrays Logarithmic Removerr class:
     The problem has to contain arrays/multiarrays of integers. They will be transformed into a bit boolean format to
     represent the numbers.
     """
 
     def __init__(self):
         engines.engine.Engine.__init__(self)
-        CompilerMixin.__init__(self, CompilationKind.INT_ARRAYS_BITS_REMOVING)
+        CompilerMixin.__init__(self, CompilationKind.ARRAYS_LOGARITHMIC_REMOVING)
         self.n_bits = OrderedDict()
 
     @property
@@ -120,11 +120,11 @@ class IntArraysBitsRemover(engines.engine.Engine, CompilerMixin):
 
     @staticmethod
     def supports(problem_kind):
-        return problem_kind <= IntArraysBitsRemover.supported_kind()
+        return problem_kind <= ArraysLogarithmicRemover.supported_kind()
 
     @staticmethod
     def supports_compilation(compilation_kind: CompilationKind) -> bool:
-        return compilation_kind == CompilationKind.INT_ARRAYS_BITS_REMOVING
+        return compilation_kind == CompilationKind.ARRAYS_LOGARITHMIC_REMOVING
 
     @staticmethod
     def resulting_problem_kind(
