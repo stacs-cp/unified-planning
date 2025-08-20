@@ -31,7 +31,7 @@ from unified_planning.model import (
 )
 from unified_planning.model.problem_kind_versioning import LATEST_PROBLEM_KIND_VERSION
 from unified_planning.engines.compilers.utils import (
-    replace_action,
+    replace_action, updated_minimize_action_costs,
 )
 from typing import Dict, List, Optional, Union
 from functools import partial
@@ -332,6 +332,7 @@ class CountIntRemover(engines.engine.Engine, CompilerMixin):
         new_problem.name = f"{self.name}_{problem.name}"
         count_expressions: Dict[str, "up.model.fnode.FNode"] = {}
         new_problem.clear_actions()
+        new_problem.clear_quality_metrics()
         for action in problem.actions:
             new_action = action.clone()
             new_action.clear_preconditions()
@@ -346,15 +347,26 @@ class CountIntRemover(engines.engine.Engine, CompilerMixin):
             new_problem.add_goal(new_goal)
 
         new_actions = []
-        changed_actions = new_problem.actions
+        changed_actions = new_problem.actions.copy()
         new_problem.clear_actions()
         for action in changed_actions:
             new_action = self.add_count_effects(new_problem, action, count_expressions)
             new_actions.append(new_action)
             new_problem.add_action(new_action)
 
-        for i in range(0, len(problem.actions)):
-            new_to_old[new_actions[i]] = problem.actions[i]
+        for new, old in zip(new_actions, problem.actions):
+            new_to_old[new] = old
+
+        for qm in problem.quality_metrics:
+            if qm.is_minimize_action_costs():
+                new_problem.add_quality_metric(
+                    updated_minimize_action_costs(
+                        qm, new_to_old, new_problem.environment
+                    )
+                )
+            # ...
+            else:
+                new_problem.add_quality_metric(qm)
 
         return CompilerResult(
             new_problem, partial(replace_action, map=new_to_old), self.name
