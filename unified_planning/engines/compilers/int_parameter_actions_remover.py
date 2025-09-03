@@ -356,12 +356,23 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                             new_fluent = self._manage_node(new_problem, effect.fluent, this_integer_parameters, this_instantiations)
                             new_value = self._manage_node(new_problem, effect.value, this_integer_parameters, this_instantiations)
                             new_condition = self._manage_node(new_problem, effect.condition, this_integer_parameters, this_instantiations)
-                            if new_condition not in (None, FALSE()):
-                                if None not in (new_fluent, new_value):
-                                    self._add_effect(new_action, effect_type, new_fluent, new_value, new_condition, new_forall)
-                                else:
+
+                            # Invalid value if it is out of range
+                            if new_fluent.type.is_int_type():
+                                t = new_fluent.type
+                                if (new_value < t.lower_bound).simplify() == TRUE() or (new_value > t.upper_bound).simplify() == TRUE():
+                                    new_value = None
+                            # Unconditional effect
+                            if effect.condition == TRUE():
+                                if None in (new_fluent, new_value):
                                     remove_action = True
                                     break
+                                else:
+                                    self._add_effect(new_action, effect_type, new_fluent, new_value, new_condition, new_forall)
+                            # Conditional effect
+                            else:
+                                if new_condition not in (None, FALSE()) and None not in (new_fluent, new_value):
+                                    self._add_effect(new_action, effect_type, new_fluent, new_value, new_condition, new_forall)
                         if remove_action:
                             break
                     if not remove_action and new_action.effects != []:
