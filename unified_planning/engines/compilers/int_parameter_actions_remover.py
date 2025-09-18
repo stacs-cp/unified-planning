@@ -232,7 +232,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
         if node_type in {OperatorKind.OR, OperatorKind.COUNT, OperatorKind.EXISTS}:
             return [arg for arg in args if arg is not None]
         elif node_type in {OperatorKind.IMPLIES}:
-            return [args[0], FALSE()] if args[1] is None else args[1]
+            return [args[0], FALSE()] if (args[1] is None and args[0] is not None) else args[1]
         # LE, LT, NOT, EQUALS, FORALL, IFF, AND, ARITHMETIC OPERATIONS ...
         else:
             return None if None in args else args
