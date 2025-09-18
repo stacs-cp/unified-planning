@@ -6,13 +6,8 @@
   <component name="ChangeListManager">
     <list default="true" id="7c60bccf-105d-46ba-a2c0-79b47893c82f" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/experiments/15-puzzle/15Puzzle.py" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/15-puzzle/15Puzzle.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/experiments/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/experiments/compilation_solving.py" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/compilation_solving.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/experiments/folding/output.sas" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/experiments/folding/pddl.py" beforeDir="false" afterPath="$PROJECT_DIR$/experiments/folding/pddl.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/unified_planning/engines/compilers/int_arrays_bits_remover.py" beforeDir="false" afterPath="$PROJECT_DIR$/unified_planning/engines/compilers/arrays_logarithmic_remover.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/unified_planning/engines/mixins/compiler.py" beforeDir="false" afterPath="$PROJECT_DIR$/unified_planning/engines/mixins/compiler.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/unified_planning/io/pddl_reader.py" beforeDir="false" afterPath="$PROJECT_DIR$/unified_planning/io/pddl_reader.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/unified_planning/io/pddl_writer.py" beforeDir="false" afterPath="$PROJECT_DIR$/unified_planning/io/pddl_writer.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />

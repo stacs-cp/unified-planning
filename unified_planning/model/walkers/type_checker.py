@@ -18,7 +18,7 @@ from fractions import Fraction
 import unified_planning.model.types
 import unified_planning.environment
 import unified_planning.model.walkers as walkers
-from unified_planning.model.types import BOOL, TIME, _UserType, _IntType, _ArrayType
+from unified_planning.model.types import BOOL, DERIVED_BOOL, TIME, _UserType, _IntType, _ArrayType
 from unified_planning.model.fnode import FNode
 from unified_planning.model.operators import OperatorKind
 from unified_planning.exceptions import UPTypeError
@@ -105,7 +105,7 @@ class TypeChecker(walkers.dag.DagWalker):
     ) -> Optional["unified_planning.model.types.Type"]:
         assert expression is not None
         for x in args:
-            if x is None or x != BOOL:
+            if x is None or x not in (BOOL, DERIVED_BOOL):
                 return None
         return BOOL
 

@@ -28,6 +28,10 @@ class Type(ABC):
         """Returns `True` iff is `boolean Type`."""
         return False
 
+    def is_derived_bool_type(self) -> bool:
+        """Returns `True` iff is `derived bool Type`."""
+        return False
+
     def is_user_type(self) -> bool:
         """Returns `True` iff is a `user Type`."""
         return False
@@ -78,6 +82,15 @@ class _BoolType(Type):
         """Returns true iff is boolean type."""
         return True
 
+class _DerivedBoolType(Type):
+    """Represents the derived bool type."""
+
+    def __repr__(self) -> str:
+        return "derived bool"
+
+    def is_derived_bool_type(self) -> bool:
+        """Returns true iff is derived bool type."""
+        return True
 
 class _TimeType(Type):
     """Represent the type for an absolute Time"""
@@ -255,6 +268,7 @@ class _ArrayType(Type):
 
 
 BOOL = _BoolType()
+DERIVED_BOOL = _DerivedBoolType()
 TIME = _TimeType()
 
 
@@ -271,6 +285,8 @@ def domain_size(
     :return: The number of values that the given `Type` can have in the given `Problem`.
     """
     if typename.is_bool_type():
+        return 2
+    elif typename.is_derived_bool_type():
         return 2
     elif typename.is_user_type():
         return len(list(objects_set.objects(typename)))
