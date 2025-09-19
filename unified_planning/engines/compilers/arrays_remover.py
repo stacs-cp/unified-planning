@@ -238,6 +238,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
         new_problem.clear_fluents()
         new_problem.clear_actions()
         new_problem.clear_goals()
+        new_problem.clear_axioms()
         new_problem.initial_values.clear()
         new_problem.clear_quality_metrics()
         assert self.mode == 'strict' or self.mode == 'permissive'
@@ -279,6 +280,30 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                 for f, v in problem.explicit_initial_values.items():
                     if f.fluent() == fluent and v != default_value:
                         new_problem.set_initial_value(fluent(*f.args), v)
+
+        for axiom in problem.axioms:
+            new_axiom = axiom.clone()
+            new_axiom.name = get_fresh_name(new_problem, new_axiom.name)
+            new_axiom.clear_preconditions()
+            new_axiom.clear_effects()
+            for precondition in axiom.preconditions:
+                new_preconditions = self._get_new_nodes(new_problem, precondition)
+                for np in new_preconditions:
+                    new_axiom.add_precondition(np)
+            for effect in axiom.effects:
+                new_fnode = self._get_new_nodes(new_problem, effect.fluent)[0]
+                new_value = self._get_new_nodes(new_problem, effect.value)[0]
+                new_condition = self._get_new_nodes(new_problem, effect.condition)[0]
+                if not new_condition.is_false() and new_fnode is not None:
+                    if effect.is_increase():
+                        new_axiom.add_increase_effect(new_fnode, new_value, new_condition, effect.forall)
+                    elif effect.is_decrease():
+                        new_axiom.add_decrease_effect(new_fnode, new_value, new_condition, effect.forall)
+                    else:
+                        new_axiom.add_effect(new_fnode, new_value, new_condition, effect.forall)
+
+            new_problem.add_axiom(new_axiom)
+            new_to_old[new_axiom] = axiom
 
         for action in problem.actions:
             for p in action.parameters:

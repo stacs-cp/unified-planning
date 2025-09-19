@@ -15,9 +15,7 @@
 """This module defines the quantifiers remover class."""
 import re
 from itertools import product
-
 from unified_planning.model.fnode import FNode
-import unified_planning as up
 import unified_planning.engines as engines
 from collections import OrderedDict
 from unified_planning.engines.mixins.compiler import CompilationKind, CompilerMixin
@@ -28,18 +26,20 @@ from unified_planning.model import (
     DurativeAction,
     Action,
     ProblemKind,
-    Type,
-    Fluent, MinimizeExpressionOnFinalState, MinimizeActionCosts, RangeVariable, Parameter, OperatorKind,
+    Fluent,
+    MinimizeActionCosts,
+    RangeVariable,
+    OperatorKind,
 )
 from unified_planning.model.problem_kind_versioning import LATEST_PROBLEM_KIND_VERSION
 from unified_planning.engines.compilers.utils import (
     get_fresh_name,
     lift_action_instance,
 )
-from typing import Dict, List, Optional, Tuple, Any, OrderedDict, Union
+from typing import Dict, List, Optional, Tuple, OrderedDict, Union
 from functools import partial
 
-from unified_planning.shortcuts import Int, FALSE, TRUE, Not
+from unified_planning.shortcuts import Int, FALSE, TRUE
 
 
 class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
@@ -309,6 +309,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
         new_problem = problem.clone()
         new_problem.name = f"{self.name}_{problem.name}"
         new_problem.clear_actions()
+        new_problem.clear_axioms()
         new_problem.clear_quality_metrics()
 
         for action in problem.actions:
@@ -378,6 +379,34 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                     if not remove_action and new_action.effects != []:
                         new_problem.add_action(new_action)
                         trace_back_map[new_action] = (action, instantiations)
+
+        for axiom in problem.axioms:
+            new_axiom = axiom.clone()
+            new_axiom.name = get_fresh_name(new_problem, new_axiom.name)
+            new_axiom.clear_preconditions()
+            new_axiom.clear_effects()
+            for parameter in axiom.parameters:
+                if parameter.type.is_int_type():
+                    raise NotImplementedError(
+                        "Integer parameters in axioms are not supported!"
+                    )
+            for precondition in axiom.preconditions:
+                new_precondition = self._manage_node(new_problem, precondition)
+                new_axiom.add_precondition(new_precondition)
+            for effect in axiom.effects:
+                new_fluent = self._manage_node(new_problem, effect.fluent)
+                new_value = self._manage_node(new_problem, effect.value)
+                new_condition = self._manage_node(new_problem, effect.condition)
+                if not new_condition.is_false() and new_fluent is not None:
+                    if effect.is_increase():
+                        new_axiom.add_increase_effect(new_fluent, new_value, new_condition, effect.forall)
+                    elif effect.is_decrease():
+                        new_axiom.add_decrease_effect(new_fluent, new_value, new_condition, effect.forall)
+                    else:
+                        new_axiom.add_effect(new_fluent, new_value, new_condition, effect.forall)
+
+            new_problem.add_axiom(new_axiom)
+            trace_back_map[new_axiom] = axiom
 
         for qm in problem.quality_metrics:
             if qm.is_minimize_sequential_plan_length() or qm.is_minimize_makespan():
