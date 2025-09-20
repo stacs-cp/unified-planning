@@ -73,6 +73,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
         supported_kind.set_fluents_type("REAL_FLUENTS")
         supported_kind.set_fluents_type("ARRAY_FLUENTS")
         supported_kind.set_fluents_type("OBJECT_FLUENTS")
+        supported_kind.set_fluents_type("DERIVED_FLUENTS")
         supported_kind.set_conditions_kind("NEGATIVE_CONDITIONS")
         supported_kind.set_conditions_kind("DISJUNCTIVE_CONDITIONS")
         supported_kind.set_conditions_kind("EQUALITIES")
@@ -359,10 +360,12 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                             new_condition = self._manage_node(new_problem, effect.condition, this_integer_parameters, this_instantiations)
 
                             # Invalid value if it is out of range
-                            if new_fluent.type.is_int_type():
-                                t = new_fluent.type
-                                if (new_value < t.lower_bound).simplify() == TRUE() or (new_value > t.upper_bound).simplify() == TRUE():
-                                    new_value = None
+                            if None not in (new_fluent, new_value):
+                                if new_fluent.type.is_int_type():
+                                    t = new_fluent.type
+                                    if ((new_value < t.lower_bound).simplify() == TRUE() or
+                                        (new_value > t.upper_bound).simplify() == TRUE()):
+                                        new_value = None
                             # Unconditional effect
                             if effect.condition == TRUE():
                                 if None in (new_fluent, new_value):
@@ -379,6 +382,32 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                     if not remove_action and new_action.effects != []:
                         new_problem.add_action(new_action)
                         trace_back_map[new_action] = (action, instantiations)
+
+        for qm in problem.quality_metrics:
+            if qm.is_minimize_sequential_plan_length() or qm.is_minimize_makespan():
+                new_problem.add_quality_metric(qm)
+            elif qm.is_minimize_action_costs():
+                assert isinstance(qm, MinimizeActionCosts)
+                new_costs: Dict["up.model.Action", "up.model.Expression"] = {}
+                for new_act, old_act in trace_back_map.items():
+                    if old_act is None:
+                        continue
+                    new_cost = qm.get_action_cost(old_act[0])
+                    if new_cost.is_parameter_exp():
+                        i = 0
+                        for p in old_act[0].parameters:
+                            if p.name == str(new_cost):
+                                break
+                            if p.type.is_int_type():
+                                i += 1
+                        new_costs[new_act] = old_act[1][i]
+                    else:
+                        new_costs[new_act] = new_cost
+                new_problem.add_quality_metric(
+                    MinimizeActionCosts(new_costs, environment=new_problem.environment)
+                )
+            else:
+                new_problem.add_quality_metric(qm)
 
         for axiom in problem.axioms:
             new_axiom = axiom.clone()
@@ -407,32 +436,6 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
 
             new_problem.add_axiom(new_axiom)
             trace_back_map[new_axiom] = axiom
-
-        for qm in problem.quality_metrics:
-            if qm.is_minimize_sequential_plan_length() or qm.is_minimize_makespan():
-                new_problem.add_quality_metric(qm)
-            elif qm.is_minimize_action_costs():
-                assert isinstance(qm, MinimizeActionCosts)
-                new_costs: Dict["up.model.Action", "up.model.Expression"] = {}
-                for new_act, old_act in trace_back_map.items():
-                    if old_act is None:
-                        continue
-                    new_cost = qm.get_action_cost(old_act[0])
-                    if new_cost.is_parameter_exp():
-                        i = 0
-                        for p in old_act[0].parameters:
-                            if p.name == str(new_cost):
-                                break
-                            if p.type.is_int_type():
-                                i += 1
-                        new_costs[new_act] = old_act[1][i]
-                    else:
-                        new_costs[new_act] = new_cost
-                new_problem.add_quality_metric(
-                    MinimizeActionCosts(new_costs, environment=new_problem.environment)
-                )
-            else:
-                new_problem.add_quality_metric(qm)
 
         return CompilerResult(
             new_problem,

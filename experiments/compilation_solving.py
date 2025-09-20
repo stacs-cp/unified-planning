@@ -86,7 +86,7 @@ def compile_and_solve(problem, solving, compilation=None):
         signal.alarm(0)
         mid_time = time.time()
         print(f'UP Compilation Time:', mid_time - start_time)
-        print(problem.objects)
+        print(problem)
 
         # Solving
         try:

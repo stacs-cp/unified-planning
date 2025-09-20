@@ -3,6 +3,8 @@ from unified_planning.shortcuts import *
 from experiments import compilation_solving
 import argparse
 
+# python -m experiments.puzznic.Puzznic --compilation integers --solving symk
+
 # Parser
 parser = argparse.ArgumentParser(description="Solve Puzznic")
 parser.add_argument('--compilation', type=str, help='Compilation strategy to apply')
@@ -12,7 +14,8 @@ args = parser.parse_args()
 compilation = args.compilation
 solving = args.solving
 
-instance = subprocess.run(['python3', 'read_instance.py', 'puzznic20'], text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+instance_path = f'/Users/cds26/PycharmProjects/unified-planning/experiments/puzznic/read_instance.py'
+instance = subprocess.run(['python3', instance_path, 'puzznic20'], text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 output = instance.stdout.split("---")
 initial_state = eval(output[0].strip())
 undefined  = eval(output[1].strip())
@@ -137,6 +140,5 @@ costs: Dict[Action, Expression] = {
 }
 puzznic_problem.add_quality_metric(MinimizeActionCosts(costs))
 
-assert compilation in ['up'], f"Unsupported compilation type: {compilation}"
-
+assert compilation in ['up', 'integers', 'ut-integers'], f"Unsupported compilation type: {compilation}"
 compilation_solving.compile_and_solve(puzznic_problem, solving, compilation)

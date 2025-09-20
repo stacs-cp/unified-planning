@@ -6,7 +6,7 @@ timeout_limit = 3600
 args = sys.argv[1:]
 file = args[0]
 
-with open(f'probs/{file}.prob', 'r') as f:
+with open(f'/Users/cds26/PycharmProjects/unified-planning/experiments/puzznic/probs/{file}.prob', 'r') as f:
     inlines = f.readlines()
 
 lines = []

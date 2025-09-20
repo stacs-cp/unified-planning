@@ -344,6 +344,9 @@ def is_compatible_type(
     """
     if t_left == t_right:
         return True
+    if (t_left.is_derived_bool_type() and t_right.is_bool_type()) or (
+            t_left.is_bool_type() and t_right.is_derived_bool_type()):
+        return True
     if t_left.is_user_type() and t_right.is_user_type():
         assert isinstance(t_left, _UserType) and isinstance(t_right, _UserType)
         # compatible if t_right is a subclass of t_left

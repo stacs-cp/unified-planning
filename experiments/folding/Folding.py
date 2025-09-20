@@ -1,161 +1,95 @@
 import argparse
+import subprocess
 
 from experiments import compilation_solving
 from unified_planning.shortcuts import *
+
+# Run: python -m experiments.folding.Folding --compilation ut-integers --solving fast-downward
 
 # Parser
 parser = argparse.ArgumentParser(description="Solve Folding")
 parser.add_argument('--compilation', type=str, help='Compilation strategy to apply')
 parser.add_argument('--solving', type=str, help='Planner to use')
-
 args = parser.parse_args()
 compilation = args.compilation
 solving = args.solving
 
-dimension = 3
-nodes = 3
+# Read instance
+instance_path = f'/Users/cds26/PycharmProjects/unified-planning/experiments/folding/read_instance.py'
+instance = subprocess.run(['python3', instance_path, 'o01'], text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+output = instance.stdout.split("---")
+r = eval(eval(output[0].strip())[0].strip())
+c = eval(eval(output[0].strip())[1].strip())
+nodes = len(eval(output[1].strip()))
+initial_state = eval(output[1].strip())
+goal_state = eval(output[2].strip())
+
 # ---------------------------------------------------- Problem ---------------------------------------------------------
-folding = Problem('folding')
+folding_problem = Problem('folding_problem')
 
-rows = Fluent('rows', ArrayType(nodes, IntType(0, dimension-1)))
-cols = Fluent('cols', ArrayType(nodes, IntType(0, dimension-1)))
+rows = Fluent('rows', ArrayType(nodes, IntType(0, r-1)))
+cols = Fluent('cols', ArrayType(nodes, IntType(0, c-1)))
 
-folding.add_fluent(rows, default_initial_value=0)
-folding.add_fluent(cols, default_initial_value=0)
+folding_problem.add_fluent(rows, default_initial_value=0)
+folding_problem.add_fluent(cols, default_initial_value=0)
 
-folding.set_initial_value(rows[0], 2)
-folding.set_initial_value(cols[0], 0)
-folding.set_initial_value(rows[1], 1)
-folding.set_initial_value(cols[1], 0)
-folding.set_initial_value(rows[2], 0)
-folding.set_initial_value(cols[2], 0)
-#folding.set_initial_value(rows[0], 7)
-#folding.set_initial_value(cols[0], 7)
-#folding.set_initial_value(rows[1], 6)
-#folding.set_initial_value(cols[1], 7)
-#folding.set_initial_value(rows[2], 5)
-#folding.set_initial_value(cols[2], 7)
-#folding.set_initial_value(rows[3], 4)
-#folding.set_initial_value(cols[3], 7)
-#folding.set_initial_value(rows[4], 3)
-#folding.set_initial_value(cols[4], 7)
-#folding.set_initial_value(rows[5], 2)
-#folding.set_initial_value(cols[5], 7)
-#folding.set_initial_value(rows[6], 1)
-#folding.set_initial_value(cols[6], 7)
-#folding.set_initial_value(rows[7], 0)
-#folding.set_initial_value(cols[7], 7)
+for i, s in enumerate(initial_state):
+    folding_problem.set_initial_value(rows[i], s[0])
+    folding_problem.set_initial_value(cols[i], s[1])
 
-rotate_clockwise = InstantaneousAction('rotate_clockwise', x=IntType(0, dimension-1),
-                                       y=IntType(0, dimension-1), n=IntType(0, nodes-1))
-x = rotate_clockwise.parameter('x')
-y = rotate_clockwise.parameter('y')
+rotate_clockwise = InstantaneousAction('rotate_clockwise', n=IntType(0, nodes-1))
 n = rotate_clockwise.parameter('n')
-#rotate_clockwise.add_precondition(And(
-#    LE(x, folding.initial_value(rows[0]) + n),
-#    GE(x, folding.initial_value(rows[0]) - n),
-#))
-#rotate_clockwise.add_precondition(And(
-#    LE(y, folding.initial_value(cols[0]) + n),
-#    GE(y, folding.initial_value(cols[0]) - n),
-#))
-rotate_clockwise.add_precondition(Equals(rows[n], x))
-rotate_clockwise.add_precondition(Equals(cols[n], y))
+rotate_clockwise.add_precondition(And(
+    LE(rows[n], folding_problem.initial_value(rows[0]) + n),
+    GE(rows[n], folding_problem.initial_value(rows[0]) - n),
+))
+rotate_clockwise.add_precondition(And(
+    LE(cols[n], folding_problem.initial_value(cols[0]) + n),
+    GE(cols[n], folding_problem.initial_value(cols[0]) - n),
+))
 g = RangeVariable('g', n+1, nodes-1)
 b = RangeVariable('b', 0, n-1)
+# mirar que, per totes les que es mouen (g), no estan en la mateixa posicio que les que estan quietes (b)
+next_row = rows[n] - cols[n] + cols[g]
+next_col = cols[n] + rows[n] - rows[g]
 rotate_clockwise.add_precondition(Forall(
-    Or(Not(Equals(rows[b], x - y + cols[g])),
-       Not(Equals(cols[b], y + x - rows[g]))), g,b))
-rotate_clockwise.add_effect(rows[g], x - y + cols[g], forall=[g])
-rotate_clockwise.add_effect(cols[g], y + x - rows[g], forall=[g])
-folding.add_action(rotate_clockwise)
+    Or(Not(Equals(rows[b], next_row)),
+       Not(Equals(cols[b], next_col))), g,b))
+rotate_clockwise.add_effect(rows[g], next_row, forall=[g])
+rotate_clockwise.add_effect(cols[g], next_col, forall=[g])
+folding_problem.add_action(rotate_clockwise)
 
-rotate_counter_clockwise = InstantaneousAction('rotate_counter_clockwise', x=IntType(0, dimension-1),
-                                       y=IntType(0, dimension-1), n=IntType(0, nodes-1))
-x = rotate_counter_clockwise.parameter('x')
-y = rotate_counter_clockwise.parameter('y')
+rotate_counter_clockwise = InstantaneousAction('rotate_counter_clockwise', n=IntType(0, nodes-1))
 n = rotate_counter_clockwise.parameter('n')
-#rotate_counter_clockwise.add_precondition(And(
-#    LE(x, folding.initial_value(rows[0]) + n),
-#    GE(x, folding.initial_value(rows[0]) - n),
-#))
-#rotate_counter_clockwise.add_precondition(And(
-#    LE(y, folding.initial_value(cols[0]) + n),
-#    GE(y, folding.initial_value(cols[0]) - n),
-#))
-rotate_counter_clockwise.add_precondition(Equals(rows[n], x))
-rotate_counter_clockwise.add_precondition(Equals(cols[n], y))
+rotate_counter_clockwise.add_precondition(And(
+    LE(rows[n], folding_problem.initial_value(rows[0]) + n),
+    GE(rows[n], folding_problem.initial_value(rows[0]) - n),
+))
+rotate_counter_clockwise.add_precondition(And(
+    LE(cols[n], folding_problem.initial_value(cols[0]) + n),
+    GE(cols[n], folding_problem.initial_value(cols[0]) - n),
+))
 g = RangeVariable('g', n+1, nodes-1)
 b = RangeVariable('b', 0, n-1)
+next_row = rows[n] + cols[n] - cols[g]
+next_col = cols[n] - rows[n] + rows[g]
 rotate_counter_clockwise.add_precondition(Forall(
-    Or(Not(Equals(rows[b], x + y - cols[g])),
-       Not(Equals(cols[b], y - x + rows[g]))), g,b))
-rotate_counter_clockwise.add_effect(rows[g], x + y - cols[g], forall=[g])
-rotate_counter_clockwise.add_effect(cols[g], y - x + rows[g], forall=[g])
-folding.add_action(rotate_counter_clockwise)
+    Or(Not(Equals(rows[b], next_row)),
+       Not(Equals(cols[b], next_col))), g,b))
+rotate_counter_clockwise.add_effect(rows[g], next_row, forall=[g])
+rotate_counter_clockwise.add_effect(cols[g], next_col, forall=[g])
+folding_problem.add_action(rotate_counter_clockwise)
 
-folding.add_goal(Equals(rows[1], 2))
-folding.add_goal(Equals(cols[1], 1))
-folding.add_goal(Equals(rows[2], 2))
-folding.add_goal(Equals(cols[2], 2))
-#folding.add_goal(Equals(rows[0], 7))
-#folding.add_goal(Equals(cols[0], 7))
-#folding.add_goal(Equals(rows[1], 6))
-#folding.add_goal(Equals(cols[1], 7))
-#folding.add_goal(Equals(rows[2], 5))
-#folding.add_goal(Equals(cols[2], 7))
-#folding.add_goal(Equals(rows[3], 5))
-#folding.add_goal(Equals(cols[3], 8))
-#folding.add_goal(Equals(rows[4], 6))
-#folding.add_goal(Equals(cols[4], 8))
-#folding.add_goal(Equals(rows[5], 6))
-#folding.add_goal(Equals(cols[5], 9))
-#folding.add_goal(Equals(rows[6], 7))
-#folding.add_goal(Equals(cols[6], 9))
-#folding.add_goal(Equals(rows[7], 7))
-#folding.add_goal(Equals(cols[7], 10))
+for i, g in enumerate(goal_state):
+    folding_problem.add_goal(Equals(rows[i], g[0]))
+    folding_problem.add_goal(Equals(cols[i], g[1]))
 
 costs: Dict[Action, Expression] = {
     rotate_clockwise: Int(1),
     rotate_counter_clockwise: Int(1),
 }
-folding.add_quality_metric(MinimizeActionCosts(costs))
+folding_problem.add_quality_metric(MinimizeActionCosts(costs))
 
 assert compilation in ['integers', 'ut-integers', 'logarithmic'], f"Unsupported compilation type: {compilation}"
 
-#compilation_solving.compile_and_solve(folding, solving, compilation)
-
-COMPILATION_PIPELINES = {
-    'up': [
-        CompilationKind.INT_PARAMETER_ACTIONS_REMOVING,
-        CompilationKind.ARRAYS_REMOVING,
-        CompilationKind.USERTYPE_FLUENTS_REMOVING,
-    ],
-    'integers': [
-        CompilationKind.INT_PARAMETER_ACTIONS_REMOVING,
-        CompilationKind.ARRAYS_REMOVING,
-    ],
-    'ut-integers': [
-        CompilationKind.INT_PARAMETER_ACTIONS_REMOVING,
-        CompilationKind.ARRAYS_REMOVING,
-        CompilationKind.INTEGERS_REMOVING,
-        #CompilationKind.USERTYPE_FLUENTS_REMOVING,
-    ]
-}
-problem = folding
-compilation_kinds_to_apply = COMPILATION_PIPELINES[compilation]
-results = []
-for ck in compilation_kinds_to_apply:
-    print(f'Compilation kind: {ck}')
-    params = {}
-    if ck == CompilationKind.ARRAYS_REMOVING:
-        params = {'mode': 'permissive'}
-    with Compiler(problem_kind=problem.kind, compilation_kind=ck, params=params) as compiler:
-        result = compiler.compile(
-            problem,
-            ck
-        )
-        results.append(result)
-        problem = result.problem
-
-#print(problem)
+compilation_solving.compile_and_solve(folding_problem, solving, compilation)

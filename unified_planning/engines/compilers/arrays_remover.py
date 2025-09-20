@@ -69,6 +69,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
         supported_kind.set_fluents_type("REAL_FLUENTS")
         supported_kind.set_fluents_type("ARRAY_FLUENTS")
         supported_kind.set_fluents_type("OBJECT_FLUENTS")
+        supported_kind.set_fluents_type("DERIVED_FLUENTS")
         supported_kind.set_conditions_kind("NEGATIVE_CONDITIONS")
         supported_kind.set_conditions_kind("DISJUNCTIVE_CONDITIONS")
         supported_kind.set_conditions_kind("EQUALITIES")
