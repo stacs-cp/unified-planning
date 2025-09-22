@@ -352,6 +352,8 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                     return True
             if a.is_int_constant() or a.is_le() or a.is_lt():
                 return True
+            if self._has_integers(a):
+                return True
         return False
 
     def _consistent(self, assign1, assign2):
@@ -480,9 +482,9 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
 
             # Expression that contains integers !!!
 
-            # negation normal form!!!
-            new_node = self._to_nnf(new_problem, node)
-            if self._has_integers(new_node):
+            if self._has_integers(node):
+                # negation normal form!!!
+                new_node = self._to_nnf(new_problem, node)
                 cases = self._treat_integer_expression(new_node, old_problem, new_problem)
                 if not cases:
                     return None
@@ -496,16 +498,16 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                 return Or(*or_cases).simplify()
             else:
                 # Other nodes
-                new_args = [self._get_new_node(old_problem, new_problem, arg) for arg in new_node.args]
-                if new_node.is_exists() or new_node.is_forall():
+                new_args = [self._get_new_node(old_problem, new_problem, arg) for arg in node.args]
+                if node.is_exists() or node.is_forall():
                     new_variables = [
                         model.Variable(v.name, tm.UserType('Number')) if v.type.is_int_type() else v
-                        for v in new_node.variables()
+                        for v in node.variables()
                     ]
-                    return em.create_node(new_node.node_type, tuple(new_args), payload=tuple(new_variables))
+                    return em.create_node(node.node_type, tuple(new_args), payload=tuple(new_variables))
                 if None in new_args:
                     return None
-                return em.create_node(new_node.node_type, tuple(new_args)).simplify()
+                return em.create_node(node.node_type, tuple(new_args)).simplify()
 
     def _convert_effect(
             self,
@@ -622,7 +624,9 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
             new_action.clear_preconditions()
             new_action.clear_effects()
             for precondition in action.preconditions:
+                print("precondition", precondition)
                 new_precondition = self._get_new_node(problem, new_problem, precondition)
+                print("new_precondition", new_precondition)
                 if new_precondition is None or new_precondition == FALSE():
                     remove_action = True
                     break
