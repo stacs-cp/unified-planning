@@ -16,11 +16,8 @@
 
 
 from itertools import product
-
-from unified_planning.model.walkers import simplifier
-
-import unified_planning as up
 import unified_planning.engines as engines
+import re
 from unified_planning.engines.mixins.compiler import CompilationKind, CompilerMixin
 from unified_planning.engines.results import CompilerResult
 from unified_planning.model import (
@@ -68,6 +65,7 @@ class CountIntRemover(engines.engine.Engine, CompilerMixin):
         supported_kind.set_fluents_type("INT_FLUENTS")
         supported_kind.set_fluents_type("REAL_FLUENTS")
         supported_kind.set_fluents_type("OBJECT_FLUENTS")
+        supported_kind.set_fluents_type("ARRAY_FLUENTS")
         supported_kind.set_conditions_kind("NEGATIVE_CONDITIONS")
         supported_kind.set_conditions_kind("DISJUNCTIVE_CONDITIONS")
         supported_kind.set_conditions_kind("EQUALITIES")
@@ -140,10 +138,17 @@ class CountIntRemover(engines.engine.Engine, CompilerMixin):
     ) -> "up.model.fnode.FNode":
         env = new_problem.environment
         em = env.expression_manager
-        if expression.is_constant() or expression.is_parameter_exp():
+        if expression.is_constant() or expression.is_parameter_exp() or expression.is_object_exp():
             return expression
         elif expression.is_fluent_exp():
             if fluent is None:
+                if len(expression.fluent().name.split('[')) > 1:
+                    this_fluent = new_problem.fluent(expression.fluent().name.split('[')[0])(*expression.args)
+                    indices = [int(i) for i in re.findall(r'\[(.*?)\]', expression.fluent().name)]
+                    this_initial_value = new_problem.initial_value(this_fluent)
+                    for i in indices:
+                        this_initial_value = this_initial_value.constant_value()[i]
+                    return this_initial_value
                 return new_problem.initial_value(expression)
             else:
                 if fluent == expression:
