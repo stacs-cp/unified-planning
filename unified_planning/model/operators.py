@@ -64,7 +64,6 @@ BOOL_OPERATORS = frozenset(
         OperatorKind.IFF,
         OperatorKind.EXISTS,
         OperatorKind.FORALL,
-        OperatorKind.COUNT,
     ]
 )
 
@@ -77,7 +76,7 @@ IRA_RELATIONS = frozenset([OperatorKind.LE, OperatorKind.LT])
 RELATIONS = frozenset((OperatorKind.EQUALS,)) | IRA_RELATIONS
 
 IRA_OPERATORS = frozenset(
-    [OperatorKind.PLUS, OperatorKind.MINUS, OperatorKind.TIMES, OperatorKind.DIV]
+    [OperatorKind.PLUS, OperatorKind.MINUS, OperatorKind.TIMES, OperatorKind.DIV, OperatorKind.COUNT]
 )
 
 TRAJECTORY_CONSTRAINTS = frozenset(
