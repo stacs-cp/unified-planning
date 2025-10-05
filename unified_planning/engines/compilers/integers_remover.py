@@ -14,6 +14,9 @@
 #
 """This module defines the quantifiers remover class."""
 import operator
+from operator import and_, or_
+
+from ortools.sat.python import cp_model
 from itertools import product
 
 from unified_planning.model.expression import ListExpression
@@ -21,6 +24,7 @@ from unified_planning.model.operators import OperatorKind
 
 import unified_planning as up
 import unified_planning.engines as engines
+from collections import defaultdict
 import bisect
 from unified_planning import model
 from unified_planning.engines.mixins.compiler import CompilationKind, CompilerMixin
@@ -29,17 +33,48 @@ from unified_planning.exceptions import UPProblemDefinitionError, UPValueError, 
 from unified_planning.model import (
     Problem,
     Action,
-    ProblemKind, Variable, MinimizeActionCosts, Effect, EffectKind,
+    ProblemKind, Variable, MinimizeActionCosts, Effect, EffectKind, AbstractProblem,
 )
 from unified_planning.model.problem_kind_versioning import LATEST_PROBLEM_KIND_VERSION
 from unified_planning.engines.compilers.utils import (
     get_fresh_name,
     replace_action, updated_minimize_action_costs,
 )
-from typing import Dict, Optional, OrderedDict, Set, Iterator
-from functools import partial
-from unified_planning.shortcuts import Exists, And, Or, Equals, Int, Plus, Not, LT, FALSE, LE, GT, GE
+from typing import Dict, Optional, OrderedDict, Set, Iterator, List, Tuple, Union
+from functools import partial, reduce
 
+from unified_planning.model.types import _IntType
+from unified_planning.shortcuts import Exists, And, Or, Equals, Int, Plus, Not, LT, FALSE, LE, GT, GE, IntType, Iff
+
+
+class VarArraySolutionPrinter(cp_model.CpSolverSolutionCallback):
+    """Print intermediate solutions."""
+
+    def __init__(self, variables: list[cp_model.IntVar]):
+        cp_model.CpSolverSolutionCallback.__init__(self)
+        self.__variables = variables
+        self.__solution_count = 0
+        self.__solutions = []
+        self.__seen = set()  # Per detectar duplicats
+
+    def on_solution_callback(self):
+        solution = {str(v): self.value(v) for v in self.__variables}
+
+        # Convertir a tupla per fer hash
+        sol_tuple = tuple(sorted(solution.items()))
+
+        if sol_tuple not in self.__seen:
+            self.__seen.add(sol_tuple)
+            self.__solutions.append(solution)
+            self.__solution_count += 1
+
+    @property
+    def solution_count(self) -> int:
+        return self.__solution_count
+
+    @property
+    def solutions(self) -> list[dict[str, int]]:
+        return self.__solutions
 
 class IntegersRemover(engines.engine.Engine, CompilerMixin):
     """
@@ -228,122 +263,6 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
             raise UPProblemDefinitionError(
                 f"Operation {expr.node_type} not supported!")
 
-    def _normalize(self, node):
-        v1, c1 = self._decompose(node.arg(0))
-        v2, c2 = self._decompose(node.arg(1))
-        vars_norm = self._merge(v1, self._negate(v2))
-        const_norm = c1 - c2
-
-        # If there's only a variable
-        if len(vars_norm) == 1:
-            (var, coef), = vars_norm.items()
-            if coef != 1:
-                vars_norm = {var: 1}
-                const_norm = const_norm / coef
-        return vars_norm, const_norm
-
-    def _handle_comparison(self, new_problem, node):
-        # Normalitzar
-        normalized_vars, normalized_const = self._normalize(node)
-        target = -normalized_const
-        var_items = list(normalized_vars.items())
-
-        if normalized_vars == {}:
-            return []
-        # Cas 1 variable
-        if len(var_items) == 1:
-            (var, coef) = var_items[0]
-            assert coef == 1, "Coefficient of not 1 not supported!"
-            bounds = self._get_bounds(var)
-
-            if node.node_type == OperatorKind.EQUALS:
-                solutions = [{var: target}] if target in bounds else []
-            elif node.node_type in (OperatorKind.LE, OperatorKind.LT):
-                bisect_fn = bisect.bisect_right if node.node_type == OperatorKind.LE else bisect.bisect_left
-                idx = bisect_fn(bounds, target)
-                solutions = [{var: v} for v in bounds[:idx]]
-            else:
-                raise UPProblemDefinitionError(
-                    f"Node type {node.node_type} not supported here!"
-                )
-
-        # Cas 2 variables
-        elif len(var_items) == 2:
-            (var1, coef1), (var2, coef2) = var_items
-            bounds_1 = self._get_bounds(var1)
-            bounds_2 = self._get_bounds(var2)
-            solutions = []
-            # Iterem per la variable amb menys valors, però simplifiquem en els dos sentits
-            if node.node_type == OperatorKind.EQUALS:
-                op = operator.eq
-            elif node.node_type == OperatorKind.LE:
-                op = operator.le
-            elif node.node_type == OperatorKind.LT:
-                op = operator.lt
-            else:
-                raise UPProblemDefinitionError("Node type not supported here!")
-
-            if len(bounds_1) <= len(bounds_2):
-                for v1 in bounds_1:
-                    valid_v2 = [v2 for v2 in bounds_2 if op(coef1 * v1 + coef2 * v2 + normalized_const, 0)]
-
-                    if set(valid_v2) == set(bounds_2):
-                        # Fixant var1 = v1, TOTS els valors de var2 funcionen
-                        solutions.append({var1: v1})
-                    else:
-                        # Normal: només afegim els parells vàlids
-                        solutions.extend({var1: v1, var2: v2} for v2 in valid_v2)
-            else:
-                for v2 in bounds_2:
-                    valid_v1 = [v1 for v1 in bounds_1 if op(coef1 * v1 + coef2 * v2 + normalized_const, 0)]
-
-                    if set(valid_v1) == set(bounds_1):
-                        # Fixant var2 = v2, TOTS els valors de var1 funcionen
-                        solutions.append({var2: v2})
-                    else:
-                        solutions.extend({var1: v1, var2: v2} for v1 in valid_v1)
-
-        # Cas més de 2 variables
-        else:
-            def backtrack(idx, current_assign, current_sum):
-                if idx == len(var_items) - 1:
-                    var, coef = var_items[idx]
-                    rest = target - current_sum
-                    if rest % coef == 0:
-                        v = rest // coef
-                        if v in self._get_bounds(var):
-                            yield {**current_assign, var: v}
-                else:
-                    var, coef = var_items[idx]
-                    bounds = self._get_bounds(var)
-                    valid_values = []
-
-                    for v in bounds:
-                        new_sum = current_sum + coef * v
-                        for _ in backtrack(idx + 1, {**current_assign, var: v}, new_sum):
-                            valid_values.append(v)
-                            break
-
-                    if set(valid_values) == set(bounds):
-                        # tots els valors del domini funcionen - nomes guardem la variable
-                        yield current_assign
-                    else:
-                        for v in valid_values:
-                            yield from backtrack(idx + 1, {**current_assign, var: v}, current_sum + coef * v)
-
-            solutions = list(backtrack(0, {}, 0))
-        return solutions
-
-    def _has_arithmetics(self, node: "up.model.fnode.FNode"):
-        # mirar si algun argument es enter
-        for a in node.args:
-            operation_inner = self.operation_inner_map.get(a.node_type)
-            if operation_inner is not None:
-                return True
-            if self._has_arithmetics(a):
-                return True
-        return False
-
     def _has_integers(self, node: "up.model.fnode.FNode"):
         # Check if any child of node has integers in it
         for a in node.args:
@@ -356,54 +275,143 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                 return True
         return False
 
-    def _consistent(self, assign1, assign2):
-        for k, v in assign1.items():
-            if k in assign2 and assign2[k] != v:
-                return False
-        return True
-
-    def _combine_constraints(self, node, old_problem, new_problem):
-        all_solutions = []
-        for child in node.args:
-            if self.operation_outer_map.get(child.node_type) is not None:
-                sols = self._combine_constraints(child, old_problem, new_problem)
-            elif self._has_integers(child):
-                sols = self._handle_comparison(new_problem, child)
+    def _add_constraints(self, problem, node, variables, expressions, cpmodel):
+        if node.is_constant():
+            return cpmodel.new_constant(node.constant_value())
+        elif node.is_fluent_exp():
+            fluent = node.fluent()
+            if node in variables:
+                return variables[node]
             else:
-                sols = self._get_new_node(old_problem, new_problem, child)
+                if fluent.type.is_int_type():
+                    f = cpmodel.new_int_var(fluent.type.lower_bound, fluent.type.upper_bound, fluent.name)
+                    variables[node] = f
+                    return f
+                else:
+                    f = cpmodel.new_bool_var(fluent.name)
+                    variables[node] = f
+                    return f
 
-            if not sols:  # cap solució -> AND impossible
-                return None
-            all_solutions.append(sols)
-
-        results = []
-
-        # aixo ns
-        def backtrack(i, current):
-            if i == len(all_solutions):
-                results.append(current.copy())
-                return
-            for sol in all_solutions[i]:
-                if self._consistent(current, sol):
-                    merged = {**current, **sol}
-                    backtrack(i + 1, merged)
-
-        backtrack(0, {})
-        return results
-
-    def _treat_integer_expression(self, node, old_problem, new_problem):
-        if node.node_type == OperatorKind.AND: # controlar que hi ha enters un altre cop..
-            return self._combine_constraints(node, old_problem, new_problem)
-        elif node.node_type == OperatorKind.NOT:
-            return self._treat_integer_expression(node, old_problem, new_problem)
-        elif node.node_type == OperatorKind.OR:
-            possible_cases = []
+        elif node.is_and():
+            child_vars = []
             for arg in node.args:
-                possible_cases.extend(self._treat_integer_expression(arg, old_problem, new_problem))
-            return possible_cases
-        else:  # comparison operators (equals, lt, le)
-            possible_cases = self._handle_comparison(new_problem, node)
-            return possible_cases
+                child_result = self._add_constraints(problem, arg, variables, expressions, cpmodel)
+                child_vars.append(child_result)
+
+            and_var = cpmodel.new_bool_var(f"and_{id(node)}")
+            cpmodel.add(sum(child_vars) == len(child_vars)).only_enforce_if(and_var)
+            cpmodel.add(sum(child_vars) < len(child_vars)).only_enforce_if(~and_var)
+            return and_var
+
+        elif node.is_or():
+            child_vars = []
+            for arg in node.args:
+                child_result = self._add_constraints(problem, arg, variables, expressions, cpmodel)
+                child_vars.append(child_result)
+
+            or_var = cpmodel.new_bool_var(f"or_{id(node)}")
+            cpmodel.add(sum(child_vars) >= 1).only_enforce_if(or_var)
+            cpmodel.add(sum(child_vars) == 0).only_enforce_if(~or_var)
+            return or_var
+
+        elif node.is_not():
+            inner_var = self._add_constraints(problem, node.arg(0), variables, expressions, cpmodel)
+            # Crear una nova variable booleana per la negació
+            not_var = cpmodel.new_bool_var(f"not_{id(node)}")
+            cpmodel.add(inner_var == 0).only_enforce_if(not_var)
+            cpmodel.add(inner_var == 1).only_enforce_if(~not_var)
+            return not_var
+
+        elif node.is_equals():
+            if node.arg(0).type.is_user_type():
+                if node in variables:
+                    return variables[node]
+                var = cpmodel.new_bool_var(str(node))
+                variables[node] = var
+                expressions[str(var)] = node
+                return var
+            else:
+                left = self._add_constraints(problem, node.arg(0), variables, expressions, cpmodel)
+                right = self._add_constraints(problem, node.arg(1), variables, expressions, cpmodel)
+                eq_var = cpmodel.new_bool_var(f"eq_{node}")
+                cpmodel.add(left == right).only_enforce_if(eq_var)
+                cpmodel.add(left != right).only_enforce_if(~eq_var)
+                return eq_var
+
+        elif node.is_lt() or node.is_le() or node.is_plus() or node.is_minus() or node.is_times():
+            left = self._add_constraints(problem, node.arg(0), variables, expressions, cpmodel)
+            right = self._add_constraints(problem, node.arg(1), variables, expressions, cpmodel)
+
+            if node.is_lt():
+                var = cpmodel.new_bool_var(f"lt_{id(node)}")
+                cpmodel.add(left < right).only_enforce_if(var)
+                cpmodel.add(left >= right).only_enforce_if(~var)
+                return var
+            if node.is_le():
+                var = cpmodel.new_bool_var(f"le_{id(node)}")
+                cpmodel.add(left <= right).only_enforce_if(var)
+                cpmodel.add(left > right).only_enforce_if(~var)
+                return var
+            if node.is_plus():
+                return left + right
+            if node.is_minus():
+                return left - right
+            if node.is_times():
+                return left * right
+
+        else:
+            raise NotImplementedError(f"Node type {node.node_type} not implemented")
+
+    def _call_cp_solver(self, node, old_problem, new_problem):
+        variables = {}
+        expressions = {}
+        cpmodel = cp_model.CpModel()
+
+        # constraints
+        constraints = self._add_constraints(old_problem, node, variables, expressions, cpmodel)
+        if isinstance(constraints, cp_model.IntVar):
+            cpmodel.add(constraints == 1)
+        else:
+            cpmodel.add(constraints)
+        cp_variables = list(variables.values())
+
+        solver = cp_model.CpSolver()
+        solution_printer = VarArraySolutionPrinter(cp_variables)
+        solver.parameters.enumerate_all_solutions = True
+        status = solver.solve(cpmodel, solution_printer)
+        if status == cp_model.OPTIMAL or status == cp_model.FEASIBLE:
+            # possible solutions
+            possible_solutions = []
+            solutions = solution_printer.solutions
+            if len(solutions) > 1:
+                # Agrupar valors i descartar variables que agafen tot el domini - aconsegueixo reduir a 1/4 part
+                solutions = self.simplify_solutions(old_problem, solution_printer.solutions)
+
+            for s in solutions:
+                assignations = []
+                for f, v in s.items():
+                    if new_problem.has_fluent(f):
+                        fluent = new_problem.fluent(f)  # vigilar! com guardar parametres
+                        if old_problem.fluent(f).type.is_int_type():
+                            if isinstance(v, set):
+                                or_e = [Equals(fluent, self._get_object_n(new_problem, value)) for value in v]
+                                assignations.append(Or(or_e))
+                            else:
+                                value = self._get_object_n(new_problem, v)
+                                assignations.append(Equals(fluent, value))
+                        elif old_problem.fluent(f).type.is_bool_type():
+                            value = True if v == 1 else False
+                            assignations.append(Iff(fluent, value))
+                        else:
+                            raise UPProblemDefinitionError(f"Not implemented yet!")
+                    else:
+                        assignations.append(expressions[f] if v == 1 else Not(expressions[f]))
+
+                possible_solutions.append(And(assignations).simplify())
+            return Or(possible_solutions).simplify()
+        else:
+            return None
+
 
     def _apply_negation(self, node):
         constants = {
@@ -418,17 +426,14 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
         }
         if node.node_type in constants:
             return Not(node)
-        if node.node_type == OperatorKind.EQUALS:
-            return Or(LT(node.arg(0), node.arg(1)),
-                      GT(node.arg(0), node.arg(1))).simplify()
-        elif node.node_type == OperatorKind.LE:
+        if node.node_type == OperatorKind.LE:
             return GT(node.arg(0), node.arg(1)).simplify()
         elif node.node_type == OperatorKind.LT:
             return GE(node.arg(0), node.arg(1)).simplify()
         elif node.node_type == OperatorKind.AND:
-            return Or(node.args).simplify()
+            return Or(Not(a) for a in node.args).simplify()
         elif node.node_type == OperatorKind.OR:
-            return And(node.args).simplify()
+            return And(Not(a) for a in node.args).simplify()
         elif node.node_type == OperatorKind.NOT:
             return node.arg(0)
         else:
@@ -448,7 +453,12 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
         if node.node_type in constants:
             return node
         elif node.node_type == OperatorKind.NOT:
-            return self._apply_negation(self._to_nnf(new_problem, node.arg(0)))
+            if node.arg(0).node_type in constants:
+                return Not(self._to_nnf(new_problem, node.arg(0)))
+            elif node.arg(0).is_equals(): # deixem el not equals
+                return node
+            else:
+                return self._to_nnf(new_problem, self._apply_negation(node.arg(0)))
         elif node.node_type == OperatorKind.IMPLIES:
             return Or(self._to_nnf(new_problem, Not(node.arg(0))), self._to_nnf(new_problem, node.arg(1)))
         elif node.node_type == OperatorKind.IFF:
@@ -458,11 +468,101 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
             em = new_problem.environment.expression_manager
             return em.create_node(node.node_type, tuple([self._to_nnf(new_problem, a) for a in node.args]))
 
+    def _factorise_cases(self, cases):
+        grouped = defaultdict(list)
+
+        # 1. Agrupem segons totes les variables menys una
+        for case in cases:
+            for var in case:
+                # clau = tot menys 'var'
+                key = tuple(sorted((k, v) for k, v in case.items() if k != var))
+                grouped[(key, var)].append(case[var])
+
+        simplified = []
+        used = set()
+
+        # 2. Si una variable té diversos valors, compactem-ho
+        for (key, var), vals in grouped.items():
+            if len(vals) > 1:
+                # conjunt de valors
+                compact = dict(key)
+                compact[var] = set(vals)
+                simplified.append(compact)
+                used.update((frozenset(case.items()) for case in cases
+                             if all(case.get(k) == v for k, v in key)))
+
+        # 3. Afegim els casos que no s’han pogut compactar
+        for case in cases:
+            if frozenset(case.items()) not in used:
+                simplified.append({k: v for k, v in case.items()})
+
+        return simplified
+
+    def simplify_solutions(self, problem: AbstractProblem, solutions: list[dict[str, int]]):
+        """
+        Agrupa solucions que només difereixen en una o poques variables.
+        Retorna solucions compactades on un valor pot ser un set i
+        elimina variables que agafen tots els valors del seu domini.
+        """
+        if not solutions:
+            return []
+
+        # Obtenir totes les variables
+        all_vars = list(solutions[0].keys())
+
+        simplified = []
+        used = set()
+
+        # Intentar agrupar per cada variable
+        for var_to_vary in all_vars:
+            groups = {}
+
+            for i, sol in enumerate(solutions):
+                if i in used:
+                    continue
+
+                # Clau = tots els valors menys la variable que pot variar
+                key = tuple((k, v) for k, v in sorted(sol.items()) if k != var_to_vary)
+
+                if key not in groups:
+                    groups[key] = []
+                groups[key].append((i, sol[var_to_vary]))
+
+            # Si un grup té múltiples valors per la variable, compactar
+            for key, indices_and_vals in groups.items():
+                if len(indices_and_vals) > 1:
+                    # Marcar com usades
+                    for idx, _ in indices_and_vals:
+                        used.add(idx)
+
+                    # Crear solució compactada
+                    compact = dict(key)
+                    values_set = set(val for _, val in indices_and_vals)
+
+                    # Comprovar si té tots els valors del domini
+                    min_val, max_val = problem.fluent(var_to_vary).type.lower_bound, problem.fluent(var_to_vary).type.upper_bound
+                    expected_values = set(range(min_val, max_val + 1))
+
+                    # Si NO té tots els valors, guardar el set
+                    if values_set != expected_values:
+                        compact[var_to_vary] = values_set
+                    # Si té tots els valors, no afegir la variable (l'eliminem)
+
+                    simplified.append(compact)
+
+        # Afegir solucions que no s'han pogut agrupar
+        for i, sol in enumerate(solutions):
+            if i not in used:
+                simplified.append(sol)
+
+        return simplified
+
     def _get_new_node(
             self,
             old_problem: "up.model.AbstractProblem",
             new_problem: "up.model.AbstractProblem",
-            node: "up.model.fnode.FNode"
+            node: "up.model.fnode.FNode",
+            learned_values: Optional[Dict["up.model.fnode.FNode", Set[int]]] = {}
     ) -> up.model.fnode.FNode:
         env = new_problem.environment
         em = env.expression_manager
@@ -480,33 +580,20 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                 raise UPProblemDefinitionError(
                     f"Operation {operation_inner} not supported as an external expression!")
 
-            # Expression that contains integers !!!
-
             if self._has_integers(node):
-                # negation normal form!!!
-                new_node = self._to_nnf(new_problem, node)
-                cases = self._treat_integer_expression(new_node, old_problem, new_problem)
-                if not cases:
-                    return None
-                or_cases = []
-                for c in cases:
-                    and_cases = []
-                    for f,v in c.items():
-                        and_cases.append(Equals(self._get_new_node(old_problem, new_problem, f),
-                                                self._get_new_node(old_problem, new_problem, Int(v))).simplify())
-                    or_cases.append(And(*and_cases).simplify())
-                return Or(*or_cases).simplify()
+                node_nnf = self._to_nnf(new_problem, node).simplify()
+                return self._call_cp_solver(node_nnf, old_problem, new_problem)
             else:
                 # Other nodes
-                new_args = [self._get_new_node(old_problem, new_problem, arg) for arg in node.args]
-                if node.is_exists() or node.is_forall():
-                    new_variables = [
-                        model.Variable(v.name, tm.UserType('Number')) if v.type.is_int_type() else v
-                        for v in node.variables()
-                    ]
-                    return em.create_node(node.node_type, tuple(new_args), payload=tuple(new_variables))
+                new_args = [self._get_new_node(old_problem, new_problem, arg, learned_values) for arg in node.args]
                 if None in new_args:
                     return None
+                if node.is_exists() or node.is_forall():
+                    new_variables = [
+                        Variable(v.name, tm.UserType('Number')) if v.type.is_int_type() else v
+                        for v in node.variables()
+                    ]
+                    return em.create_node(node.node_type, tuple(new_args), payload=tuple(new_variables)).simplify()
                 return em.create_node(node.node_type, tuple(new_args)).simplify()
 
     def _convert_effect(
@@ -547,13 +634,15 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
             problem: "up.model.AbstractProblem",
             n: Optional[int] = None,
     ):
-        number_type = problem.environment.type_manager.UserType('Number')
+        tm = problem.environment.type_manager
+        em = problem.environment.expression_manager
+        number_type = tm.UserType('Number')
         if not problem.has_object(f'n{n}'):
             ut_number = model.Object(f'n{n}', number_type)
             problem.add_object(ut_number)
         else:
             ut_number = problem.object(f'n{n}')
-        return problem.environment.expression_manager.ObjectExp(ut_number)
+        return em.ObjectExp(ut_number)
 
     def _transform_fluent(self, fluent, default_value, new_signature, new_problem, ut_number):
         if fluent.type.is_int_type():
@@ -623,14 +712,13 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
             new_action.name = get_fresh_name(new_problem, action.name)
             new_action.clear_preconditions()
             new_action.clear_effects()
-            for precondition in action.preconditions:
-                print("precondition", precondition)
-                new_precondition = self._get_new_node(problem, new_problem, precondition)
-                print("new_precondition", new_precondition)
-                if new_precondition is None or new_precondition == FALSE():
-                    remove_action = True
-                    break
-                new_action.add_precondition(new_precondition)
+            learned_values = {}
+
+            new_preconditions = self._get_new_node(problem, new_problem, And(action.preconditions), learned_values)
+            if new_preconditions is None or new_preconditions == FALSE():
+                remove_action = True
+                break
+            new_action.add_precondition(new_preconditions)
             if not remove_action:
                 for effect in action.effects:
                     if effect.is_increase() or effect.is_decrease():
@@ -671,16 +759,19 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                                     self._get_object_n(new_problem, v),
                                     Or(possible_cases), effect.forall)
                         else:
-                            new_node = self._get_new_node(problem, new_problem, effect.fluent)
-                            new_condition = self._get_new_node(problem, new_problem, effect.condition)
-                            new_value = self._get_new_node(problem, new_problem, effect.value)
+                            new_node = self._get_new_node(problem, new_problem, effect.fluent, learned_values)
+                            new_condition = self._get_new_node(problem, new_problem, effect.condition, learned_values)
+                            new_value = self._get_new_node(problem, new_problem, effect.value, learned_values)
                             new_action.add_effect(new_node, new_value, new_condition, effect.forall)
                 if not remove_action:
                     new_to_old[new_action] = action
                     new_problem.add_action(new_action)
 
         for goal in problem.goals:
-            new_problem.add_goal(self._get_new_node(problem, new_problem, goal))
+            new_goal = self._get_new_node(problem, new_problem, goal)
+            if new_goal is None:
+                raise UPProblemDefinitionError("Goal cannot be translated!")
+            new_problem.add_goal(new_goal)
 
         for qm in problem.quality_metrics:
             if qm.is_minimize_action_costs():
