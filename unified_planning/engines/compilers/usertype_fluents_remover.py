@@ -42,7 +42,7 @@ from unified_planning.model import (
     Object,
     Expression,
     DurationInterval,
-    UPState,
+    UPState, Axiom,
 )
 from unified_planning.model.problem_kind_versioning import LATEST_PROBLEM_KIND_VERSION
 from unified_planning.model.walkers import UsertypeFluentsWalker
@@ -261,6 +261,27 @@ class UsertypeFluentsRemover(engines.engine.Engine, CompilerMixin):
                 )
             new_problem.add_action(new_action)
             new_to_old[new_action] = old_action
+
+        for old_axiom in problem.axioms:
+            params = OrderedDict(((p.name, p.type) for p in old_axiom.parameters))
+            new_axiom = Axiom(old_axiom.name, _parameters=params, _env=env)
+            for p in old_axiom.preconditions:
+                new_axiom.add_precondition(
+                    utf_remover.remove_usertype_fluents_from_condition(p)
+                )
+            for e in old_axiom.effects:
+                for ne in self._convert_effect(
+                        e, problem, fluents_map, em, utf_remover
+                ):
+                    new_axiom._add_effect_instance(ne)
+            if old_axiom.simulated_effect is not None:
+                new_axiom.set_simulated_effect(
+                    self._convert_simulated_effect(
+                        old_axiom.simulated_effect, fluents_map, em, problem
+                    )
+                )
+            new_problem.add_axiom(new_axiom)
+            new_to_old[new_axiom] = old_axiom
 
         for g in problem.goals:
             new_problem.add_goal(utf_remover.remove_usertype_fluents_from_condition(g))

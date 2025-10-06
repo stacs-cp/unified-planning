@@ -562,7 +562,6 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
             old_problem: "up.model.AbstractProblem",
             new_problem: "up.model.AbstractProblem",
             node: "up.model.fnode.FNode",
-            learned_values: Optional[Dict["up.model.fnode.FNode", Set[int]]] = {}
     ) -> up.model.fnode.FNode:
         env = new_problem.environment
         em = env.expression_manager
@@ -585,7 +584,7 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                 return self._call_cp_solver(node_nnf, old_problem, new_problem)
             else:
                 # Other nodes
-                new_args = [self._get_new_node(old_problem, new_problem, arg, learned_values) for arg in node.args]
+                new_args = [self._get_new_node(old_problem, new_problem, arg) for arg in node.args]
                 if None in new_args:
                     return None
                 if node.is_exists() or node.is_forall():
@@ -676,6 +675,7 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
         new_problem.clear_fluents()
         new_problem.clear_actions()
         new_problem.clear_goals()
+        new_problem.clear_axioms()
         new_problem.initial_values.clear()
         new_problem.clear_quality_metrics()
         env = new_problem.environment
@@ -712,9 +712,8 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
             new_action.name = get_fresh_name(new_problem, action.name)
             new_action.clear_preconditions()
             new_action.clear_effects()
-            learned_values = {}
 
-            new_preconditions = self._get_new_node(problem, new_problem, And(action.preconditions), learned_values)
+            new_preconditions = self._get_new_node(problem, new_problem, And(action.preconditions))
             if new_preconditions is None or new_preconditions == FALSE():
                 remove_action = True
                 break
@@ -759,13 +758,36 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
                                     self._get_object_n(new_problem, v),
                                     Or(possible_cases), effect.forall)
                         else:
-                            new_node = self._get_new_node(problem, new_problem, effect.fluent, learned_values)
-                            new_condition = self._get_new_node(problem, new_problem, effect.condition, learned_values)
-                            new_value = self._get_new_node(problem, new_problem, effect.value, learned_values)
+                            new_node = self._get_new_node(problem, new_problem, effect.fluent)
+                            new_condition = self._get_new_node(problem, new_problem, effect.condition)
+                            new_value = self._get_new_node(problem, new_problem, effect.value)
                             new_action.add_effect(new_node, new_value, new_condition, effect.forall)
                 if not remove_action:
                     new_to_old[new_action] = action
                     new_problem.add_action(new_action)
+
+        # Axioms
+        for axiom in problem.axioms:
+            remove_axiom = False
+            new_axiom = axiom.clone()
+            new_axiom.name = get_fresh_name(new_problem, new_axiom.name)
+            new_axiom.clear_preconditions()
+            new_axiom.clear_effects()
+            for precondition in axiom.preconditions:
+                new_precondition = self._get_new_node(problem, new_problem, precondition)
+                if new_precondition is None or new_precondition == FALSE():
+                    remove_axiom = True
+                    break
+                new_axiom.add_precondition(new_precondition)
+            if not remove_axiom:
+                for effect in axiom.effects:
+                    new_node = self._get_new_node(problem, new_problem, effect.fluent)
+                    new_condition = self._get_new_node(problem, new_problem, effect.condition)
+                    new_value = self._get_new_node(problem, new_problem, effect.value)
+                    new_axiom.add_effect(new_node, new_value, new_condition, effect.forall)
+
+                new_to_old[new_axiom] = axiom
+                new_problem.add_axiom(new_axiom)
 
         for goal in problem.goals:
             new_goal = self._get_new_node(problem, new_problem, goal)
