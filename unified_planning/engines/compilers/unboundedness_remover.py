@@ -161,15 +161,6 @@ class UnboundednessRemover(engines.engine.Engine, CompilerMixin):
         env = new_problem.environment
         tm = env.type_manager
 
-        bounded_fluents = {}
-
-        # Fluents
-        for fluent in problem.fluents:
-            if fluent.type.is_int_type() and fluent.type.lower_bound is not None and fluent.type.upper_bound is not None:
-                bounded_fluents[fluent] = (fluent.type.lower_bound, fluent.type.upper_bound)
-
-        print(bounded_fluents)
-
         # Actions
         for action in problem.actions:
             remove_action = False
@@ -181,8 +172,8 @@ class UnboundednessRemover(engines.engine.Engine, CompilerMixin):
                 new_action.add_precondition(precondition)
             for effect in action.effects:
                 fluent = effect.fluent.fluent()
-                if fluent in bounded_fluents.keys():
-                    lb, ub = fluent.type.lower_bound, fluent.type.upper_bound
+                if fluent.type.is_int_type() and fluent.type.lower_bound is not None and fluent.type.upper_bound is not None:
+                    lb, ub = (fluent.type.lower_bound, fluent.type.upper_bound)
                     if effect.condition is True:
                         new_action.add_precondition(And(LE(effect.value, ub), GE(effect.value, lb)).simplify())
                     else:
