@@ -280,7 +280,7 @@ def lift_action_instance(
     Where the grounded action is obtained by grounding
     the "original_action" with the specific "parameters"."""
     lifted_action, parameters = map[action_instance.action]
-    return ActionInstance(lifted_action, tuple(action_instance.actual_parameters + parameters))
+    return ActionInstance(lifted_action, action_instance.actual_parameters + tuple(parameters))
 
 
 def replace_action(
