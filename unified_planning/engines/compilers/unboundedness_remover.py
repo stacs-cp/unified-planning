@@ -77,6 +77,7 @@ class UnboundednessRemover(engines.engine.Engine, CompilerMixin):
         supported_kind.set_fluents_type("INT_FLUENTS")
         supported_kind.set_fluents_type("REAL_FLUENTS")
         supported_kind.set_fluents_type("OBJECT_FLUENTS")
+        supported_kind.set_fluents_type("ARRAY_FLUENTS")
         supported_kind.set_conditions_kind("NEGATIVE_CONDITIONS")
         supported_kind.set_conditions_kind("DISJUNCTIVE_CONDITIONS")
         supported_kind.set_conditions_kind("EQUALITIES")
@@ -172,12 +173,13 @@ class UnboundednessRemover(engines.engine.Engine, CompilerMixin):
                 new_action.add_precondition(precondition)
             for effect in action.effects:
                 fluent = effect.fluent.fluent()
-                if fluent.type.is_int_type() and fluent.type.lower_bound is not None and fluent.type.upper_bound is not None:
-                    lb, ub = (fluent.type.lower_bound, fluent.type.upper_bound)
-                    if effect.condition is True:
-                        new_action.add_precondition(And(LE(effect.value, ub), GE(effect.value, lb)).simplify())
-                    else:
-                        new_action.add_precondition(And(effect.condition, GE(effect.value, lb), LE(effect.value, ub)).simplify())
+                if not effect.value.is_constant():
+                    if fluent.type.is_int_type() and fluent.type.lower_bound is not None and fluent.type.upper_bound is not None:
+                        lb, ub = (fluent.type.lower_bound, fluent.type.upper_bound)
+                        if effect.condition is True:
+                            new_action.add_precondition(And(LE(effect.value, ub), GE(effect.value, lb)).simplify())
+                        else:
+                            new_action.add_precondition(And(effect.condition, GE(effect.value, lb), LE(effect.value, ub)).simplify())
 
                 if effect.is_increase():
                     new_action.add_increase_effect(effect.fluent, effect.value, effect.condition, effect.forall)
