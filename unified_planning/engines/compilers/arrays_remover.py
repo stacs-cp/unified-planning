@@ -182,9 +182,14 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
         env = new_problem.environment
         em = env.expression_manager
         if node.is_fluent_exp():
+            print("args fluent :", node.args)
+            new_args = []
+            for a in node.args:
+                new_args.extend(self._get_new_nodes(new_problem, a))
             new_fluent = self._get_new_fluent(node.fluent())
+            print(new_args)
             if new_problem.has_fluent(new_fluent.name):
-                return [new_fluent(*node.args)]
+                return [new_fluent(*new_args)]
             else:
                 if self.mode == 'strict':
                     print(f"Fluent {new_fluent.name} out of range!")

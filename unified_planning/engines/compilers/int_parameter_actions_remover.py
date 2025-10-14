@@ -182,14 +182,20 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
     ) -> Union["up.model.fnode.FNode", None]:
         em = new_problem.environment.expression_manager
         if node.is_fluent_exp():
+            # controlar parametres primer (fluents poden estar anidats!!!)
+            new_args = []
+            for arg in node.args:
+                new_args.append(self._manage_node(new_problem, arg, integer_parameters, instantiations))
+            if None in new_args:
+                return None
             original_fluent = new_problem.fluent(node.fluent().name.split('[')[0])
             if original_fluent.type.is_array_type():
                 fluent = node.fluent()
                 new_name = self._get_fluent_name(new_problem, fluent.name, integer_parameters, instantiations)
                 if new_name is None:
                     return None
-                return Fluent(new_name, fluent.type, fluent.signature, fluent.environment)(*node.args)
-            return node
+                return Fluent(new_name, fluent.type, fluent.signature, fluent.environment)(*new_args)
+            return node.fluent()(*new_args)
         elif node.is_parameter_exp():
             if integer_parameters.get(node.parameter().name) is not None:
                 return Int(instantiations[integer_parameters.get(node.parameter().name)])
@@ -549,8 +555,9 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                 remove_action = False
                 temporal_preconditions = []
                 for precondition in action.preconditions:
-                    print("precondition", precondition)
+                    print("------ precondition", precondition)
                     new_precondition = self._manage_node(new_problem, precondition, integer_parameters, instantiations)
+                    print("------ new_precondition", new_precondition)
                     if new_precondition is None or new_precondition == FALSE():
                         remove_action = True
                         break
