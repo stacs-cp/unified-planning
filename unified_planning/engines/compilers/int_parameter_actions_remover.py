@@ -227,7 +227,6 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                 return Not(Equals(new_var, new_constant))
 
         elif node.is_equals():
-            print(node.arg(0), node.arg(1),node.arg(0).type, node.arg(1).type )
             var, constant = (node.arg(0), node.arg(1)) \
                 if node.arg(0).is_fluent_exp() or node.arg(0).is_parameter_exp() \
                 else (node.arg(1), node.arg(0))
@@ -555,9 +554,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                 remove_action = False
                 temporal_preconditions = []
                 for precondition in action.preconditions:
-                    print("------ precondition", precondition)
                     new_precondition = self._manage_node(new_problem, precondition, integer_parameters, instantiations)
-                    print("------ new_precondition", new_precondition)
                     if new_precondition is None or new_precondition == FALSE():
                         remove_action = True
                         break
