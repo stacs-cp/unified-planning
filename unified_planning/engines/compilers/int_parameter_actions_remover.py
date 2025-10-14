@@ -13,8 +13,12 @@
 # limitations under the License.
 #
 """This module defines the quantifiers remover class."""
+import itertools
 import re
+import bisect
 from itertools import product
+
+from unified_planning.exceptions import UPProblemDefinitionError
 from unified_planning.model.fnode import FNode
 import unified_planning.engines as engines
 from collections import OrderedDict
@@ -39,7 +43,7 @@ from unified_planning.engines.compilers.utils import (
 from typing import Dict, List, Optional, Tuple, OrderedDict, Union
 from functools import partial
 
-from unified_planning.shortcuts import Int, FALSE, TRUE
+from unified_planning.shortcuts import Int, FALSE, TRUE, Or, Not, And, GT, GE, LT, Equals
 
 
 class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
@@ -173,7 +177,8 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             new_problem: "up.model.AbstractProblem",
             node: "up.model.fnode.FNode",
             integer_parameters: Optional[dict[str, int]] = {},
-            instantiations: Optional[tuple] = ()
+            instantiations: Optional[tuple] = (),
+            bounds: Optional[dict["up.model.fnode.FNode", int]] = {},
     ) -> Union["up.model.fnode.FNode", None]:
         em = new_problem.environment.expression_manager
         if node.is_fluent_exp():
@@ -191,6 +196,52 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             return node
         elif node.is_constant() or node.is_variable_exp() or node.is_timing_exp():
             return node
+        elif node.is_not() and node.arg(0).is_equals():
+            subnode = node.arg(0)
+            # si no esta a la llista de bounds... sempre es complira -> cert
+            var, constant = (subnode.arg(0), subnode.arg(1)) \
+                if subnode.arg(0).is_fluent_exp() or subnode.arg(0).is_parameter_exp() \
+                else (subnode.arg(1), subnode.arg(0))
+            new_var = self._manage_node(new_problem, var, integer_parameters, instantiations, bounds)
+            new_constant = self._manage_node(new_problem, constant, integer_parameters, instantiations, bounds)
+            if new_var in bounds.keys():
+                value = new_constant.object() if new_constant.type.is_user_type() else new_constant.constant_value()
+                if len(bounds[new_var]) == 1:
+                    if bounds[new_var][0] != value:
+                        return TRUE()
+                    else:
+                        return FALSE()
+                elif value not in bounds[new_var]:
+                    return TRUE()
+                elif value in bounds[new_var]:
+                    return Not(Equals(new_var, new_constant))
+                else:
+                    return None
+            else:
+                return Not(Equals(new_var, new_constant))
+
+        elif node.is_equals():
+            print(node.arg(0), node.arg(1),node.arg(0).type, node.arg(1).type )
+            var, constant = (node.arg(0), node.arg(1)) \
+                if node.arg(0).is_fluent_exp() or node.arg(0).is_parameter_exp() \
+                else (node.arg(1), node.arg(0))
+            new_var = self._manage_node(new_problem, var, integer_parameters, instantiations, bounds)
+            new_constant = self._manage_node(new_problem, constant, integer_parameters, instantiations, bounds)
+            if new_var is None or new_constant is None:
+                return None
+            if new_var in bounds.keys():
+                value = new_constant.object() if new_constant.is_object_exp() else new_constant.constant_value()
+                if len(bounds[new_var]) == 1:
+                    if bounds[new_var][0] == value:
+                        return TRUE()
+                    else:
+                        return None
+                elif value in bounds[new_var]:
+                    return Equals(new_var, new_constant)
+                else:
+                    return None
+            else:
+                return Equals(new_var, new_constant)
         else:
             if node.is_forall() or node.is_exists():
                 new_forall, range_vars = self._process_forall(node.variables())
@@ -207,7 +258,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                     for ti in instantiation_combinations:
                         this_instantiations = instantiations + ti
                         for arg in node.args:
-                            new_args.append(self._manage_node(new_problem, arg, this_integer_parameters, this_instantiations))
+                            new_args.append(self._manage_node(new_problem, arg, this_integer_parameters, this_instantiations, bounds))
                     new_node_type = OperatorKind.AND if node.is_forall() else OperatorKind.OR
                     if None in new_args:
                         new_args = self._is_problematic(new_node_type, new_args)
@@ -215,14 +266,14 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                         return None
                     return em.create_node(new_node_type, tuple(new_args)).simplify()
                 else:
-                    new_args = [self._manage_node(new_problem, arg, integer_parameters, instantiations) for arg in
+                    new_args = [self._manage_node(new_problem, arg, integer_parameters, instantiations, bounds) for arg in
                                 node.args]
                     if None in new_args:
                         new_args = self._is_problematic(node.node_type, new_args)
                     if new_args is None or new_args is []:
                         return None
                     return em.create_node(node.node_type, tuple(new_args), new_forall).simplify()
-            new_args = [self._manage_node(new_problem, arg, integer_parameters, instantiations) for arg in node.args]
+            new_args = [self._manage_node(new_problem, arg, integer_parameters, instantiations, bounds) for arg in node.args]
             if None in new_args:
                 new_args = self._is_problematic(node.node_type, new_args)
             if new_args is None or new_args is []:
@@ -289,6 +340,167 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
         else:
             action.add_effect(fluent, value, condition, forall)
 
+    def _apply_negation(self, node):
+        constants = {
+            OperatorKind.BOOL_CONSTANT,
+            OperatorKind.INT_CONSTANT,
+            OperatorKind.LIST_CONSTANT,
+            OperatorKind.REAL_CONSTANT,
+            OperatorKind.FLUENT_EXP,
+            OperatorKind.OBJECT_EXP,
+            OperatorKind.PARAM_EXP,
+            OperatorKind.VARIABLE_EXP
+        }
+        if node.node_type in constants:
+            return Not(node).simplify()
+        elif node.node_type == OperatorKind.LE:
+            return GT(node.arg(0), node.arg(1)).simplify()
+        elif node.node_type == OperatorKind.LT:
+            return GE(node.arg(0), node.arg(1)).simplify()
+        elif node.node_type == OperatorKind.AND:
+            return Or(Not(a) for a in node.args).simplify()
+        elif node.node_type == OperatorKind.OR:
+            return And(Not(a) for a in node.args).simplify()
+        elif node.node_type == OperatorKind.NOT:
+            return node.arg(0).simplify()
+        else:
+            raise UPProblemDefinitionError(f"Negation not supported for {node.node_type}")
+
+    def _to_nnf(self, new_problem, node):
+        constants = {
+            OperatorKind.BOOL_CONSTANT,
+            OperatorKind.INT_CONSTANT,
+            OperatorKind.LIST_CONSTANT,
+            OperatorKind.REAL_CONSTANT,
+            OperatorKind.FLUENT_EXP,
+            OperatorKind.OBJECT_EXP,
+            OperatorKind.PARAM_EXP,
+            OperatorKind.VARIABLE_EXP
+        }
+        if node.node_type in constants:
+            return node.simplify()
+        elif node.node_type == OperatorKind.NOT:
+            if node.arg(0).node_type in constants:
+                return Not(self._to_nnf(new_problem, node.arg(0))).simplify()
+            elif node.arg(0).is_equals(): # deixar el not equals
+                #Or(GT(node.arg(0).arg(0), node.arg(0).arg(1)), LT(node.arg(0).arg(0), node.arg(0).arg(1)))
+                return node.simplify()
+            else:
+                return self._to_nnf(new_problem, self._apply_negation(node.arg(0))).simplify()
+        elif node.node_type == OperatorKind.IMPLIES:
+            return Or(self._to_nnf(new_problem, Not(node.arg(0))), self._to_nnf(new_problem, node.arg(1))).simplify()
+        elif node.node_type == OperatorKind.IFF:
+            return And(Or(self._to_nnf(new_problem, Not(node.arg(0))), self._to_nnf(new_problem, node.arg(1))),
+                       Or(self._to_nnf(new_problem, node.arg(0)), self._to_nnf(new_problem, Not(node.arg(1))))).simplify()
+        else:
+            em = new_problem.environment.expression_manager
+            return em.create_node(node.node_type, tuple([self._to_nnf(new_problem, a) for a in node.args])).simplify()
+
+    def _get_bounds(self, problem, node, bounds):
+        if node.is_and():
+            for a in node.args:
+                self._get_bounds(problem, a, bounds)
+                return True
+        elif node.is_not() and node.arg(0).is_equals():
+            subnode = node.arg(0)
+            if subnode.arg(0).type.is_int_type() and (subnode.arg(0).is_constant() or subnode.arg(1).is_constant()):
+                switch = subnode.arg(1).type.is_fluent_exp()
+                fluent, value = (
+                    (subnode.arg(0), subnode.arg(1).constant_value()) # CONSTANT O NO?
+                    if not switch else
+                    (subnode.arg(1), subnode.arg(0).constant_value())
+                )
+                current_bounds = bounds.get(
+                    fluent,
+                    list(range(fluent.type.lower_bound, fluent.type.upper_bound + 1))
+                )
+                idx = bisect.bisect_left(current_bounds, value)
+
+                if idx < len(current_bounds) and current_bounds[idx] == value:
+                    new_bounds = current_bounds[:idx] + current_bounds[idx + 1:]
+                    if not new_bounds:
+                        return None
+                    bounds[fluent] = new_bounds
+                return True
+
+            elif subnode.arg(0).type.is_user_type() and (subnode.arg(0).is_object_exp() or subnode.arg(1).is_object_exp()):
+                var, value = (
+                    (subnode.arg(0), subnode.arg(1).object())
+                    if subnode.arg(0).is_fluent_exp() or subnode.arg(0).is_parameter_exp() else
+                    (subnode.arg(1), subnode.arg(0).object())
+                )
+                current_bounds = bounds.get(
+                    var,
+                    list(problem.objects(var.type))
+                )
+                if value not in current_bounds:
+                    return None
+                new_bounds = [obj for obj in current_bounds if obj != value]
+                if not new_bounds:
+                    return None
+                bounds[var] = new_bounds
+
+        elif node.is_equals():
+            if ((node.arg(0).type.is_int_type() or node.is_lt() or node.is_le()) and
+                    (node.arg(0).is_constant() or node.arg(1).is_constant())):
+                switch = node.arg(1).is_fluent_exp()
+                fluent, value = (
+                    (node.arg(0), node.arg(1).constant_value())
+                    if not switch else
+                    (node.arg(1), node.arg(0).constant_value())
+                )
+                current_bounds = bounds.get(
+                    fluent,
+                    list(range(fluent.type.lower_bound, fluent.type.upper_bound + 1))
+                )
+                # Decide bisect mode based on operator and side
+                if node.is_lt():
+                    left_fn, right_fn = bisect.bisect_left, bisect.bisect_right
+                    take_lower = not switch
+                elif node.is_le():
+                    left_fn, right_fn = bisect.bisect_right, bisect.bisect_left
+                    take_lower = not switch
+                else:  # equals
+                    if value not in current_bounds:
+                        return None
+                    bounds[fluent] = [value]
+                    return True
+
+                # Apply slicing
+                if take_lower:
+                    idx = left_fn(current_bounds, value)
+                    new_bounds = current_bounds[:idx]
+                else:
+                    idx = right_fn(current_bounds, value)
+                    new_bounds = current_bounds[idx:]
+
+                bounds[fluent] = new_bounds
+            elif node.arg(0).type.is_user_type() and (node.arg(0).is_object_exp() or node.arg(1).is_object_exp()):
+                var, value = (
+                    (node.arg(0), node.arg(1).object())
+                    if node.arg(0).is_fluent_exp() or node.arg(0).is_parameter_exp() else
+                    (node.arg(1), node.arg(0).object())
+                )
+                current_bounds = bounds.get(
+                    var,
+                    list(problem.objects(var.type))
+                )
+                if value not in current_bounds:
+                    return None
+                bounds[var] = [value]
+        #else:
+        #    raise NotImplementedError(f"Node type {node.node_type} not implemented")
+
+    def _get_assignations(self, problem, preconditions):
+        # de moment nomes suporta enters
+        bounds = {}
+        for p in preconditions:
+            self._get_bounds(problem, p, bounds)
+        if {k: v[0] for k, v in bounds.items() if len(v) == 0}:
+            return None
+
+        return {k: v for k, v in bounds.items()}
+
     def _compile(
         self,
         problem: "up.model.AbstractProblem",
@@ -317,6 +529,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             new_parameters = OrderedDict()
             integer_parameters = {}
             integers_domains = []
+
             for old_parameter in action.parameters:
                 if old_parameter.type.is_user_type():
                     new_parameters.update({old_parameter.name: old_parameter.type})
@@ -334,12 +547,41 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                 else:
                     new_action = Action(new_action_name, new_parameters, action.environment)
                 remove_action = False
+                temporal_preconditions = []
                 for precondition in action.preconditions:
+                    print("precondition", precondition)
                     new_precondition = self._manage_node(new_problem, precondition, integer_parameters, instantiations)
                     if new_precondition is None or new_precondition == FALSE():
                         remove_action = True
                         break
-                    new_action.add_precondition(new_precondition)
+                    if new_precondition.is_and():
+                        for np in new_precondition.args:
+                            temporal_preconditions.append(self._to_nnf(new_problem, np).simplify())
+                    elif new_precondition is not TRUE():
+                        temporal_preconditions.append(self._to_nnf(new_problem, new_precondition).simplify())
+
+                # Search assignations
+                bounds = self._get_assignations(problem, temporal_preconditions)
+                if bounds is None:
+                    break
+
+                # Replace values in other preconditions
+                if bounds:
+                    for fluent, value in bounds.items():
+                        if len(value) == 1:
+                            new_action.add_precondition(Equals(fluent, value[0]))
+
+                    for op in temporal_preconditions:
+                        new_op = self._manage_node(new_problem, op, {}, (), bounds)
+                        if new_op is None or new_op == FALSE():
+                            remove_action = True
+                            break
+                        if new_op != TRUE():
+                            new_action.add_precondition(new_op)
+                else:
+                    for op in temporal_preconditions:
+                        new_action.add_precondition(op)
+
                 if not remove_action:
                     for effect in action.effects:
                         effect_type = 'increase' if effect.is_increase() else 'decrease' if effect.is_decrease() else 'none'
@@ -356,8 +598,8 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                         for ti in instantiation_combinations:
                             this_instantiations = instantiations + ti
                             new_fluent = self._manage_node(new_problem, effect.fluent, this_integer_parameters, this_instantiations)
-                            new_value = self._manage_node(new_problem, effect.value, this_integer_parameters, this_instantiations)
-                            new_condition = self._manage_node(new_problem, effect.condition, this_integer_parameters, this_instantiations)
+                            new_value = self._manage_node(new_problem, effect.value, this_integer_parameters, this_instantiations, bounds)
+                            new_condition = self._manage_node(new_problem, effect.condition, this_integer_parameters, this_instantiations, bounds)
 
                             # Invalid value if it is out of range
                             if None not in (new_fluent, new_value):
