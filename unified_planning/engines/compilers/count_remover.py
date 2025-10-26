@@ -12,33 +12,28 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-"""This module defines the quantifiers remover class."""
+"""This module defines the count remover class."""
 import itertools
-
-from unified_planning.exceptions import UPValueError
-from unified_planning.model.walkers import simplifier
-
 import unified_planning as up
 import unified_planning.engines as engines
+from unified_planning.exceptions import UPValueError
+from unified_planning.model.walkers import simplifier
 from unified_planning.engines.mixins.compiler import CompilationKind, CompilerMixin
 from unified_planning.engines.results import CompilerResult
-from unified_planning.model import (
-    Problem,
-    Action,
-    ProblemKind,
-    OperatorKind,
-)
+from unified_planning.model import Problem, Action, ProblemKind, OperatorKind, FNode
 from unified_planning.model.problem_kind_versioning import LATEST_PROBLEM_KIND_VERSION
-from unified_planning.engines.compilers.utils import (
-    replace_action, get_fresh_name, updated_minimize_action_costs,
-)
-from typing import Dict, Optional, Union
+from unified_planning.engines.compilers.utils import replace_action, get_fresh_name, updated_minimize_action_costs
+from typing import Dict, Optional, Tuple, List
 from functools import partial
-from unified_planning.shortcuts import Not, And, Or
+from unified_planning.shortcuts import Not, And, Or, FALSE, TRUE
 
 class CountRemover(engines.engine.Engine, CompilerMixin):
     """
-    Count expression remover class: Only appears in the goal
+    Removes Count expressions that appear inside comparisons by expanding them into boolean formulas.
+
+    Supports:
+    - Count vs constant
+    - Count vs Count
     """
 
     def __init__(self):
@@ -129,115 +124,322 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
         new_kind.unset_conditions_kind("COUNTING")
         return new_kind
 
-    def _generate_combinations(self, arguments, min_true, max_true) -> "up.model.fnode.FNode":
-        """Generates combinations of expressions with a fixed amount of True arguments."""
-        return Or(
-            And(*(arguments[idx] if idx in true_indices else Not(arguments[idx])
-                 for idx in range(len(arguments))))
-            for i in range(min_true, max_true + 1)
-            for true_indices in itertools.combinations(range(len(arguments)), i)
-        )
+    # ==================== EXPRESSION TRANSFORMATION ====================
 
-    def _get_expression(self, node_type: str, arguments: list["up.model.fnode.FNode"], value: int):
-        """Returns the expression according to the node type and value."""
-        operation_map = {
-            'le': (0, value),
-            'eq': (value, value),
-            'lt': (0, value - 1),
-        }
-        if node_type in operation_map:
-            return self._generate_combinations(arguments, *operation_map[node_type])
+    def _transform_count_comparison(self, new_problem: Problem, node: FNode) -> FNode:
+        """
+        Transform comparisons involving Count expressions.
+        Handles:
+        - Count(args) op constant
+        - constant op Count(args)
+        - Count(args1) op Count(args2)
+        """
+        left = node.arg(0)
+        right = node.arg(1)
+        op = node.node_type
+        left_is_count = left.is_count()
+        right_is_count = right.is_count()
+
+        if left_is_count and right.is_int_constant():
+            return self._expand_count_vs_constant(left, right.constant_value(), op)
+        elif right_is_count and left.is_int_constant():
+            return self._expand_constant_vs_count(left.constant_value(), right, op)
+        elif left_is_count and right_is_count:
+            return self._expand_count_vs_count(left, right, op)
         else:
-            raise UPValueError(f"Count in an expression type {node_type} not supported!")
+            raise UPValueError(f"Unexpected Count comparison structure: {node}")
 
-    def _manage_counts(
+    def _transform_expression(self, new_problem: Problem, node: FNode) -> FNode:
+        """Transform expressions recursively."""
+        # Base cases: no transformation needed
+        if node.is_fluent_exp() or node.is_parameter_exp() or node.is_constant():
+            return node
+
+        # Check if this node is a comparison involving Count
+        comparison_ops = {OperatorKind.LT, OperatorKind.LE, OperatorKind.EQUALS}
+        if node.node_type in comparison_ops and any(arg.is_count() for arg in node.args):
+            return self._transform_count_comparison(new_problem, node)
+
+        # Transform all arguments
+        em = new_problem.environment.expression_manager
+        new_args = [
+            self._transform_expression(new_problem, arg)
+            for arg in node.args
+        ]
+        return em.create_node(node.node_type, tuple(new_args))
+
+    # ==================== COUNT VS CONSTANT ====================
+
+    def _exactly_k_combinations(self, arguments: List[FNode], k: int) -> List[FNode]:
+        """Generate all formulas where exactly k arguments are true."""
+        n = len(arguments)
+        if k > n or k < 0:
+            return []
+        combinations = []
+        for true_indices in itertools.combinations(range(n), k):
+            true_set = set(true_indices)
+            literals = [
+                arguments[i] if i in true_set else Not(arguments[i])
+                for i in range(n)
+            ]
+            combinations.append(And(*literals))
+        return combinations
+
+    def _exactly_k_true_formula(self, arguments: List[FNode], min_true: int, max_true: int) -> FNode:
+        """
+        Generate formula: "between min_true and max_true arguments are true".
+        Returns: Or of all combinations where exactly k args are true,
+                 for k in [min_true, max_true].
+        """
+        n = len(arguments)
+
+        # Edge cases
+        if min_true > n or max_true < 0:
+            return FALSE()
+        if min_true < 0:
+            min_true = 0
+        if max_true > n:
+            max_true = n
+        if min_true == 0 and max_true >= n:
+            return TRUE()
+
+        # OPTIMIZED: Special cases
+        if min_true == max_true:
+            # Exact count - enumerate
+            clauses = self._exactly_k_combinations(arguments, min_true)
+        elif min_true == 0 and max_true == n - 1:
+            # At most n-1 = not all true
+            return Not(And(*arguments))
+        elif min_true == 1 and max_true == n:
+            # At least 1
+            return Or(*arguments)
+        elif min_true == 0 and max_true == 1:
+            # At most 1
+            clauses = []
+            clauses.append(And(*[Not(a) for a in arguments]))  # all false
+            clauses.extend(self._exactly_k_combinations(arguments, 1))  # exactly 1
+        else:
+            # General range - enumerate all k values
+            clauses = []
+            for k in range(min_true, max_true + 1):
+                clauses.extend(self._exactly_k_combinations(arguments, k))
+
+        if len(clauses) == 0:
+            return FALSE()
+        elif len(clauses) == 1:
+            return clauses[0]
+        else:
+            return Or(*clauses)
+
+    def _expand_count_vs_constant(
+            self, count_node: FNode, value: int, op: OperatorKind
+    ) -> FNode:
+        """
+        Expand Count(args) op value into boolean formula.
+
+        Examples:
+        - Count(a, b, c) <= 2  →  "at most 2 of {a,b,c} are true"
+        - Count(a, b, c) == 2   →  "exactly 2 of {a,b,c} is true"
+        - Count(a, b, c) < 2   →  "at most 1 of {a,b,c} is true"
+        """
+        arguments = list(count_node.args)
+        n = len(arguments)
+
+        # Determine min and max number of true arguments
+        if op == OperatorKind.LE:
+            min_true, max_true = 0, min(value, n)
+        elif op == OperatorKind.EQUALS:
+            min_true, max_true = value, value
+        elif op == OperatorKind.LT:
+            min_true, max_true = 0, min(value - 1, n)
+        else:
+            raise UPValueError(f"Operator {op} not supported (should be LT/LE/EQUALS)")
+
+        # Generate boolean formula
+        return self._exactly_k_true_formula(arguments, min_true, max_true)
+
+    def _expand_constant_vs_count(
+            self, value: int, count_node: FNode, op: OperatorKind
+    ) -> FNode:
+        """
+        Expand constant op Count(args) into boolean formula.
+        """
+        arguments = list(count_node.args)
+        n = len(arguments)
+
+        # Flip the comparison semanticsx
+        if op == OperatorKind.LT:
+            # value < Count means Count > value means Count >= value+1
+            min_true, max_true = value + 1, n
+        elif op == OperatorKind.LE:
+            # value <= Count means Count >= value
+            min_true, max_true = value, n
+        elif op == OperatorKind.EQUALS:
+            # value = Count means Count = value
+            min_true, max_true = value, value
+        else:
+            raise UPValueError(f"Operator {op} not supported (should be LT/LE/EQUALS)")
+
+        # Generate boolean formula
+        return self._exactly_k_true_formula(arguments, min_true, max_true)
+
+    def _satisfies_operator(self, k1: int, k2: int, op: OperatorKind) -> bool:
+        """Check if (k1, k2) satisfies the operator."""
+        if op == OperatorKind.LT:
+            return k1 < k2
+        elif op == OperatorKind.LE:
+            return k1 <= k2
+        elif op == OperatorKind.EQUALS:
+            return k1 == k2
+        else:
+            raise UPValueError(f"Operator {op} should be normalized by UP")
+
+    # ==================== COUNT VS COUNT ====================
+
+    def _expand_count_vs_count(
+            self, count1: FNode, count2: FNode, op: OperatorKind
+    ) -> FNode:
+        """
+        Expand Count(args1) op Count(args2) into boolean formula.
+
+        Strategy: Enumerate all possible (k1, k2) pairs that satisfy the comparison,
+        then generate: Or over all valid pairs of (exactly k1 true in args1) ∧ (exactly k2 true in args2)
+        """
+        args1 = list(count1.args)
+        args2 = list(count2.args)
+        n1 = len(args1)
+        n2 = len(args2)
+
+        # Generate all valid (k1, k2) pairs
+        valid_pairs = self._get_valid_count_pairs(op, n1, n2)
+        if len(valid_pairs) == 0:
+            return FALSE()
+
+        # Generate formula for each pair
+        k1_to_k2s = {}
+        for k1, k2 in valid_pairs:
+            k1_to_k2s.setdefault(k1, []).append(k2)
+
+        # Generate formula for each k1 group
+        clauses = []
+        for k1 in sorted(k1_to_k2s.keys()):
+            k2_list = sorted(k1_to_k2s[k1])
+            k2_min = min(k2_list)
+            k2_max = max(k2_list)
+
+            formula1 = self._exactly_k_true_formula(args1, k1, k1)  # exactly k1
+
+            # Check if k2_list is continuous range
+            if k2_list == list(range(k2_min, k2_max + 1)):
+                # Continuous range - use optimized formula
+                formula2 = self._exactly_k_true_formula(args2, k2_min, k2_max)
+            else:
+                # Non-continuous - enumerate each k2
+                k2_clauses = [self._exactly_k_true_formula(args2, k2, k2) for k2 in k2_list]
+                formula2 = Or(*k2_clauses) if len(k2_clauses) > 1 else k2_clauses[0]
+
+            clauses.append(And(formula1, formula2))
+        if len(clauses) == 1:
+            return clauses[0]
+        else:
+            return Or(*clauses)
+
+    def _get_valid_count_pairs(self, op: OperatorKind, n1: int, n2: int) -> List[Tuple[int, int]]:
+        """Get all valid (k1, k2) pairs for Count(args1) op Count(args2)."""
+        pairs = []
+        for k1 in range(n1 + 1):
+            for k2 in range(n2 + 1):
+                # Check if (k1, k2) satisfies the operator
+                if (
+                        (op == OperatorKind.LT and k1 < k2) or
+                        (op == OperatorKind.LE and k1 <= k2) or
+                        (op == OperatorKind.EQUALS and k1 == k2)
+                ):
+                    pairs.append((k1, k2))
+        return pairs
+
+    # ==================== ACTION TRANSFORMATION ====================
+
+    def _transform_action(
+            self, problem: Problem, new_problem: Problem, action: Action
+    ) -> Action:
+        """Transform an action by transforming all its expressions."""
+        new_action = action.clone()
+        new_action.name = get_fresh_name(new_problem, action.name)
+        new_action.clear_preconditions()
+        new_action.clear_effects()
+
+        # Transform preconditions
+        for precondition in action.preconditions:
+            new_precondition = self._transform_expression(new_problem, precondition)
+            new_action.add_precondition(new_precondition)
+
+        # Transform effects
+        for effect in action.effects:
+            self._transform_effect(new_problem, new_action, effect)
+
+        return new_action
+
+    def _transform_effect(
             self,
-            new_problem: "up.model.Problem",
-            expression: "up.model.fnode.FNode",
-            count_expressions: Dict[str, "up.model.fnode.FNode"]
-    ) -> Union["up.model.fnode.FNode", "up.model.fluent.Fluent", bool]:
-        """Manage expressions type Count and generates new expressions."""
-        if expression.is_fluent_exp() or expression.is_parameter_exp() or expression.is_constant():
-            return expression
-        if any(arg.is_count() for arg in expression.args):
-            count_expression, value = (
-                (expression.arg(0), expression.arg(1).constant_value())
-                if expression.arg(0).is_count() else (expression.arg(1), expression.arg(0).constant_value())
+            new_problem: Problem,
+            new_action: Action,
+            effect: "up.model.effect.Effect"
+    ):
+        """Transform a single effect."""
+        new_fluent = self._transform_expression(new_problem, effect.fluent)
+        new_value = self._transform_expression(new_problem, effect.value)
+        new_condition = self._transform_expression(new_problem, effect.condition)
+
+        # Add the appropriate type of effect
+        if effect.is_increase():
+            new_action.add_increase_effect(
+                new_fluent, new_value, new_condition, effect.forall
             )
-            operation_map = {
-                OperatorKind.EQUALS: 'eq',
-                OperatorKind.LT: 'lt',
-                OperatorKind.LE: 'le'
-            }
-            operation = operation_map.get(expression.node_type)
-            return self._get_expression(operation, count_expression.args, value)
-
-        new_args = [self._manage_counts(new_problem, arg, count_expressions) for arg in expression.args]
-        return new_problem.environment.expression_manager.create_node(expression.node_type, tuple(new_args))
-
-    def _add_effect(self, action, effect_type: str, fluent, value, condition, forall):
-        """
-        Adds an effect to the specified action.
-
-        :param action: The action to which the effect will be added.
-        :param effect_type: A string indicating the type of the effect (e.g., "add", "delete", or "modify").
-        :param fluent: The fluent being affected by the effect.
-        :param value: The value to be assigned to the fluent as part of the effect.
-        :param condition: The condition under which the effect is applied. This can be a logical condition or a fluent expression.
-        :param forall: A list or iterable representing the variables that must satisfy the effect's condition (used for universally quantified effects).
-        :return: None. The effect is directly added to the action.
-        """
-        if effect_type == 'increase':
-            action.add_increase_effect(fluent, value, condition, forall)
-        elif effect_type == 'decrease':
-            action.add_decrease_effect(fluent, value, condition, forall)
+        elif effect.is_decrease():
+            new_action.add_decrease_effect(
+                new_fluent, new_value, new_condition, effect.forall
+            )
         else:
-            action.add_effect(fluent, value, condition, forall)
+            new_action.add_effect(
+                new_fluent, new_value, new_condition, effect.forall
+            )
+
+    # ==================== MAIN COMPILATION ====================
 
     def _compile(
-        self,
-        problem: "up.model.AbstractProblem",
-        compilation_kind: "up.engines.CompilationKind",
+            self,
+            problem: Problem,
+            compilation_kind: CompilationKind,
     ) -> CompilerResult:
-        """
-        """
+        """Main compilation"""
         assert isinstance(problem, Problem)
-        new_to_old: Dict[Action, Action] = {}
+
+        # Clone problem
         new_problem = problem.clone()
         new_problem.name = f"{self.name}_{problem.name}"
-        count_expressions: Dict[str, "up.model.fnode.FNode"] = {}
         new_problem.clear_actions()
+        new_problem.clear_goals()
         new_problem.clear_quality_metrics()
+
+        # Transform actions
+        new_to_old: Dict[Action, Action] = {}
         for action in problem.actions:
-            new_action = action.clone()
-            new_action.name = get_fresh_name(new_problem, action.name)
-            new_action.clear_preconditions()
-            new_action.clear_effects()
-            for precondition in action.preconditions:
-                new_precondition = self._manage_counts(new_problem, precondition, count_expressions)
-                new_action.add_precondition(new_precondition)
-            for effect in action.effects:
-                effect_type = 'increase' if effect.is_increase() else 'decrease' if effect.is_decrease() else 'none'
-                new_fluent = self._manage_counts(new_problem, effect.fluent, count_expressions)
-                new_value = self._manage_counts(new_problem, effect.value, count_expressions)
-                new_condition = self._manage_counts(new_problem, effect.condition, count_expressions)
-                self._add_effect(new_action, effect_type, new_fluent, new_value, new_condition, effect.forall)
+            new_action = self._transform_action(problem, new_problem, action)
             new_problem.add_action(new_action)
             new_to_old[new_action] = action
 
-        new_problem.clear_goals()
+        # Transform goals
         for goal in problem.goals:
-            new_goal = self._manage_counts(new_problem, goal, count_expressions)
+            new_goal = self._transform_expression(new_problem, goal)
             new_problem.add_goal(new_goal)
 
+        # Transform quality metrics
         for qm in problem.quality_metrics:
             if qm.is_minimize_action_costs():
                 new_problem.add_quality_metric(
-                    updated_minimize_action_costs(
-                        qm, new_to_old, new_problem.environment
-                    )
+                    updated_minimize_action_costs(qm, new_to_old, new_problem.environment)
                 )
-            # ...
             else:
                 new_problem.add_quality_metric(qm)
 

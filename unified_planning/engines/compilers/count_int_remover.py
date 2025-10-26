@@ -12,31 +12,34 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-"""This module defines the quantifiers remover class."""
+"""This module defines the count int remover class."""
 
-
-from itertools import product
 import unified_planning.engines as engines
 import re
+
+from itertools import product
 from unified_planning.engines.mixins.compiler import CompilationKind, CompilerMixin
 from unified_planning.engines.results import CompilerResult
-from unified_planning.model import (
-    Problem,
-    Action,
-    ProblemKind,
-    OperatorKind,
-)
+from unified_planning.model import Problem, Action, ProblemKind, OperatorKind, FNode, AbstractProblem
 from unified_planning.model.problem_kind_versioning import LATEST_PROBLEM_KIND_VERSION
-from unified_planning.engines.compilers.utils import (
-    replace_action, updated_minimize_action_costs,
-)
-from typing import Dict, List, Optional, Union
+from unified_planning.engines.compilers.utils import replace_action, updated_minimize_action_costs
+from typing import Dict, List, Optional, Union, Set
 from functools import partial
 from unified_planning.shortcuts import Int, Not, And, Equals
 
 class CountIntRemover(engines.engine.Engine, CompilerMixin):
     """
-    Count expression remover class: ...
+    Compiler that removes Count expressions by converting them to integer fluents.
+
+    Each boolean expression inside a Count becomes a 0/1 fluent, and the Count expression is replaced by the sum of these fluents.
+
+    Example:
+        Count((a > b), my_bool) >= 1
+    Becomes:
+        count_0 + count_1 >= 1
+    Where:
+        count_0 represents (a > b) (0 or 1)
+        count_1 represents my_bool (0 or 1)
     """
 
     def __init__(self):
@@ -128,251 +131,297 @@ class CountIntRemover(engines.engine.Engine, CompilerMixin):
         new_kind.set_fluents_type("INT_FLUENTS")
         return new_kind
 
-    def expression_value(
+    # ==================== EXPRESSION EVALUATION ====================
+
+    def _evaluate_expression(
             self,
-            new_problem: "up.model.Problem",
-            expression: "up.model.fnode.FNode",
-            fluent: Optional["up.model.fnode.FNode"] = None,
-            value: Optional["up.model.fnode.FNode"] = None,
-            type_effect: Optional[str] = None
-    ) -> "up.model.fnode.FNode":
-        env = new_problem.environment
-        em = env.expression_manager
+            problem: Problem,
+            expression: FNode,
+            fluent_to_update: Optional[FNode] = None,
+            new_value: Optional[FNode] = None,
+            effect_type: Optional[str] = None
+    ) -> FNode:
+        """
+        Evaluate expression, used to compute initial values and to determine how effects change count fluents.
+        """
+        em = problem.environment.expression_manager
+        # Base cases
         if expression.is_constant() or expression.is_parameter_exp() or expression.is_object_exp():
             return expression
-        elif expression.is_fluent_exp():
-            if fluent is None:
-                if len(expression.fluent().name.split('[')) > 1:
-                    this_fluent = new_problem.fluent(expression.fluent().name.split('[')[0])(*expression.args)
-                    indices = [int(i) for i in re.findall(r'\[(.*?)\]', expression.fluent().name)]
-                    this_initial_value = new_problem.initial_value(this_fluent)
-                    for i in indices:
-                        this_initial_value = this_initial_value.constant_value()[i]
-                    return this_initial_value
-                return new_problem.initial_value(expression)
-            else:
-                if fluent == expression:
-                    if type_effect == 'increase':
-                        new_expression = em.create_node(OperatorKind.PLUS, tuple([expression, value])).simplify()
-                    elif type_effect == 'decrease':
-                        new_expression = em.create_node(OperatorKind.MINUS, tuple([expression, value])).simplify()
-                    else:
-                        new_expression = value
-                else:
-                    new_expression = expression
-                return new_expression
-        else:
-            new_args = []
-            for arg in expression.args:
-                new_args.append(self.expression_value(new_problem, arg, fluent, value, type_effect))
-            return em.create_node(expression.node_type, tuple(new_args)).simplify()
-
-    def find_fluents_affected(
-            self,
-            expression: "up.model.fnode.FNode",
-    ) -> List["up.model.fnode.FNode"]:
-        fluents = []
+        # Fluent expression
         if expression.is_fluent_exp():
-            fluents.append(expression)
-        else:
-            for arg in expression.args:
-                fluents += self.find_fluents_affected(arg)
+            # Handle array fluents with indices in name (e.g., "fluent[0][1]")
+
+            # Maybe I should change this?
+            if '[' in expression.fluent().name:
+                base_name = expression.fluent().name.split('[')[0]
+                indices = [int(i) for i in re.findall(r'\[(.*?)\]', expression.fluent().name)]
+                fluent_exp = problem.fluent(base_name)(*expression.args)
+                value = problem.initial_value(fluent_exp)
+                # Navigate through array indices
+                for idx in indices:
+                    value = value.constant_value()[idx]
+                return value
+
+            # Check if this is the fluent being updated
+            if fluent_to_update is not None and fluent_to_update == expression:
+                if effect_type == 'increase':
+                    return em.Plus(expression, new_value).simplify()
+                elif effect_type == 'decrease':
+                    return em.Minus(expression, new_value).simplify()
+                else:
+                    return new_value
+
+            # Regular fluent evaluation
+            return problem.initial_value(expression)
+
+        # Recursive case
+        new_args = [
+            self._evaluate_expression(problem, arg, fluent_to_update, new_value, effect_type)
+            for arg in expression.args
+        ]
+        return em.create_node(expression.node_type, tuple(new_args)).simplify()
+
+    def _find_affected_fluents(self, expression: FNode) -> List[FNode]:
+        """Extract all fluent expressions from an expression tree."""
+        if expression.is_fluent_exp():
+            return [expression]
+        fluents = []
+        for arg in expression.args:
+            fluents.extend(self._find_affected_fluents(arg))
         return fluents
 
-    def add_count_effects(
-            self,
-            new_problem: "up.model.Problem",
-            action: "up.model.action.Action",
-            count_expressions: Dict[str, "up.model.fnode.FNode"]
-    ) -> "up.model.action.Action":
-        for count, expression in count_expressions.items():
-            new_expression = expression
-            effects_conditions = True
-            direct_effect_fluents = []
-            indirect_effect_fluents = []
-            possible_parameters: Dict["up.model.fnode.FNode", List["up.model.fnode.FNode"]] = {}
+    # ==================== COUNT EXPRESSION REPLACEMENT ====================
+    def _depends_on_params_action(self, expression: FNode) -> bool:
+        if expression.is_parameter_exp():
+            return True
+        for a in expression.args:
+            if self._depends_on_params_action(a):
+                return True
+        return False
 
-            for effect in action.effects:
-                for fe in self.find_fluents_affected(expression):
-                    if effect.fluent == fe:
-                        direct_effect_fluents.append(effect)
-                    elif effect.fluent.fluent().name == fe.fluent().name:
-                        if indirect_effect_fluents.count(effect) == 0:
-                            indirect_effect_fluents.append(effect)
-                        for i in range(len(effect.fluent.args)):
-                            this_parameter = effect.fluent.arg(i)
-                            this_object = fe.arg(i)
-                            if this_parameter in possible_parameters.keys():
-                                possible_parameters[this_parameter].append(this_object)
-                            else:
-                                possible_parameters[this_parameter] = [this_object]
+    def _replace_count_with_fluents(
+            self, problem: Problem, expression: FNode, count_registry: Dict[str, FNode]
+    ) -> FNode:
+        """Replace Count expressions with sums of fluents."""
+        em = problem.environment.expression_manager
+        tm = problem.environment.type_manager
 
-            if direct_effect_fluents or indirect_effect_fluents:
-                for effect in direct_effect_fluents:
-                    if effect.is_conditional():
-                        effects_conditions = And(effects_conditions, effect.condition).simplify()
-                    if effect.is_increase():
-                        type_effect = 'increase'
-                    elif effect.is_decrease():
-                        type_effect = 'decrease'
-                    else:
-                        type_effect = None
-                    new_expression = self.expression_value(new_problem, new_expression, effect.fluent, effect.value,
-                                                               type_effect)
-
-                if indirect_effect_fluents:
-                    combinations = list(product(*possible_parameters.values()))
-                    keys = list(possible_parameters.keys())
-                    for c in combinations:
-                        comb_new_expression = new_expression
-                        comb_effects_conditions = effects_conditions
-                        for effect in indirect_effect_fluents:
-                            new_args_fluent = []
-                            for arg in effect.fluent.args:
-                                i = keys.index(arg)
-                                new_args_fluent.append(c[i])
-                                comb_effects_conditions = And(comb_effects_conditions, Equals(c[i], arg)).simplify()
-
-                            if effect.is_conditional():
-                                comb_effects_conditions = And(comb_effects_conditions, effect.condition).simplify()
-                            if effect.is_increase():
-                                type_effect = 'increase'
-                            elif effect.is_decrease():
-                                type_effect = 'decrease'
-                            else:
-                                type_effect = None
-                            comb_new_expression = self.expression_value(new_problem, comb_new_expression, effect.fluent.fluent()(*new_args_fluent),
-                                                                   effect.value, type_effect)
-                        if comb_new_expression.is_bool_constant():
-                            if comb_new_expression.is_true():
-                                new_value = 1
-                            else:
-                                new_value = 0
-                            if comb_effects_conditions is None:
-                                action.add_effect(new_problem.fluent(count), new_value)
-                            else:
-                                action.add_effect(new_problem.fluent(count), new_value, comb_effects_conditions)
-                        else:
-                            if comb_effects_conditions is None:
-                                action.add_effect(new_problem.fluent(count), 1, comb_new_expression)
-                                action.add_effect(new_problem.fluent(count), 0, Not(comb_new_expression).simplify())
-                            else:
-                                action.add_effect(new_problem.fluent(count), 1, And(comb_new_expression, comb_effects_conditions).simplify())
-                                action.add_effect(new_problem.fluent(count), 0,
-                                                  And(Not(comb_new_expression), comb_effects_conditions).simplify())
-                else:
-                    if new_expression.is_bool_constant():
-                        if new_expression.is_true():
-                            new_value = 1
-                        else:
-                            new_value = 0
-                        if effects_conditions is None:
-                            action.add_effect(new_problem.fluent(count), new_value)
-                        else:
-                            action.add_effect(new_problem.fluent(count), new_value, effects_conditions)
-                    else:
-                        if effects_conditions is None:
-                            action.add_effect(new_problem.fluent(count), 1, new_expression)
-                            action.add_effect(new_problem.fluent(count), 0, Not(new_expression).simplify())
-                        else:
-                            action.add_effect(new_problem.fluent(count), 1, And(new_expression, effects_conditions).simplify())
-                            action.add_effect(new_problem.fluent(count), 0, And(Not(new_expression), effects_conditions).simplify())
-        return action
-
-    def add_counts(
-            self,
-            new_problem: "up.model.Problem",
-            expression: "up.model.fnode.FNode",
-            count_expressions: Dict[str, "up.model.fnode.FNode"]
-    ) -> Union["up.model.fnode.FNode", "up.model.fluent.Fluent", bool]:
-        env = new_problem.environment
-        em = env.expression_manager
-        tm = env.type_manager
+        # Base cases
         if expression.is_fluent_exp() or expression.is_parameter_exp() or expression.is_constant():
             return expression
-        elif expression.is_count():
-            new_ca_args = []
-            for ca in expression.args:
-                if ca.is_false():
-                    pass
-                elif ca.is_true():
-                    new_ca_args.append(Int(1))
-                else:
-                    existing_key = next((key for key, value in count_expressions.items() if value == ca), None)
-                    if existing_key is not None:
-                        existing_fluent = new_problem.fluent(existing_key)
-                        new_ca_args.append(existing_fluent())
-                    else:
-                        n_count = len(count_expressions)
-                        fluent_name = 'count_' + str(n_count)
-                        count_expressions[fluent_name] = ca
-                        initial_value = self.expression_value(new_problem, ca)
-                        assert initial_value.is_bool_constant()
-                        if initial_value.is_true():
-                            fluent_value = Int(1)
-                        else:
-                            fluent_value = Int(0)
-                        new_problem.add_fluent(fluent_name, tm.IntType(0, 1))
-                        new_problem.set_initial_value(new_problem.fluent(fluent_name), fluent_value)
-                        new_fluent = new_problem.fluent(fluent_name)
-                        new_ca_args.append(new_fluent())
-                        n_count += 1
-            return em.create_node(OperatorKind.PLUS, tuple(new_ca_args))
-        else:
-            new_args = []
+
+        # Count expression
+        if expression.is_count():
+            sum_args = []
             for arg in expression.args:
-                new_args.append(self.add_counts(new_problem, arg, count_expressions))
+                # If the argument contains a parameter - not fully instantiated (depends on each specific action)
+                if self._depends_on_params_action(arg):
+                    # Return the same Count, the translation is not possible in this case
+                    return expression
+                # Skip trivial cases
+                if arg.is_false():
+                    continue
+                elif arg.is_true():
+                    sum_args.append(Int(1))
+                    continue
+                # Check if we already have a fluent for this expression
+                existing_name = next(
+                    (name for name, expr in count_registry.items() if expr == arg),
+                    None
+                )
+                if existing_name:
+                    sum_args.append(problem.fluent(existing_name)())
+                else:
+                    # Create new count fluent
+                    fluent_name = f'count_{len(count_registry)}'
+                    count_registry[fluent_name] = arg
+                    # Evaluate initial value
+                    # pero que passa quan no esta totalment grounded?
+                    initial_eval = self._evaluate_expression(problem, arg)
+                    assert initial_eval.is_bool_constant(), \
+                        f"Count argument initial value must be boolean constant, got: {initial_eval}"
+                    initial_value = Int(1) if initial_eval.is_true() else Int(0)
+                    # Add fluent to problem
+                    problem.add_fluent(fluent_name, tm.IntType(0, 1))
+                    problem.set_initial_value(problem.fluent(fluent_name), initial_value)
+                    sum_args.append(problem.fluent(fluent_name)())
+
+            # Return sum of all count fluents
+            if not sum_args:
+                return Int(0)
+            elif len(sum_args) == 1:
+                return sum_args[0]
+            else:
+                return em.Plus(*sum_args)
+
+        # Recursive case
+        new_args = [self._replace_count_with_fluents(problem, arg, count_registry) for arg in expression.args]
         return em.create_node(expression.node_type, tuple(new_args))
+
+    # ==================== EFFECT GENERATION ====================
+
+    def _add_count_effect_to_action(
+            self, action: Action, problem: Problem, count_name: str, new_expr: FNode, condition: Optional[FNode]
+    ):
+        """Add conditional effect to update count fluent."""
+        count_fluent = problem.fluent(count_name)
+        if new_expr.is_bool_constant():
+            # Expression evaluates to constant
+            value = 1 if new_expr.is_true() else 0
+            if condition:
+                action.add_effect(count_fluent, value, condition)
+            else:
+                action.add_effect(count_fluent, value)
+        else:
+            # Expression is conditional
+            if condition:
+                # True case
+                action.add_effect(
+                    count_fluent, 1,
+                    And(new_expr, condition).simplify()
+                )
+                # False case
+                action.add_effect(
+                    count_fluent, 0,
+                    And(Not(new_expr), condition).simplify()
+                )
+            else:
+                action.add_effect(count_fluent, 1, new_expr)
+                action.add_effect(count_fluent, 0, Not(new_expr).simplify())
+
+    def _generate_count_effects(self, problem: Problem, action: Action, count_registry: Dict[str, FNode]) -> Action:
+        """
+        Generate effects for count fluents based on action effects.
+        For each count fluent tracking expression E:
+        - If action effects change fluents in E, add conditional effects to update the count fluent accordingly
+        """
+        for count_name, count_expr in count_registry.items():
+            # Find which fluents in count_expr are affected by action
+            affected_fluents = self._find_affected_fluents(count_expr)
+
+            # Separate direct and indirect effects
+            direct_effects = []
+            indirect_effects = []
+            param_to_objects: Dict[FNode, Set[FNode]] = {}
+
+            for effect in action.effects:
+                for tracked_fluent in affected_fluents:
+                    if effect.fluent == tracked_fluent:
+                        # Direct effect on tracked fluent
+                        direct_effects.append(effect)
+                    elif effect.fluent.fluent().name == tracked_fluent.fluent().name:
+                        # Same fluent but different parameters
+                        indirect_effects.append(effect)
+
+                        # Track parameter mappings
+                        for i, param in enumerate(effect.fluent.args):
+                            obj = tracked_fluent.arg(i)
+                            param_to_objects.setdefault(param, set()).add(obj)
+            if not (direct_effects or indirect_effects):
+                continue
+
+            # Process direct effects
+            combined_condition = None
+            new_expr = count_expr
+            for effect in direct_effects:
+                if effect.is_conditional():
+                    combined_condition = And(combined_condition, effect.condition).simplify() \
+                        if combined_condition else effect.condition
+                effect_type = 'increase' if effect.is_increase() else 'decrease' if effect.is_decrease() else None
+                new_expr = self._evaluate_expression(problem, new_expr, effect.fluent, effect.value, effect_type)
+
+            # Process indirect effects (with parameter instantiation)
+            if indirect_effects:
+                # Generate all parameter combinations
+                param_list = list(param_to_objects.keys())
+                object_lists = [list(param_to_objects[p]) for p in param_list]
+
+                for obj_combination in product(*object_lists):
+                    inst_expr = new_expr
+                    inst_condition = combined_condition
+                    param_map = dict(zip(param_list, obj_combination))
+                    for effect in indirect_effects:
+                        # Build instantiated fluent
+                        inst_fluent_args = [param_map[arg] for arg in effect.fluent.args]
+                        inst_fluent = effect.fluent.fluent()(*inst_fluent_args)
+
+                        # Add parameter equality conditions
+                        for param, obj in param_map.items():
+                            eq_cond = Equals(obj, param)
+                            inst_condition = And(inst_condition, eq_cond).simplify() if inst_condition else eq_cond
+                        # Add effect condition
+                        if effect.is_conditional():
+                            inst_condition = And(inst_condition, effect.condition).simplify()
+
+                        # Update expression
+                        effect_type = 'increase' if effect.is_increase() else 'decrease' if effect.is_decrease() else None
+                        inst_expr = self._evaluate_expression(problem, inst_expr, inst_fluent, effect.value, effect_type)
+                    # Add effect to action
+                    self._add_count_effect_to_action(
+                        action, problem, count_name,
+                        inst_expr, inst_condition
+                    )
+            else:
+                # No indirect effects, just add the direct effect
+                self._add_count_effect_to_action(
+                    action, problem, count_name,
+                    new_expr, combined_condition
+                )
+        return action
 
     def _compile(
         self,
-        problem: "up.model.AbstractProblem",
-        compilation_kind: "up.engines.CompilationKind",
+        problem: AbstractProblem,
+        compilation_kind: CompilationKind,
     ) -> CompilerResult:
-        """
-        """
+        """Main compilation method."""
         assert isinstance(problem, Problem)
-        new_to_old: Dict[Action, Action] = {}
+
+        # Setup new problem
         new_problem = problem.clone()
         new_problem.name = f"{self.name}_{problem.name}"
-        count_expressions: Dict[str, "up.model.fnode.FNode"] = {}
         new_problem.clear_actions()
+        new_problem.clear_goals()
         new_problem.clear_quality_metrics()
+
+        count_registry: Dict[str, FNode] = {}
+        new_to_old: Dict[Action, Action] = {}
+
+        # Transform actions (preconditions only, effects later)
+        temp_actions = []
         for action in problem.actions:
             new_action = action.clone()
             new_action.clear_preconditions()
-            for pre in action.preconditions:
-                new_precondition = self.add_counts(new_problem, pre, count_expressions)
+            for precondition in action.preconditions:
+                new_precondition = self._replace_count_with_fluents(new_problem, precondition, count_registry)
                 new_action.add_precondition(new_precondition)
-            new_problem.add_action(new_action)
+            temp_actions.append(new_action)
 
-        new_problem.clear_goals()
+        # Transform goals
         for goal in problem.goals:
-            new_goal = self.add_counts(new_problem, goal, count_expressions)
+            new_goal = self._replace_count_with_fluents(new_problem, goal, count_registry)
             new_problem.add_goal(new_goal)
 
-        new_actions = []
-        changed_actions = new_problem.actions.copy()
-        new_problem.clear_actions()
-        for action in changed_actions:
-            new_action = self.add_count_effects(new_problem, action, count_expressions)
-            new_actions.append(new_action)
-            new_problem.add_action(new_action)
+        # Add effects for count fluents
+        final_actions = []
+        for temp_action, old_action in zip(temp_actions, problem.actions):
+            final_action = self._generate_count_effects(
+                new_problem, temp_action, count_registry
+            )
+            final_actions.append(final_action)
+            new_problem.add_action(final_action)
+            new_to_old[final_action] = old_action
 
-        for new, old in zip(new_actions, problem.actions):
-            new_to_old[new] = old
-
-        for qm in problem.quality_metrics:
-            if qm.is_minimize_action_costs():
+        # Transform quality metrics
+        for metric in problem.quality_metrics:
+            if metric.is_minimize_action_costs():
                 new_problem.add_quality_metric(
                     updated_minimize_action_costs(
-                        qm, new_to_old, new_problem.environment
+                        metric, new_to_old, new_problem.environment
                     )
                 )
-            # ...
             else:
-                new_problem.add_quality_metric(qm)
+                new_problem.add_quality_metric(metric)
 
-        return CompilerResult(
-            new_problem, partial(replace_action, map=new_to_old), self.name
-        )
+        return CompilerResult(new_problem, partial(replace_action, map=new_to_old), self.name)

@@ -12,65 +12,42 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-"""This module defines the quantifiers remover class."""
+"""This module defines the integers remover class."""
 import operator
-from operator import and_, or_
+import unified_planning as up
+import unified_planning.engines as engines
 
 from ortools.sat.python import cp_model
 from itertools import product
-
+from bidict import bidict
 from unified_planning.model.expression import ListExpression
 from unified_planning.model.operators import OperatorKind
-
-import unified_planning as up
-import unified_planning.engines as engines
-from collections import defaultdict
-import bisect
-from unified_planning import model
 from unified_planning.engines.mixins.compiler import CompilationKind, CompilerMixin
 from unified_planning.engines.results import CompilerResult
-from unified_planning.exceptions import UPProblemDefinitionError, UPValueError, UPConflictingEffectsException
-from unified_planning.model import (
-    Problem,
-    Action,
-    ProblemKind, Variable, MinimizeActionCosts, Effect, EffectKind, AbstractProblem,
-)
+from unified_planning.exceptions import UPProblemDefinitionError, UPValueError
+from unified_planning.model import Problem, Action, ProblemKind, Variable, Effect, EffectKind, Object, FNode, Fluent
 from unified_planning.model.problem_kind_versioning import LATEST_PROBLEM_KIND_VERSION
-from unified_planning.engines.compilers.utils import (
-    get_fresh_name,
-    replace_action, updated_minimize_action_costs,
-)
-from typing import Dict, Optional, OrderedDict, Set, Iterator, List, Tuple, Union
-from functools import partial, reduce
+from unified_planning.engines.compilers.utils import get_fresh_name, replace_action, updated_minimize_action_costs
+from typing import Dict, Optional, Iterator
+from functools import partial
+from unified_planning.shortcuts import And, Or, Equals, Int, Not, FALSE, GT, GE, Iff
 
-from unified_planning.model.types import _IntType
-from unified_planning.shortcuts import Exists, And, Or, Equals, Int, Plus, Not, LT, FALSE, LE, GT, GE, IntType, Iff
-
-
-class VarArraySolutionPrinter(cp_model.CpSolverSolutionCallback):
-    """Print intermediate solutions."""
+class CPSolutionCollector(cp_model.CpSolverSolutionCallback):
+    """Collects all unique solutions from CP-SAT solver."""
 
     def __init__(self, variables: list[cp_model.IntVar]):
         cp_model.CpSolverSolutionCallback.__init__(self)
         self.__variables = variables
-        self.__solution_count = 0
         self.__solutions = []
-        self.__seen = set()  # Per detectar duplicats
+        self.__seen = set()  # To detect duplicates
 
     def on_solution_callback(self):
         solution = {str(v): self.value(v) for v in self.__variables}
-
-        # Convertir a tupla per fer hash
         sol_tuple = tuple(sorted(solution.items()))
 
         if sol_tuple not in self.__seen:
             self.__seen.add(sol_tuple)
             self.__solutions.append(solution)
-            self.__solution_count += 1
-
-    @property
-    def solution_count(self) -> int:
-        return self.__solution_count
 
     @property
     def solutions(self) -> list[dict[str, int]]:
@@ -78,7 +55,10 @@ class VarArraySolutionPrinter(cp_model.CpSolverSolutionCallback):
 
 class IntegersRemover(engines.engine.Engine, CompilerMixin):
     """
-    Integers remover class: ...
+    Compiler that removes bounded integers from a planning problem.
+
+    Converts integer fluents to object-typed fluents where objects represent numeric values (n0, n1, n2, ...).
+    Integer arithmetic and comparisons are handled by enumerating possible value combinations.
     """
 
     def __init__(self):
@@ -172,503 +152,488 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
         new_kind.unset_parameters("BOUNDED_INT_FLUENT_PARAMETERS")
         return new_kind
 
-    operation_inner_map = {
+    # Operators that can appear inside arithmetic expressions
+    ARITHMETIC_OPS = {
         OperatorKind.PLUS: 'plus',
         OperatorKind.MINUS: 'minus',
         OperatorKind.DIV: 'div',
         OperatorKind.TIMES: 'mult',
     }
 
-    operation_outer_map = {
-        OperatorKind.OR: 'or',
-        OperatorKind.AND: 'and',
+    # ==================== METHODS ====================
+
+    def _get_number_object(self, problem: Problem, value: int) -> FNode:
+        """Get or create object representing numeric value (e.g., n5 for 5)."""
+        em = problem.environment.expression_manager
+        tm = problem.environment.type_manager
+        number_type = tm.UserType('Number')
+
+        obj_name = f'n{value}'
+        if not problem.has_object(obj_name):
+            problem.add_object(Object(obj_name, number_type))
+
+        return em.ObjectExp(problem.object(obj_name))
+
+    def _has_integers(self, node: FNode) -> bool:
+        """Check if expression contains integer fluents or operations."""
+        if node.is_fluent_exp() and node.fluent().type.is_int_type():
+            return True
+        if node.is_int_constant() or node.is_le() or node.is_lt():
+            return True
+        return any(self._has_integers(arg) for arg in node.args)
+
+    def _find_integer_fluents(self, node: FNode) -> dict[str, list[int]]:
+        """Extract all integer fluents and their domains from expression."""
+        fluents = {}
+        if node.is_fluent_exp():
+            if not node.fluent().type.is_int_type():
+                return fluents
+
+            fluent_type = node.fluent().type
+            fluents[node.fluent().name] = list(range(
+                fluent_type.lower_bound,
+                fluent_type.upper_bound + 1
+            ))
+            return fluents
+        for arg in node.args:
+            fluents.update(self._find_integer_fluents(arg))
+        return fluents
+
+    # ==================== EXPRESSION TRANSFORMATION ====================
+
+    def _evaluate_with_assignment(self, problem: Problem, node: FNode, assignment: dict[str, int]) -> FNode:
+        """Evaluate expression by substituting fluent values from assignment."""
+        em = problem.environment.expression_manager
+        if node.is_fluent_exp():
+            return Int(assignment[node.fluent().name])
+        if not node.args:
+            return node
+        new_args = [
+            self._evaluate_with_assignment(problem, arg, assignment)
+            for arg in node.args
+        ]
+        return em.create_node(node.node_type, tuple(new_args)).simplify()
+
+    constants = {
+        OperatorKind.BOOL_CONSTANT, OperatorKind.INT_CONSTANT, OperatorKind.LIST_CONSTANT, OperatorKind.REAL_CONSTANT,
+        OperatorKind.FLUENT_EXP, OperatorKind.OBJECT_EXP, OperatorKind.PARAM_EXP, OperatorKind.VARIABLE_EXP
     }
 
-    def _get_bounds(self, expression):
-        if expression.is_fluent_exp() and expression.fluent().type.is_int_type():
-            fluent = expression.fluent().type
-            return list(range(fluent.lower_bound, fluent.upper_bound + 1))
-        elif expression.is_constant():
-            return expression.constant_value()
-        return []
+    def _apply_negation(self, node: FNode) -> FNode:
+        """Apply De Morgan's laws to push negation inward."""
 
-    def _find_fluents(self, node):
-        info = {}
-        if node.is_fluent_exp():
-            assert node.fluent().type.is_int_type(), "Fluents inside arithmetic expressions must have integer type!"
-            info[node.fluent().name] = [i for i in
-                                       range(node.fluent().type.lower_bound, node.fluent().type.upper_bound + 1)]
-            return info
-        for arg in node.args:
-            child_info = self._find_fluents(arg)
-            for k, v in child_info.items():
-                info[k] = v
-        return info
-
-    def _check_expression(self, new_problem, node, assignation):
-        new_args = []
-        for arg in node.args:
-            if arg.is_fluent_exp():
-                new_args.append(Int(assignation[arg.fluent().name]))
-            elif arg.args == ():
-                new_args.append(arg)
-            else:
-                new_args.append(self._check_expression(new_problem, arg, assignation))
-        return new_problem.environment.expression_manager.create_node(node.node_type, tuple(new_args)).simplify()
-
-    def _negate(self, v):
-        return {var: -coef for var, coef in v.items()}
-
-    def _merge(self, v1, v2):
-        result = dict(v1)  # copia
-        for var, coef in v2.items():
-            result[var] = result.get(var, 0) + coef
-            if result[var] == 0:
-                del result[var]  # per netejar zeros
-        return result
-
-    def _decompose(self, expr):
-        if expr.is_fluent_exp():
-            return {expr: 1}, 0
-        elif expr.is_constant():
-            return {}, expr.constant_value()
-        elif expr.is_plus():
-            v1, c1 = self._decompose(expr.arg(0))
-            v2, c2 = self._decompose(expr.arg(1))
-            return self._merge(v1, v2), c1 + c2
-        elif expr.is_minus():
-            v1, c1 = self._decompose(expr.arg(0))
-            v2, c2 = self._decompose(expr.arg(1))
-            return self._merge(v1, self._negate(v2)), c1 - c2
-        elif expr.is_times():
-            v1, c1 = self._decompose(expr.arg(0))
-            v2, c2 = self._decompose(expr.arg(1))
-            if len(v1) == 0:  # constant is the first argument
-                return {var: coef * c1 for var, coef in v2.items()}, c1 * c2
-            elif len(v2) == 0:  # constant is the second argument
-                return {var: coef * c2 for var, coef in v1.items()}, c1 * c2
-            else:
-                raise UPProblemDefinitionError("Multiplication of 2 fluents not supported!")
-        elif expr.is_div():
-            v1, c1 = self._decompose(expr.arg(0))
-            v2, c2 = self._decompose(expr.arg(1))
-            # division per constant
-            if len(v2) == 0:
-                return {var: coef / c2 for var, coef in v1.items()}, c1 / c2
-            else:
-                raise UPProblemDefinitionError("Division of 2 fluents not supported!")
-        #elif expr.is_implies():
-        #    return self._decompose((~expr.arg(0)) | expr.arg(1))
-        else:
-            raise UPProblemDefinitionError(
-                f"Operation {expr.node_type} not supported!")
-
-    def _has_integers(self, node: "up.model.fnode.FNode"):
-        # Check if any child of node has integers in it
-        for a in node.args:
-            if a.is_fluent_exp():
-                if a.fluent().type.is_int_type():
-                    return True
-            if a.is_int_constant() or a.is_le() or a.is_lt():
-                return True
-            if self._has_integers(a):
-                return True
-        return False
-
-    def _add_constraints(self, problem, node, variables, expressions, cpmodel):
-        if node.is_constant():
-            return cpmodel.new_constant(node.constant_value())
-        elif node.is_fluent_exp():
-            fluent = node.fluent()
-            if node in variables:
-                return variables[node]
-            else:
-                if fluent.type.is_int_type():
-                    f = cpmodel.new_int_var(fluent.type.lower_bound, fluent.type.upper_bound, fluent.name)
-                    variables[node] = f
-                    return f
-                else:
-                    f = cpmodel.new_bool_var(fluent.name)
-                    variables[node] = f
-                    return f
-
-        elif node.is_and():
-            child_vars = []
-            for arg in node.args:
-                child_result = self._add_constraints(problem, arg, variables, expressions, cpmodel)
-                child_vars.append(child_result)
-
-            and_var = cpmodel.new_bool_var(f"and_{id(node)}")
-            cpmodel.add(sum(child_vars) == len(child_vars)).only_enforce_if(and_var)
-            cpmodel.add(sum(child_vars) < len(child_vars)).only_enforce_if(~and_var)
-            return and_var
-
-        elif node.is_or():
-            child_vars = []
-            for arg in node.args:
-                child_result = self._add_constraints(problem, arg, variables, expressions, cpmodel)
-                child_vars.append(child_result)
-
-            or_var = cpmodel.new_bool_var(f"or_{id(node)}")
-            cpmodel.add(sum(child_vars) >= 1).only_enforce_if(or_var)
-            cpmodel.add(sum(child_vars) == 0).only_enforce_if(~or_var)
-            return or_var
-
-        elif node.is_not():
-            inner_var = self._add_constraints(problem, node.arg(0), variables, expressions, cpmodel)
-            # Crear una nova variable booleana per la negació
-            not_var = cpmodel.new_bool_var(f"not_{id(node)}")
-            cpmodel.add(inner_var == 0).only_enforce_if(not_var)
-            cpmodel.add(inner_var == 1).only_enforce_if(~not_var)
-            return not_var
-
-        elif node.is_equals():
-            if node.arg(0).type.is_user_type():
-                if node in variables:
-                    return variables[node]
-                var = cpmodel.new_bool_var(str(node))
-                variables[node] = var
-                expressions[str(var)] = node
-                return var
-            else:
-                left = self._add_constraints(problem, node.arg(0), variables, expressions, cpmodel)
-                right = self._add_constraints(problem, node.arg(1), variables, expressions, cpmodel)
-                eq_var = cpmodel.new_bool_var(f"eq_{node}")
-                cpmodel.add(left == right).only_enforce_if(eq_var)
-                cpmodel.add(left != right).only_enforce_if(~eq_var)
-                return eq_var
-
-        elif node.is_lt() or node.is_le() or node.is_plus() or node.is_minus() or node.is_times():
-            left = self._add_constraints(problem, node.arg(0), variables, expressions, cpmodel)
-            right = self._add_constraints(problem, node.arg(1), variables, expressions, cpmodel)
-
-            if node.is_lt():
-                var = cpmodel.new_bool_var(f"lt_{id(node)}")
-                cpmodel.add(left < right).only_enforce_if(var)
-                cpmodel.add(left >= right).only_enforce_if(~var)
-                return var
-            if node.is_le():
-                var = cpmodel.new_bool_var(f"le_{id(node)}")
-                cpmodel.add(left <= right).only_enforce_if(var)
-                cpmodel.add(left > right).only_enforce_if(~var)
-                return var
-            if node.is_plus():
-                return left + right
-            if node.is_minus():
-                return left - right
-            if node.is_times():
-                return left * right
-
-        else:
-            raise NotImplementedError(f"Node type {node.node_type} not implemented")
-
-    def _call_cp_solver(self, node, old_problem, new_problem):
-        variables = {}
-        expressions = {}
-        cpmodel = cp_model.CpModel()
-
-        # constraints
-        constraints = self._add_constraints(old_problem, node, variables, expressions, cpmodel)
-        if isinstance(constraints, cp_model.IntVar):
-            cpmodel.add(constraints == 1)
-        else:
-            cpmodel.add(constraints)
-        cp_variables = list(variables.values())
-
-        solver = cp_model.CpSolver()
-        solution_printer = VarArraySolutionPrinter(cp_variables)
-        solver.parameters.enumerate_all_solutions = True
-        status = solver.solve(cpmodel, solution_printer)
-        if status == cp_model.OPTIMAL or status == cp_model.FEASIBLE:
-            # possible solutions
-            possible_solutions = []
-            solutions = solution_printer.solutions
-            if len(solutions) > 1:
-                # Agrupar valors i descartar variables que agafen tot el domini - aconsegueixo reduir a 1/4 part
-                solutions = self.simplify_solutions(old_problem, solution_printer.solutions)
-
-            for s in solutions:
-                assignations = []
-                for f, v in s.items():
-                    if new_problem.has_fluent(f):
-                        fluent = new_problem.fluent(f)  # vigilar! com guardar parametres
-                        if old_problem.fluent(f).type.is_int_type():
-                            if isinstance(v, set):
-                                or_e = [Equals(fluent, self._get_object_n(new_problem, value)) for value in v]
-                                assignations.append(Or(or_e))
-                            else:
-                                value = self._get_object_n(new_problem, v)
-                                assignations.append(Equals(fluent, value))
-                        elif old_problem.fluent(f).type.is_bool_type():
-                            value = True if v == 1 else False
-                            assignations.append(Iff(fluent, value))
-                        else:
-                            raise UPProblemDefinitionError(f"Not implemented yet!")
-                    else:
-                        assignations.append(expressions[f] if v == 1 else Not(expressions[f]))
-
-                possible_solutions.append(And(assignations).simplify())
-            return Or(possible_solutions).simplify()
-        else:
-            return None
-
-
-    def _apply_negation(self, node):
-        constants = {
-            OperatorKind.BOOL_CONSTANT,
-            OperatorKind.INT_CONSTANT,
-            OperatorKind.LIST_CONSTANT,
-            OperatorKind.REAL_CONSTANT,
-            OperatorKind.FLUENT_EXP,
-            OperatorKind.OBJECT_EXP,
-            OperatorKind.PARAM_EXP,
-            OperatorKind.VARIABLE_EXP
-        }
-        if node.node_type in constants:
+        if node.node_type in self.constants:
             return Not(node)
-        if node.node_type == OperatorKind.LE:
+        elif node.node_type == OperatorKind.LE:
             return GT(node.arg(0), node.arg(1)).simplify()
         elif node.node_type == OperatorKind.LT:
             return GE(node.arg(0), node.arg(1)).simplify()
         elif node.node_type == OperatorKind.AND:
-            return Or(Not(a) for a in node.args).simplify()
+            return Or(Not(arg) for arg in node.args).simplify()
         elif node.node_type == OperatorKind.OR:
-            return And(Not(a) for a in node.args).simplify()
+            return And(Not(arg) for arg in node.args).simplify()
         elif node.node_type == OperatorKind.NOT:
             return node.arg(0)
         else:
-            raise UPProblemDefinitionError(f"Negation not supported for {node.node_type}")
+            raise UPProblemDefinitionError(f"Cannot negate {node.node_type}")
 
-    def _to_nnf(self, new_problem, node):
-        constants = {
-            OperatorKind.BOOL_CONSTANT,
-            OperatorKind.INT_CONSTANT,
-            OperatorKind.LIST_CONSTANT,
-            OperatorKind.REAL_CONSTANT,
-            OperatorKind.FLUENT_EXP,
-            OperatorKind.OBJECT_EXP,
-            OperatorKind.PARAM_EXP,
-            OperatorKind.VARIABLE_EXP
-        }
-        if node.node_type in constants:
+    def _to_nnf(self, problem: Problem, node: FNode) -> FNode:
+        """Convert expression to Negation Normal Form."""
+        em = problem.environment.expression_manager
+        if node.node_type in self.constants:
             return node
-        elif node.node_type == OperatorKind.NOT:
-            if node.arg(0).node_type in constants:
-                return Not(self._to_nnf(new_problem, node.arg(0)))
-            elif node.arg(0).is_equals(): # deixem el not equals
-                return node
+        elif node.is_not():
+            if node.arg(0).node_type in self.constants or node.arg(0).is_equals():
+                return Not(self._to_nnf(problem, node.arg(0)))
             else:
-                return self._to_nnf(new_problem, self._apply_negation(node.arg(0)))
-        elif node.node_type == OperatorKind.IMPLIES:
-            return Or(self._to_nnf(new_problem, Not(node.arg(0))), self._to_nnf(new_problem, node.arg(1)))
-        elif node.node_type == OperatorKind.IFF:
-            return And(Or(self._to_nnf(new_problem, Not(node.arg(0))), self._to_nnf(new_problem, node.arg(1))),
-                       Or(self._to_nnf(new_problem, node.arg(0)), self._to_nnf(new_problem, Not(node.arg(1)))))
+                return self._to_nnf(problem, self._apply_negation(node.arg(0)))
+        elif node.is_implies():
+            return Or(
+                self._to_nnf(problem, Not(node.arg(0))),
+                self._to_nnf(problem, node.arg(1))
+            )
+        elif node.is_iff():
+            return And(
+                Or(self._to_nnf(problem, Not(node.arg(0))), self._to_nnf(problem, node.arg(1))),
+                Or(self._to_nnf(problem, node.arg(0)), self._to_nnf(problem, Not(node.arg(1))))
+            )
         else:
-            em = new_problem.environment.expression_manager
-            return em.create_node(node.node_type, tuple([self._to_nnf(new_problem, a) for a in node.args]))
+            new_args = tuple(self._to_nnf(problem, arg) for arg in node.args)
+            return em.create_node(node.node_type, new_args)
 
-    def _factorise_cases(self, cases):
-        grouped = defaultdict(list)
+    # ==================== CP-SAT Constraint Solving ====================
 
-        # 1. Agrupem segons totes les variables menys una
-        for case in cases:
-            for var in case:
-                # clau = tot menys 'var'
-                key = tuple(sorted((k, v) for k, v in case.items() if k != var))
-                grouped[(key, var)].append(case[var])
+    def _add_cp_constraints(self, problem: Problem, node: FNode, variables: bidict, model: cp_model.CpModel):
+        """Recursively build CP-SAT constraints from expression tree."""
+        # Constants
+        if node.is_constant():
+            return model.new_constant(node.constant_value())
 
-        simplified = []
-        used = set()
+        # Fluents
+        if node.is_fluent_exp():
+            if node in variables:
+                return variables[node]
+            fluent = node.fluent()
+            if fluent.type.is_int_type():
+                var = model.new_int_var(
+                    fluent.type.lower_bound,
+                    fluent.type.upper_bound,
+                    fluent.name
+                )
+            else:
+                var = model.new_bool_var(str(node))
+            variables[node] = var
+            return var
 
-        # 2. Si una variable té diversos valors, compactem-ho
-        for (key, var), vals in grouped.items():
-            if len(vals) > 1:
-                # conjunt de valors
-                compact = dict(key)
-                compact[var] = set(vals)
-                simplified.append(compact)
-                used.update((frozenset(case.items()) for case in cases
-                             if all(case.get(k) == v for k, v in key)))
+        # AND
+        if node.is_and():
+            child_vars = [self._add_cp_constraints(problem, arg, variables, model) for arg in node.args]
+            and_var = model.new_bool_var(f"and_{id(node)}")
+            model.add(sum(child_vars) == len(child_vars)).only_enforce_if(and_var)
+            model.add(sum(child_vars) < len(child_vars)).only_enforce_if(~and_var)
+            return and_var
 
-        # 3. Afegim els casos que no s’han pogut compactar
-        for case in cases:
-            if frozenset(case.items()) not in used:
-                simplified.append({k: v for k, v in case.items()})
+        # OR
+        if node.is_or():
+            child_vars = [self._add_cp_constraints(problem, arg, variables, model) for arg in node.args]
+            or_var = model.new_bool_var(f"or_{id(node)}")
+            model.add(sum(child_vars) >= 1).only_enforce_if(or_var)
+            model.add(sum(child_vars) == 0).only_enforce_if(~or_var)
+            return or_var
 
-        return simplified
+        # NOT
+        if node.is_not():
+            inner = self._add_cp_constraints(problem, node.arg(0), variables, model)
+            not_var = model.new_bool_var(f"not_{id(node)}")
+            model.add(inner == 0).only_enforce_if(not_var)
+            model.add(inner == 1).only_enforce_if(~not_var)
+            return not_var
 
-    def simplify_solutions(self, problem: AbstractProblem, solutions: list[dict[str, int]]):
+        # Equality
+        if node.is_equals():
+            # User types treated as variables
+            if node.arg(0).type.is_user_type():
+                if node in variables:
+                    return variables[node]
+                var = model.new_bool_var(str(node))
+                variables[node] = var
+                return var
+
+            left = self._add_cp_constraints(problem, node.arg(0), variables, model)
+            right = self._add_cp_constraints(problem, node.arg(1), variables, model)
+            eq_var = model.new_bool_var(f"eq_{id(node)}")
+            model.add(left == right).only_enforce_if(eq_var)
+            model.add(left != right).only_enforce_if(~eq_var)
+            return eq_var
+
+        # Comparisons and arithmetic
+        if node.is_lt() or node.is_le():
+            left = self._add_cp_constraints(problem, node.arg(0), variables, model)
+            right = self._add_cp_constraints(problem, node.arg(1), variables, model)
+            var = model.new_bool_var(f"{'lt' if node.is_lt() else 'le'}_{id(node)}")
+            if node.is_lt():
+                model.add(left < right).only_enforce_if(var)
+                model.add(left >= right).only_enforce_if(~var)
+            else:
+                model.add(left <= right).only_enforce_if(var)
+                model.add(left > right).only_enforce_if(~var)
+            return var
+        if node.is_plus() or node.is_minus() or node.is_times():
+            left = self._add_cp_constraints(problem, node.arg(0), variables, model)
+            right = self._add_cp_constraints(problem, node.arg(1), variables, model)
+            if node.is_plus():
+                return left + right
+            elif node.is_minus():
+                return left - right
+            else:
+                return left * right
+
+        raise NotImplementedError(f"Node type {node.node_type} not implemented in CP-SAT")
+
+    def _simplify_solutions(self, variables: bidict, solutions: list[dict[str, int]]) -> list[dict[str, int]]:
         """
-        Agrupa solucions que només difereixen en una o poques variables.
-        Retorna solucions compactades on un valor pot ser un set i
-        elimina variables que agafen tots els valors del seu domini.
+        Compact solutions by grouping those differing in few variables.
+        Remove variables that take all possible domain values.
         """
         if not solutions:
             return []
-
-        # Obtenir totes les variables
         all_vars = list(solutions[0].keys())
-
         simplified = []
         used = set()
 
-        # Intentar agrupar per cada variable
-        for var_to_vary in all_vars:
+        # Try grouping by each variable
+        for var_name in all_vars:
             groups = {}
 
             for i, sol in enumerate(solutions):
                 if i in used:
                     continue
 
-                # Clau = tots els valors menys la variable que pot variar
-                key = tuple((k, v) for k, v in sorted(sol.items()) if k != var_to_vary)
+                # Key = all values except the varying variable
+                key = tuple((k, v) for k, v in sorted(sol.items()) if k != var_name)
+                groups.setdefault(key, []).append((i, sol[var_name]))
 
-                if key not in groups:
-                    groups[key] = []
-                groups[key].append((i, sol[var_to_vary]))
+            # Compact groups with multiple values
+            for key, indices_vals in groups.items():
+                if len(indices_vals) <= 1:
+                    continue
 
-            # Si un grup té múltiples valors per la variable, compactar
-            for key, indices_and_vals in groups.items():
-                if len(indices_and_vals) > 1:
-                    # Marcar com usades
-                    for idx, _ in indices_and_vals:
-                        used.add(idx)
+                # Mark as used
+                for idx, _ in indices_vals:
+                    used.add(idx)
 
-                    # Crear solució compactada
-                    compact = dict(key)
-                    values_set = set(val for _, val in indices_and_vals)
+                # Find the fluent node
+                fnode = None
+                for node, var in variables.items():
+                    if str(node) == var_name:
+                        fnode = node
+                        break
+                if not fnode:
+                    continue
 
-                    # Comprovar si té tots els valors del domini
-                    min_val, max_val = problem.fluent(var_to_vary).type.lower_bound, problem.fluent(var_to_vary).type.upper_bound
-                    expected_values = set(range(min_val, max_val + 1))
+                compact = dict(key)
+                values_set = {val for _, val in indices_vals}
 
-                    # Si NO té tots els valors, guardar el set
-                    if values_set != expected_values:
-                        compact[var_to_vary] = values_set
-                    # Si té tots els valors, no afegir la variable (l'eliminem)
+                # Check if covers entire domain
+                if fnode.fluent().type.is_int_type():
+                    lb = fnode.fluent().type.lower_bound
+                    ub = fnode.fluent().type.upper_bound
+                    domain = set(range(lb, ub + 1))
 
-                    simplified.append(compact)
+                    # Only include if not entire domain
+                    if values_set != domain:
+                        compact[var_name] = values_set
+                elif fnode.fluent().type.is_bool_type():
+                    if values_set != {0, 1}:
+                        compact[var_name] = values_set
+                else:
+                    compact[var_name] = values_set
 
-        # Afegir solucions que no s'han pogut agrupar
+                simplified.append(compact)
+
+        # Add ungrouped solutions
         for i, sol in enumerate(solutions):
             if i not in used:
                 simplified.append(sol)
 
         return simplified
 
-    def _get_new_node(
-            self,
-            old_problem: "up.model.AbstractProblem",
-            new_problem: "up.model.AbstractProblem",
-            node: "up.model.fnode.FNode",
-    ) -> up.model.fnode.FNode:
-        env = new_problem.environment
-        em = env.expression_manager
-        tm = env.type_manager
-        if node.is_int_constant():
-            return self._get_object_n(new_problem, node.constant_value())
-        elif node.is_fluent_exp() and node.fluent().type.is_int_type():
-            return new_problem.fluent(node.fluent().name)(*node.args)
-        elif node.is_object_exp() or node.is_fluent_exp() or node.is_constant() or node.is_parameter_exp():
-            return node
+    def _solve_with_cp_sat(self, old_problem: Problem, new_problem: Problem, node: FNode) -> Optional[FNode]:
+        """Use CP-SAT solver to enumerate valid value assignments."""
+        variables = bidict({})
+        cp_model_obj = cp_model.CpModel()
+
+        # Build constraints
+        result = self._add_cp_constraints(old_problem, node, variables, cp_model_obj)
+
+        # Ensure constraint is satisfied
+        if isinstance(result, cp_model.IntVar):
+            cp_model_obj.add(result == 1)
         else:
-            # Plus/Minus/Div/Mult in an outer expression
-            operation_inner = self.operation_inner_map.get(node.node_type)
-            if operation_inner is not None:
-                raise UPProblemDefinitionError(
-                    f"Operation {operation_inner} not supported as an external expression!")
+            cp_model_obj.add(result)
 
-            if self._has_integers(node):
-                node_nnf = self._to_nnf(new_problem, node).simplify()
-                return self._call_cp_solver(node_nnf, old_problem, new_problem)
-            else:
-                # Other nodes
-                new_args = [self._get_new_node(old_problem, new_problem, arg) for arg in node.args]
-                if None in new_args:
-                    return None
-                if node.is_exists() or node.is_forall():
-                    new_variables = [
-                        Variable(v.name, tm.UserType('Number')) if v.type.is_int_type() else v
-                        for v in node.variables()
-                    ]
-                    return em.create_node(node.node_type, tuple(new_args), payload=tuple(new_variables)).simplify()
-                return em.create_node(node.node_type, tuple(new_args)).simplify()
+        # Solve
+        solver = cp_model.CpSolver()
+        collector = CPSolutionCollector(list(variables.values()))
+        solver.parameters.enumerate_all_solutions = True
+        status = solver.solve(cp_model_obj, collector)
 
-    def _convert_effect(
-            self,
-            effect: "up.model.Effect",
-            old_problem: "up.model.AbstractProblem",
-            new_problem: "up.model.AbstractProblem",
-    ) -> Iterator[Effect]:
+        if status not in (cp_model.OPTIMAL, cp_model.FEASIBLE):
+            return None
+
+        solutions = collector.solutions
+        if len(solutions) > 1:
+            solutions = self._simplify_solutions(variables, solutions)
+
+        # Convert solutions to formula
+        or_clauses = []
+        for solution in solutions:
+            and_clauses = []
+
+            for var_str, value in solution.items():
+                # Find corresponding FNode
+                fnode = None
+                for node_key, var in variables.items():
+                    if str(node_key) == var_str:
+                        fnode = node_key
+                        break
+                if not fnode:
+                    continue
+
+                if fnode.is_fluent_exp():
+                    fluent = fnode.fluent()
+                    new_fluent = new_problem.fluent(fluent.name)(*fnode.args)
+
+                    if fluent.type.is_int_type():
+                        if isinstance(value, set):
+                            # Multiple values: (f = v1) OR (f = v2) OR ...
+                            or_eq = [Equals(new_fluent, self._get_number_object(new_problem, v)) for v in value]
+                            and_clauses.append(Or(or_eq))
+                        else:
+                            # Single value
+                            and_clauses.append(Equals(new_fluent, self._get_number_object(new_problem, value)))
+                    elif fluent.type.is_bool_type():
+                        bool_val = (value == 1)
+                        and_clauses.append(Iff(fnode, bool_val))
+                    else:
+                        raise UPProblemDefinitionError(f"Unexpected fluent type in CP-SAT solution")
+                else:
+                    # Boolean variable
+                    and_clauses.append(fnode if value == 1 else Not(fnode))
+
+            or_clauses.append(And(and_clauses).simplify())
+        return Or(or_clauses).simplify()
+
+    # ==================== NODE TRANSFORMATION ====================
+
+    def _transform_node(self, old_problem: Problem, new_problem: Problem, node: FNode) -> Optional[FNode]:
+        """Transform expression node to use Number objects instead of integers."""
         em = new_problem.environment.expression_manager
-        returned_effects: Set[Effect] = set()
+        tm = new_problem.environment.type_manager
 
-        lower = effect.fluent.fluent().type.lower_bound
-        upper = effect.fluent.fluent().type.upper_bound
+        # Integer constants become Number objects
+        if node.is_int_constant():
+            return self._get_number_object(new_problem, node.constant_value())
 
-        new_condition = self._get_new_node(old_problem, new_problem, effect.condition)
-        for i in range(lower, upper + 1):
-            next_value = (i + effect.value if effect.is_increase() else i - effect.value).simplify()
+        # Integer fluents
+        if node.is_fluent_exp() and node.fluent().type.is_int_type():
+            return new_problem.fluent(node.fluent().name)(*node.args)
+
+        # Other terminals
+        if node.is_object_exp() or node.is_fluent_exp() or node.is_constant() or node.is_parameter_exp():
+            return node
+
+        # Check for arithmetic operations
+        if node.node_type in self.ARITHMETIC_OPS:
+            raise UPProblemDefinitionError(
+                f"Arithmetic operation {self.ARITHMETIC_OPS[node.node_type]} "
+                f"not supported as external expression"
+            )
+
+        # Expressions with integers need CP-SAT solving
+        if self._has_integers(node):
+            return self._solve_with_cp_sat(old_problem, new_problem, node)
+
+        # Recursively transform children
+        new_args = []
+        for arg in node.args:
+            transformed = self._transform_node(old_problem, new_problem, arg)
+            if transformed is None:
+                return None
+            new_args.append(transformed)
+
+        # Handle quantifiers
+        if node.is_exists() or node.is_forall():
+            new_vars = [
+                Variable(v.name, tm.UserType('Number')) if v.type.is_int_type() else v
+                for v in node.variables()
+            ]
+            return em.create_node(node.node_type, tuple(new_args), payload=tuple(new_vars)).simplify()
+
+        return em.create_node(node.node_type, tuple(new_args)).simplify()
+
+    # ==================== EFFECT TRANSFORMATION ====================
+
+    def _transform_increase_decrease_effect(
+            self,
+            effect: Effect,
+            old_problem: Problem,
+            new_problem: Problem
+    ) -> Iterator[Effect]:
+        """Convert increase/decrease effects to conditional assignments."""
+        fluent = effect.fluent.fluent()
+        lb = fluent.type.lower_bound
+        ub = fluent.type.upper_bound
+        new_condition = self._transform_node(old_problem, new_problem, effect.condition)
+        new_fluent = new_problem.fluent(fluent.name)(*effect.fluent.args)
+        returned = set()
+
+        for i in range(lb, ub + 1):
+            if effect.is_increase():
+                next_val = i + effect.value
+            else:
+                next_val = i - effect.value
             try:
-                old_obj_num = em.ObjectExp(new_problem.object(f'n{i}'))
-                new_obj_num = em.ObjectExp(new_problem.object(f'n{next_value}'))
-                new_fluent = new_problem.fluent(effect.fluent.fluent().name)(*effect.fluent.args)
+                next_val_int = next_val.simplify().constant_value()
+            except:
+                continue
 
+            if not (lb <= next_val_int <= ub):
+                continue
+            try:
+                old_obj = self._get_number_object(new_problem, i)
+                new_obj = self._get_number_object(new_problem, next_val_int)
                 new_effect = Effect(
                     new_fluent,
-                    new_obj_num,
-                    And(Equals(new_fluent, old_obj_num), new_condition).simplify(),
+                    new_obj,
+                    And(Equals(new_fluent, old_obj), new_condition).simplify(),
                     EffectKind.ASSIGN,
-                    effect.forall,
+                    effect.forall
                 )
-                if new_effect not in returned_effects:
+                if new_effect not in returned:
                     yield new_effect
-                    returned_effects.add(new_effect)
+                    returned.add(new_effect)
             except UPValueError:
                 continue
 
-    def _get_object_n(
+    def _transform_arithmetic_assignment(
             self,
-            problem: "up.model.AbstractProblem",
-            n: Optional[int] = None,
-    ):
-        tm = problem.environment.type_manager
-        em = problem.environment.expression_manager
-        number_type = tm.UserType('Number')
-        if not problem.has_object(f'n{n}'):
-            ut_number = model.Object(f'n{n}', number_type)
-            problem.add_object(ut_number)
-        else:
-            ut_number = problem.object(f'n{n}')
-        return em.ObjectExp(ut_number)
+            effect: Effect,
+            old_problem: Problem,
+            new_problem: Problem
+    ) -> Iterator[Effect]:
+        """Handle assignments with arithmetic expressions by enumerating combinations."""
+        fluent_domains = self._find_integer_fluents(effect.value)
 
-    def _transform_fluent(self, fluent, default_value, new_signature, new_problem, ut_number):
-        if fluent.type.is_int_type():
-            lb, ub = fluent.type.lower_bound, fluent.type.upper_bound
-            # cal afegir-los?
-            new_fluent = model.Fluent(fluent.name, ut_number, new_signature, new_problem.environment)
-            if default_value is not None:
-                default_obj = self._get_object_n(new_problem, default_value)
-                new_problem.add_fluent(new_fluent, default_initial_value=default_obj)
-            else:
-                new_problem.add_fluent(new_fluent)
-            return new_fluent, True
-        else:
-            new_fluent = model.Fluent(fluent.name, fluent.type, new_signature, new_problem.environment)
-            new_problem.add_fluent(new_fluent, default_initial_value=default_value)
-            return new_fluent, False
+        if not fluent_domains:
+            return
+
+        lb = effect.fluent.fluent().type.lower_bound
+        ub = effect.fluent.fluent().type.upper_bound
+
+        # Group assignments by result value
+        value_to_conditions = {}
+
+        for combination in product(*fluent_domains.values()):
+            assignment = dict(zip(fluent_domains.keys(), combination))
+
+            try:
+                result_val = self._evaluate_with_assignment(new_problem, effect.value, assignment).constant_value()
+            except:
+                continue
+
+            if not (lb <= result_val <= ub):
+                continue
+
+            # Build condition for this assignment
+            conditions = []
+            for fluent_name, value in assignment.items():
+                fluent = new_problem.fluent(fluent_name)
+                conditions.append(Equals(fluent, self._get_number_object(new_problem, value)))
+
+            value_to_conditions.setdefault(result_val, []).append(And(conditions))
+
+        # Create effects
+        new_fluent = new_problem.fluent(effect.fluent.fluent().name)
+        new_base_condition = self._transform_node(old_problem, new_problem, effect.condition)
+
+        for value, condition_list in value_to_conditions.items():
+            full_condition = And(new_base_condition, Or(condition_list)).simplify()
+            yield Effect(
+                new_fluent,
+                self._get_number_object(new_problem, value),
+                full_condition,
+                EffectKind.ASSIGN,
+                effect.forall
+            )
 
     def _compile(
             self,
             problem: "up.model.AbstractProblem",
             compilation_kind: "up.engines.CompilationKind",
     ) -> CompilerResult:
-        """
-        """
+        """Main compilation"""
         assert isinstance(problem, Problem)
-
-        new_to_old: Dict[Action, Action] = {}
 
         new_problem = problem.clone()
         new_problem.name = f"{self.name}_{problem.name}"
@@ -678,135 +643,168 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
         new_problem.clear_axioms()
         new_problem.initial_values.clear()
         new_problem.clear_quality_metrics()
-        env = new_problem.environment
-        tm = env.type_manager
 
-        # Fluents
-        ut_number = tm.UserType('Number')
+        tm = new_problem.environment.type_manager
+        number_type = tm.UserType('Number')
+        new_to_old: Dict[Action, Action] = {}
+
+        # ========== Transform Fluents ==========
         for fluent in problem.fluents:
             default_value = problem.fluents_defaults.get(fluent)
+
+            # Check signature
             new_signature = []
-            for s in fluent.signature:
-                if s.type.is_int_type():
+            for param in fluent.signature:
+                if param.type.is_int_type():
                     raise NotImplementedError(
-                        f"Fluent '{fluent.name}' has a parameter '{s.name}' of integer type, which is not supported."
+                        f"Fluent '{fluent.name}' has integer parameter '{param.name}', "
+                        f"which is not supported"
                     )
+                new_signature.append(param)
+
+            # Transform fluent type
+            if fluent.type.is_int_type():
+                # Integer fluent -> Number-typed fluent
+                new_fluent = Fluent(fluent.name, number_type, new_signature, new_problem.environment)
+
+                if default_value is not None:
+                    default_obj = self._get_number_object(new_problem, default_value)
+                    new_problem.add_fluent(new_fluent, default_initial_value=default_obj)
                 else:
-                    new_signature.append(s)
+                    new_problem.add_fluent(new_fluent)
 
-            new_fluent, is_transformed_int = self._transform_fluent(
-                fluent, default_value, new_signature, new_problem, ut_number)
+                # Set initial values
+                for fluent_exp, value in problem.initial_values.items():
+                    if fluent_exp.fluent().name == fluent.name and value != default_value:
+                        new_problem.set_initial_value(
+                            new_problem.fluent(fluent.name)(*fluent_exp.args),
+                            self._get_number_object(new_problem, value)
+                        )
+            else:
+                # Non-integer fluent
+                new_fluent = Fluent(
+                    fluent.name,
+                    fluent.type,
+                    new_signature,
+                    new_problem.environment
+                )
+                new_problem.add_fluent(new_fluent, default_initial_value=default_value)
 
-            for k, v in problem.initial_values.items():
-                if k.fluent().name == fluent.name and v != default_value:
-                    if is_transformed_int and k.type.is_int_type():
-                        new_problem.set_initial_value(new_problem.fluent(fluent.name)(*k.args),
-                                                      self._get_object_n(new_problem, v))
-                    else:
-                        new_problem.set_initial_value(k, v)
+                # Set initial values
+                for fluent_exp, value in problem.initial_values.items():
+                    if fluent_exp.fluent().name == fluent.name and value != default_value:
+                        new_problem.set_initial_value(fluent_exp, value)
 
-        # Actions
+        # ========== Transform Actions ==========
         for action in problem.actions:
-            remove_action = False
             new_action = action.clone()
             new_action.name = get_fresh_name(new_problem, action.name)
             new_action.clear_preconditions()
             new_action.clear_effects()
 
-            new_preconditions = self._get_new_node(problem, new_problem, And(action.preconditions))
+            # Transform preconditions
+            new_preconditions = self._transform_node(problem, new_problem, And(action.preconditions))
             if new_preconditions is None or new_preconditions == FALSE():
-                remove_action = True
-                break
+                # Unsatisfiable precondition -> skip action
+                continue
+
             new_action.add_precondition(new_preconditions)
-            if not remove_action:
-                for effect in action.effects:
-                    if effect.is_increase() or effect.is_decrease():
-                        for ne in self._convert_effect(effect, problem, new_problem):
-                            new_action.add_effect(ne.fluent, ne.value, ne.condition, ne.forall)
-                    else:
-                        operation_inner = self.operation_inner_map.get(effect.value.node_type)
-                        # Plus/Minus/Div/Mult in an outer expression
-                        if operation_inner is not None:
-                            fluent_values = self._find_fluents(effect.value)
-                            grouped_assignments = {}
-                            for combination in product(*fluent_values.values()):
-                                assignation = dict(zip(fluent_values.keys(), combination))
-                                # now assign all values to the fluents and check if the expression is satisfied
-                                lb = effect.fluent.fluent().type.lower_bound
-                                ub = effect.fluent.fluent().type.upper_bound
-                                possible_value = self._check_expression(
-                                        new_problem, effect.value, assignation).constant_value()
-                                if lb <= possible_value <= ub:
-                                    grouped_assignments.setdefault(possible_value, []).append(assignation.copy())
 
-                            if not grouped_assignments:
-                                remove_action = True
+            # Transform effects
+            skip_action = False
+            for effect in action.effects:
+                if effect.is_increase() or effect.is_decrease():
+                    # Increase/decrease effects
+                    for new_effect in self._transform_increase_decrease_effect(effect, problem, new_problem):
+                        new_action.add_effect(
+                            new_effect.fluent, new_effect.value, new_effect.condition, new_effect.forall
+                        )
 
-                            for v, assignments in grouped_assignments.items():
-                                possible_cases = []
-                                for a in assignments:
-                                    inner_assignments = []
-                                    fluent_cache = {f: new_problem.fluent(f) for f in fluent_values.keys()}
-                                    for f, fv in a.items():
-                                        inner_assignments.append(
-                                            Equals(fluent_cache[f], self._get_object_n(new_problem, fv))
-                                        )
-                                    possible_cases.append(And(inner_assignments))
+                elif effect.value.node_type in self.ARITHMETIC_OPS:
+                    # Assignment with arithmetic
+                    effects_generated = False
+                    for new_effect in self._transform_arithmetic_assignment(
+                            effect, problem, new_problem
+                    ):
+                        new_action.add_effect(
+                            new_effect.fluent,
+                            new_effect.value,
+                            new_effect.condition,
+                            new_effect.forall
+                        )
+                        effects_generated = True
 
-                                new_action.add_effect(
-                                    new_problem.fluent(effect.fluent.fluent().name),
-                                    self._get_object_n(new_problem, v),
-                                    Or(possible_cases), effect.forall)
-                        else:
-                            new_node = self._get_new_node(problem, new_problem, effect.fluent)
-                            new_condition = self._get_new_node(problem, new_problem, effect.condition)
-                            new_value = self._get_new_node(problem, new_problem, effect.value)
-                            new_action.add_effect(new_node, new_value, new_condition, effect.forall)
-                if not remove_action:
-                    new_to_old[new_action] = action
-                    new_problem.add_action(new_action)
+                    if not effects_generated:
+                        # No valid assignments -> skip action
+                        skip_action = True
+                        break
 
-        # Axioms
+                else:
+                    new_fluent = self._transform_node(problem, new_problem, effect.fluent)
+                    new_condition = self._transform_node(problem, new_problem, effect.condition)
+                    new_value = self._transform_node(problem, new_problem, effect.value)
+                    if new_fluent is None or new_condition is None or new_value is None:
+                        skip_action = True
+                        break
+                    new_action.add_effect(new_fluent, new_value, new_condition, effect.forall)
+            if not skip_action:
+                new_to_old[new_action] = action
+                new_problem.add_action(new_action)
+
+        # ========== Transform Axioms ==========
         for axiom in problem.axioms:
-            remove_axiom = False
             new_axiom = axiom.clone()
-            new_axiom.name = get_fresh_name(new_problem, new_axiom.name)
+            new_axiom.name = get_fresh_name(new_problem, axiom.name)
             new_axiom.clear_preconditions()
             new_axiom.clear_effects()
+            # Transform preconditions
+            skip_axiom = False
             for precondition in axiom.preconditions:
-                new_precondition = self._get_new_node(problem, new_problem, precondition)
+                new_precondition = self._transform_node(problem, new_problem, precondition)
                 if new_precondition is None or new_precondition == FALSE():
-                    remove_axiom = True
+                    skip_axiom = True
                     break
                 new_axiom.add_precondition(new_precondition)
-            if not remove_axiom:
-                for effect in axiom.effects:
-                    new_node = self._get_new_node(problem, new_problem, effect.fluent)
-                    new_condition = self._get_new_node(problem, new_problem, effect.condition)
-                    new_value = self._get_new_node(problem, new_problem, effect.value)
-                    new_axiom.add_effect(new_node, new_value, new_condition, effect.forall)
+            if skip_axiom:
+                continue
 
+            # Transform effects
+            for effect in axiom.effects:
+                new_fluent = self._transform_node(problem, new_problem, effect.fluent)
+                new_condition = self._transform_node(problem, new_problem, effect.condition)
+                new_value = self._transform_node(problem, new_problem, effect.value)
+                if new_fluent is None or new_condition is None or new_value is None:
+                    skip_axiom = True
+                    break
+                new_axiom.add_effect(new_fluent, new_value, new_condition, effect.forall)
+            if not skip_axiom:
                 new_to_old[new_axiom] = axiom
                 new_problem.add_axiom(new_axiom)
 
+        # ========== Transform Goals ==========
         for goal in problem.goals:
-            new_goal = self._get_new_node(problem, new_problem, goal)
+            new_goal = self._transform_node(problem, new_problem, goal)
             if new_goal is None:
-                raise UPProblemDefinitionError("Goal cannot be translated!")
+                raise UPProblemDefinitionError(
+                    f"Goal cannot be translated after integer removal: {goal}"
+                )
             new_problem.add_goal(new_goal)
 
-        for qm in problem.quality_metrics:
-            if qm.is_minimize_action_costs():
+        # ========== Transform Quality Metrics ==========
+        for metric in problem.quality_metrics:
+            if metric.is_minimize_action_costs():
                 new_problem.add_quality_metric(
                     updated_minimize_action_costs(
-                        qm, new_to_old, new_problem.environment
+                        metric,
+                        new_to_old,
+                        new_problem.environment
                     )
                 )
-            # ...
             else:
-                new_problem.add_quality_metric(qm)
-
+                new_problem.add_quality_metric(metric)
 
         return CompilerResult(
-            new_problem, partial(replace_action, map=new_to_old), self.name
+            new_problem,
+            partial(replace_action, map=new_to_old),
+            self.name
         )
