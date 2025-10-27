@@ -162,10 +162,9 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
 
         # Transform all arguments
         em = new_problem.environment.expression_manager
-        new_args = [
-            self._transform_expression(new_problem, arg)
-            for arg in node.args
-        ]
+        new_args = [self._transform_expression(new_problem, arg) for arg in node.args]
+        if node.is_exists() or node.is_forall():
+            return em.create_node(node.node_type, tuple(new_args), tuple(node.variables()))
         return em.create_node(node.node_type, tuple(new_args))
 
     # ==================== COUNT VS CONSTANT ====================
@@ -178,10 +177,7 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
         combinations = []
         for true_indices in itertools.combinations(range(n), k):
             true_set = set(true_indices)
-            literals = [
-                arguments[i] if i in true_set else Not(arguments[i])
-                for i in range(n)
-            ]
+            literals = [arguments[i] if i in true_set else Not(arguments[i]) for i in range(n)]
             combinations.append(And(*literals))
         return combinations
 
@@ -192,7 +188,6 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
                  for k in [min_true, max_true].
         """
         n = len(arguments)
-
         # Edge cases
         if min_true > n or max_true < 0:
             return FALSE()
@@ -202,7 +197,6 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
             max_true = n
         if min_true == 0 and max_true >= n:
             return TRUE()
-
         # OPTIMIZED: Special cases
         if min_true == max_true:
             # Exact count - enumerate
@@ -231,15 +225,13 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
         else:
             return Or(*clauses)
 
-    def _expand_count_vs_constant(
-            self, count_node: FNode, value: int, op: OperatorKind
-    ) -> FNode:
+    def _expand_count_vs_constant(self, count_node: FNode, value: int, op: OperatorKind) -> FNode:
         """
         Expand Count(args) op value into boolean formula.
 
         Examples:
         - Count(a, b, c) <= 2  →  "at most 2 of {a,b,c} are true"
-        - Count(a, b, c) == 2   →  "exactly 2 of {a,b,c} is true"
+        - Count(a, b, c) == 2   →  "exactly 2 of {a,b,c} are true"
         - Count(a, b, c) < 2   →  "at most 1 of {a,b,c} is true"
         """
         arguments = list(count_node.args)
@@ -258,9 +250,7 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
         # Generate boolean formula
         return self._exactly_k_true_formula(arguments, min_true, max_true)
 
-    def _expand_constant_vs_count(
-            self, value: int, count_node: FNode, op: OperatorKind
-    ) -> FNode:
+    def _expand_constant_vs_count(self, value: int, count_node: FNode, op: OperatorKind) -> FNode:
         """
         Expand constant op Count(args) into boolean formula.
         """

@@ -20,6 +20,7 @@ import re
 from itertools import product
 from unified_planning.engines.mixins.compiler import CompilationKind, CompilerMixin
 from unified_planning.engines.results import CompilerResult
+from unified_planning.exceptions import UPProblemDefinitionError
 from unified_planning.model import Problem, Action, ProblemKind, OperatorKind, FNode, AbstractProblem
 from unified_planning.model.problem_kind_versioning import LATEST_PROBLEM_KIND_VERSION
 from unified_planning.engines.compilers.utils import replace_action, updated_minimize_action_costs
@@ -150,19 +151,6 @@ class CountIntRemover(engines.engine.Engine, CompilerMixin):
             return expression
         # Fluent expression
         if expression.is_fluent_exp():
-            # Handle array fluents with indices in name (e.g., "fluent[0][1]")
-
-            # Maybe I should change this?
-            if '[' in expression.fluent().name:
-                base_name = expression.fluent().name.split('[')[0]
-                indices = [int(i) for i in re.findall(r'\[(.*?)\]', expression.fluent().name)]
-                fluent_exp = problem.fluent(base_name)(*expression.args)
-                value = problem.initial_value(fluent_exp)
-                # Navigate through array indices
-                for idx in indices:
-                    value = value.constant_value()[idx]
-                return value
-
             # Check if this is the fluent being updated
             if fluent_to_update is not None and fluent_to_update == expression:
                 if effect_type == 'increase':
@@ -192,17 +180,20 @@ class CountIntRemover(engines.engine.Engine, CompilerMixin):
         return fluents
 
     # ==================== COUNT EXPRESSION REPLACEMENT ====================
-    def _depends_on_params_action(self, expression: FNode) -> bool:
-        if expression.is_parameter_exp():
-            return True
-        for a in expression.args:
-            if self._depends_on_params_action(a):
-                return True
-        return False
 
-    def _replace_count_with_fluents(
-            self, problem: Problem, expression: FNode, count_registry: Dict[str, FNode]
-    ) -> FNode:
+    def _check_argument(self, expression: FNode):
+        if expression.is_parameter_exp():
+            raise UPProblemDefinitionError(f"The Count expression contains a Parameter and cannot be evaluated!")
+        elif expression.is_variable_exp():
+            raise UPProblemDefinitionError(
+                f"The Count expression contains a Variable and cannot be evaluated!\n"
+                f"You could run the Quantifiers Remover Compiler a priori"
+            )
+        for a in expression.args:
+            self._check_argument(a)
+        return
+
+    def _replace_count_with_fluents(self, problem: Problem, expression: FNode, count_registry: Dict[str, FNode]) -> FNode:
         """Replace Count expressions with sums of fluents."""
         em = problem.environment.expression_manager
         tm = problem.environment.type_manager
@@ -215,10 +206,8 @@ class CountIntRemover(engines.engine.Engine, CompilerMixin):
         if expression.is_count():
             sum_args = []
             for arg in expression.args:
-                # If the argument contains a parameter - not fully instantiated (depends on each specific action)
-                if self._depends_on_params_action(arg):
-                    # Return the same Count, the translation is not possible in this case
-                    return expression
+                # If the argument contains a parameter or a variable - not fully instantiated (depends on each specific action)
+                self._check_argument(arg)
                 # Skip trivial cases
                 if arg.is_false():
                     continue
@@ -237,7 +226,6 @@ class CountIntRemover(engines.engine.Engine, CompilerMixin):
                     fluent_name = f'count_{len(count_registry)}'
                     count_registry[fluent_name] = arg
                     # Evaluate initial value
-                    # pero que passa quan no esta totalment grounded?
                     initial_eval = self._evaluate_expression(problem, arg)
                     assert initial_eval.is_bool_constant(), \
                         f"Count argument initial value must be boolean constant, got: {initial_eval}"
@@ -277,15 +265,9 @@ class CountIntRemover(engines.engine.Engine, CompilerMixin):
             # Expression is conditional
             if condition:
                 # True case
-                action.add_effect(
-                    count_fluent, 1,
-                    And(new_expr, condition).simplify()
-                )
+                action.add_effect(count_fluent, 1, And(new_expr, condition).simplify())
                 # False case
-                action.add_effect(
-                    count_fluent, 0,
-                    And(Not(new_expr), condition).simplify()
-                )
+                action.add_effect(count_fluent, 0, And(Not(new_expr), condition).simplify())
             else:
                 action.add_effect(count_fluent, 1, new_expr)
                 action.add_effect(count_fluent, 0, Not(new_expr).simplify())
@@ -300,74 +282,45 @@ class CountIntRemover(engines.engine.Engine, CompilerMixin):
             # Find which fluents in count_expr are affected by action
             affected_fluents = self._find_affected_fluents(count_expr)
 
-            # Separate direct and indirect effects
-            direct_effects = []
-            indirect_effects = []
-            param_to_objects: Dict[FNode, Set[FNode]] = {}
-
+            # Process each effect
             for effect in action.effects:
+                # Check if this effect can affect any tracked fluent
                 for tracked_fluent in affected_fluents:
-                    if effect.fluent == tracked_fluent:
-                        # Direct effect on tracked fluent
-                        direct_effects.append(effect)
-                    elif effect.fluent.fluent().name == tracked_fluent.fluent().name:
-                        # Same fluent but different parameters
-                        indirect_effects.append(effect)
+                    # Must be same fluent name
+                    if effect.fluent.fluent().name != tracked_fluent.fluent().name:
+                        continue
 
-                        # Track parameter mappings
-                        for i, param in enumerate(effect.fluent.args):
-                            obj = tracked_fluent.arg(i)
-                            param_to_objects.setdefault(param, set()).add(obj)
-            if not (direct_effects or indirect_effects):
-                continue
+                    # Check if arguments match (build equality conditions)
+                    equality_conditions = []
+                    all_match = True
+                    for effect_arg, tracked_arg in zip(effect.fluent.args, tracked_fluent.args):
+                        if effect_arg == tracked_arg:
+                            # Exact match (same parameter or object)
+                            continue
+                        elif effect_arg.is_parameter_exp():
+                            # Effect has parameter, tracked has concrete object
+                            # Add condition: param = object
+                            equality_conditions.append(Equals(effect_arg, tracked_arg))
+                        else:
+                            # Different concrete values - no match possible
+                            all_match = False
+                            break
+                    if not all_match:
+                        continue
+                    # This effect can change this tracked fluent
+                    # Evaluate what happens to count_expr after the effect
+                    effect_type = 'increase' if effect.is_increase() else 'decrease' if effect.is_decrease() else None
 
-            # Process direct effects
-            combined_condition = None
-            new_expr = count_expr
-            for effect in direct_effects:
-                if effect.is_conditional():
-                    combined_condition = And(combined_condition, effect.condition).simplify() \
-                        if combined_condition else effect.condition
-                effect_type = 'increase' if effect.is_increase() else 'decrease' if effect.is_decrease() else None
-                new_expr = self._evaluate_expression(problem, new_expr, effect.fluent, effect.value, effect_type)
+                    new_expr = self._evaluate_expression(problem, count_expr, tracked_fluent, effect.value, effect_type)
+                    # effect condition + equality conditions
+                    condition = None
+                    if effect.is_conditional():
+                        condition = effect.condition
+                    for eq_cond in equality_conditions:
+                        condition = And(condition, eq_cond).simplify() if condition else eq_cond
 
-            # Process indirect effects (with parameter instantiation)
-            if indirect_effects:
-                # Generate all parameter combinations
-                param_list = list(param_to_objects.keys())
-                object_lists = [list(param_to_objects[p]) for p in param_list]
-
-                for obj_combination in product(*object_lists):
-                    inst_expr = new_expr
-                    inst_condition = combined_condition
-                    param_map = dict(zip(param_list, obj_combination))
-                    for effect in indirect_effects:
-                        # Build instantiated fluent
-                        inst_fluent_args = [param_map[arg] for arg in effect.fluent.args]
-                        inst_fluent = effect.fluent.fluent()(*inst_fluent_args)
-
-                        # Add parameter equality conditions
-                        for param, obj in param_map.items():
-                            eq_cond = Equals(obj, param)
-                            inst_condition = And(inst_condition, eq_cond).simplify() if inst_condition else eq_cond
-                        # Add effect condition
-                        if effect.is_conditional():
-                            inst_condition = And(inst_condition, effect.condition).simplify()
-
-                        # Update expression
-                        effect_type = 'increase' if effect.is_increase() else 'decrease' if effect.is_decrease() else None
-                        inst_expr = self._evaluate_expression(problem, inst_expr, inst_fluent, effect.value, effect_type)
                     # Add effect to action
-                    self._add_count_effect_to_action(
-                        action, problem, count_name,
-                        inst_expr, inst_condition
-                    )
-            else:
-                # No indirect effects, just add the direct effect
-                self._add_count_effect_to_action(
-                    action, problem, count_name,
-                    new_expr, combined_condition
-                )
+                    self._add_count_effect_to_action(action, problem, count_name, new_expr, condition)
         return action
 
     def _compile(
@@ -406,9 +359,7 @@ class CountIntRemover(engines.engine.Engine, CompilerMixin):
         # Add effects for count fluents
         final_actions = []
         for temp_action, old_action in zip(temp_actions, problem.actions):
-            final_action = self._generate_count_effects(
-                new_problem, temp_action, count_registry
-            )
+            final_action = self._generate_count_effects(new_problem, temp_action, count_registry)
             final_actions.append(final_action)
             new_problem.add_action(final_action)
             new_to_old[final_action] = old_action

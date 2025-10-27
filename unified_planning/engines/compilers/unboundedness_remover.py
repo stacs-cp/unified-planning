@@ -14,23 +14,15 @@
 #
 """This module defines the unboundedness remover class."""
 
-
 import unified_planning as up
 import unified_planning.engines as engines
 from unified_planning.engines.mixins.compiler import CompilationKind, CompilerMixin
 from unified_planning.engines.results import CompilerResult
-from unified_planning.model import Problem, ProblemKind, Fluent, FNode, Action
-from unified_planning.model.fluent import get_all_fluent_exp
-from unified_planning.model.types import _RealType, _IntType
+from unified_planning.model import Problem, ProblemKind, Action
 from unified_planning.model.problem_kind_versioning import LATEST_PROBLEM_KIND_VERSION
-from unified_planning.model.walkers import FluentsSubstituter
-from unified_planning.engines.compilers.utils import (
-    add_invariant_condition_apply_function_to_problem_expressions,
-    replace_action, get_fresh_name,
-)
-from typing import List, Dict, OrderedDict, Optional, Union, cast
+from unified_planning.engines.compilers.utils import replace_action, get_fresh_name
+from typing import Dict, Optional
 from functools import partial
-
 from unified_planning.shortcuts import LE, GE, And
 
 
@@ -173,13 +165,27 @@ class UnboundednessRemover(engines.engine.Engine, CompilerMixin):
                 new_action.add_precondition(precondition)
             for effect in action.effects:
                 fluent = effect.fluent.fluent()
-                if not effect.value.is_constant():
-                    if fluent.type.is_int_type() and fluent.type.lower_bound is not None and fluent.type.upper_bound is not None:
-                        lb, ub = (fluent.type.lower_bound, fluent.type.upper_bound)
+                if fluent.type.is_int_type() and fluent.type.lower_bound is not None and fluent.type.upper_bound is not None:
+                    # If the value is a constant and inside the bounds, the check has been done before?
+                    lb, ub = (fluent.type.lower_bound, fluent.type.upper_bound)
+                    if not effect.value.is_constant():
                         if effect.condition is True:
-                            new_action.add_precondition(And(LE(effect.value, ub), GE(effect.value, lb)).simplify())
+                            new_action.add_precondition(
+                                And(LE(effect.value, ub), GE(effect.value, lb)).simplify()
+                            )
                         else:
-                            new_action.add_precondition(And(effect.condition, GE(effect.value, lb), LE(effect.value, ub)).simplify())
+                            new_action.add_precondition(
+                                And(effect.condition, GE(effect.value, lb), LE(effect.value, ub)).simplify()
+                            )
+                    elif effect.value.is_constant():
+                        if not lb <= effect.value.constant_value() <= ub:
+                            if effect.condition is True:
+                                # Unconditional effect out of bounds: delete the action
+                                remove_action = True
+                                break
+                            else:
+                                # Conditional effect out of bounds: effect is not added to the action
+                                continue
 
                 if effect.is_increase():
                     new_action.add_increase_effect(effect.fluent, effect.value, effect.condition, effect.forall)
@@ -187,6 +193,8 @@ class UnboundednessRemover(engines.engine.Engine, CompilerMixin):
                     new_action.add_decrease_effect(effect.fluent, effect.value, effect.condition, effect.forall)
                 else:
                     new_action.add_effect(effect.fluent, effect.value, effect.condition, effect.forall)
+            if remove_action:
+                continue
 
             new_to_old[new_action] = action
             new_problem.add_action(new_action)
