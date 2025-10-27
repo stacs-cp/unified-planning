@@ -12,10 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-"""This module defines the quantifiers remover class."""
-import itertools
+"""This module defines the Integer Parameters in Actions, Arrays and Range Variables remover class."""
 import re
-import bisect
 from itertools import product
 
 from unified_planning.exceptions import UPProblemDefinitionError
@@ -27,13 +25,15 @@ from unified_planning.engines.results import CompilerResult
 from unified_planning.model import (
     Problem,
     InstantaneousAction,
-    DurativeAction,
     Action,
     ProblemKind,
     Fluent,
     MinimizeActionCosts,
     RangeVariable,
+    Type,
     OperatorKind,
+    Parameter,
+    Object, Effect,
 )
 from unified_planning.model.problem_kind_versioning import LATEST_PROBLEM_KIND_VERSION
 from unified_planning.engines.compilers.utils import (
@@ -43,17 +43,23 @@ from unified_planning.engines.compilers.utils import (
 from typing import Dict, List, Optional, Tuple, OrderedDict, Union
 from functools import partial
 
-from unified_planning.shortcuts import Int, FALSE, TRUE, Or, Not, And, GT, GE, LT, Equals
-
+from unified_planning.shortcuts import Int, FALSE, TRUE, And, UserType
 
 class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
     """
-    Arrays remover class: ...
+    Removes integer parameters from actions by instantiating them.
+    Also transforms array fluents into indexed fluents.
+
+    Transforms:
+    1. Array fluents -> indexed fluents with Index type (UserType)
+    2. Integer action parameters -> grounded actions
+    3. Range variables -> expanded quantifiers
     """
 
     def __init__(self):
         engines.engine.Engine.__init__(self)
         CompilerMixin.__init__(self, CompilationKind.INT_PARAMETER_ACTIONS_REMOVING)
+        self.domains: Dict[str, List[Tuple[int, ...]]] = {}
 
     @property
     def name(self):
@@ -78,12 +84,14 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
         supported_kind.set_fluents_type("ARRAY_FLUENTS")
         supported_kind.set_fluents_type("OBJECT_FLUENTS")
         supported_kind.set_fluents_type("DERIVED_FLUENTS")
+        supported_kind.set_fluents_type("SET_FLUENTS")
         supported_kind.set_conditions_kind("NEGATIVE_CONDITIONS")
         supported_kind.set_conditions_kind("DISJUNCTIVE_CONDITIONS")
         supported_kind.set_conditions_kind("EQUALITIES")
         supported_kind.set_conditions_kind("EXISTENTIAL_CONDITIONS")
         supported_kind.set_conditions_kind("UNIVERSAL_CONDITIONS")
         supported_kind.set_conditions_kind("COUNTING")
+        supported_kind.set_conditions_kind("MEMBERING")
         supported_kind.set_conditions_kind("RANGE_VARIABLES")
         supported_kind.set_effects_kind("CONDITIONAL_EFFECTS")
         supported_kind.set_effects_kind("INCREASE_EFFECTS")
@@ -141,203 +149,435 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
         new_kind.unset_conditions_kind("RANGE_VARIABLES")
         return new_kind
 
-    def _get_fluent_name(self, problem, fluent_name, integer_parameters: dict[str, int], instantiations) -> Union[str, None]:
-        pattern = r'\[(.*?)\]'
-        new_name = fluent_name
-        for access in re.findall(pattern, fluent_name):
-            new_access = access
-            for key, index in integer_parameters.items():
-                if key == access or any(part.strip() == key for part in re.split(r'[\s+\-*/()]', new_access)):
-                    new_access = new_access.replace(key, str(instantiations[index]))
-            new_name = new_name.replace('[' + access + ']', '[' + str(eval(new_access)) + ']')
-        original_fluent = problem.fluent(fluent_name.split('[')[0])
-        undefined_positions = original_fluent.undefined_positions
-        sizes = original_fluent.sizes
-        try:
-            indexes = re.findall(pattern, new_name)
-            index_0 = eval(indexes[0])
-            if type(sizes) == tuple:
-                index_1 = eval(indexes[1])
-                assert len(indexes) == 2, "Expected 2 indexes for double array."
-                assert 0 <= index_0 < sizes[0], "Index 0 out of bounds."
-                assert 0 <= index_1 < sizes[1], "Index 1 out of bounds."
-                if undefined_positions is not None:
-                    assert (index_0, index_1) not in undefined_positions, "This position is undefined."
+    # ==================== FLUENT TRANSFORMATION ====================
+
+    def _get_array_domain_and_type(self, fluent: Fluent) -> Tuple[List[int], Type]:
+        """
+        Extract domain and element type from array fluent.
+        Stores valid positions in self.domains.
+        """
+        current_type = fluent.type
+        domain_ranges = []
+        dimensions = []
+
+        while current_type.is_array_type():
+            dimensions.append(current_type.size)
+            domain_ranges.append(range(current_type.size))
+            current_type = current_type.elements_type
+
+        # All possible positions
+        all_positions = list(product(*domain_ranges))
+
+        # Filter out undefined positions
+        if fluent.undefined_positions is not None:
+            valid_positions = [
+                pos for pos in all_positions
+                if pos not in fluent.undefined_positions
+            ]
+        else:
+            valid_positions = all_positions
+
+        self.domains[fluent.name] = valid_positions
+        return dimensions, current_type
+
+    def _add_array_as_indexed_fluent(self, problem, new_problem, fluent, default_value, index_ut):
+        """
+        Transform array fluent into indexed fluent.
+        Example: board[3][3]: int → board(i1: Index, i2: Index): int with (i1, i2, i3): Index new objects
+        """
+        assert fluent.signature == [], \
+            "Array fluents with parameters not supported in this compilation"
+
+        # Get domain and element type
+        n_elements, element_type = self._get_array_domain_and_type(fluent)
+        max_index = max(n_elements)
+
+        # Add index objects if not present
+        for i in range(max_index):
+            if not new_problem.has_object(f'i{i}'):
+                new_problem.add_object(Object(f'i{i}', index_ut))
+
+        # Create new signature with Index parameters
+        new_signature = [
+            Parameter(f'i_{dim + 1}', index_ut)
+            for dim in range(len(n_elements))
+        ]
+
+        new_fluent = Fluent(fluent.name, element_type, new_signature, fluent.environment)
+        new_problem.add_fluent(new_fluent, default_initial_value=default_value)
+
+        # Set initial values
+        for f, v in problem.explicit_initial_values.items():
+            fluent_name = f.fluent().name.split('[')[0]
+
+            if f.fluent() == fluent or fluent_name == fluent.name:
+                new_equalities = self._get_new_fluent_value(
+                    new_problem, new_fluent, f, v
+                )
+                for nf, nv in new_equalities.items():
+                    new_problem.set_initial_value(nf, nv)
+
+    def _get_element_value(self, array_value: FNode, indices: Tuple[int, ...]) -> FNode:
+        """Extract element value from nested array constant."""
+        element = array_value
+        for idx in indices:
+            element = element.constant_value()[idx]
+        return element
+
+    def _get_index_object(self, problem: Problem, n: int) -> Object:
+        """Get or create index object i{n}."""
+        obj_name = f'i{n}'
+        if not problem.has_object(obj_name):
+            obj = Object(obj_name, UserType('Index'))
+            problem.add_object(obj)
+            return obj
+        return problem.object(obj_name)
+
+    def _get_new_fluent_value(self, new_problem: Problem, new_fluent: Fluent, f: FNode, v: FNode ) -> Dict[FNode, FNode]:
+        """Convert array (partial and full) assignment to indexed fluent assignments."""
+        # Extract pre-indices from fluent name (e.g., board[2][3] → (2, 3))
+        pre_indices = tuple(int(i) for i in re.findall(r'\[([0-9]+)\]', f.fluent().name))
+
+        new_equalities = {}
+
+        if pre_indices:
+            # Partial array assignment: board[2] = value
+            new_params = [self._get_index_object(new_problem, i) for i in pre_indices]
+
+            if not f.fluent().type.is_array_type():
+                # Single element: board[2][3] = 5
+                new_equalities[new_fluent(*new_params)] = v
             else:
-                assert len(indexes) == 1
-                assert 0 <= index_0 < sizes, "Index out of bounds."
-                if undefined_positions is not None:
-                    assert index_0 not in undefined_positions, "This position is undefined."
-            return new_name
-        except AssertionError as e:
+                # Sub-array: board[2] = [1,2,3]
+                post_indices = [
+                    pos[len(pre_indices):]
+                    for pos in self.domains[new_fluent.name]
+                    if pos[:len(pre_indices)] == pre_indices
+                ]
+
+                for post_idx in post_indices:
+                    full_params = new_params + [
+                        self._get_index_object(new_problem, i)
+                        for i in post_idx
+                    ]
+                    element_value = self._get_element_value(v, post_idx)
+                    new_equalities[new_fluent(*full_params)] = element_value
+        else:
+            # Full array assignment: board = [[1,2],[3,4]]
+            for pos in self.domains[new_fluent.name]:
+                element_value = self._get_element_value(v, pos)
+                params = [self._get_index_object(new_problem, i) for i in pos]
+                new_equalities[new_fluent(*params)] = element_value
+
+        return new_equalities
+
+    def _transform_fluents(self, problem: Problem, new_problem: Problem):
+        """Transform array fluents -> indexed fluents."""
+        index_ut = UserType('Index')
+
+        for fluent in problem.fluents:
+            default_value = problem.fluents_defaults.get(fluent)
+
+            if fluent.type.is_array_type():
+                self._add_array_as_indexed_fluent(
+                    problem, new_problem, fluent, default_value, index_ut
+                )
+            else:
+                new_problem.add_fluent(fluent, default_initial_value=default_value)
+                for f, v in problem.explicit_initial_values.items():
+                    if f.fluent() == fluent:
+                        new_problem.set_initial_value(fluent(*f.args), v)
+
+    # ==================== EXPRESSION TRANSFORMATION ====================
+
+    def _extract_array_indices(
+            self, new_problem: Problem, fluent_name: str, int_params: Dict[str, int], instantiations: Tuple[int, ...]
+    ) -> Union[List[Object], None]:
+        """Extract and evaluate array indices from fluent name."""
+        pattern = r'\[(.*?)\]'
+        indices = []
+
+        for access_expr in re.findall(pattern, fluent_name):
+            if access_expr.isdigit():
+                # Constant index
+                index_value = int(access_expr)
+            else:
+                # Expression with parameters
+                evaluated_expr = access_expr
+                for param_name, param_idx in int_params.items():
+                    if param_name in evaluated_expr:
+                        evaluated_expr = evaluated_expr.replace(
+                            param_name,
+                            str(instantiations[param_idx])
+                        )
+                try:
+                    index_value = eval(evaluated_expr)
+                except:
+                    return None
+            indices.append(self._get_index_object(new_problem, index_value))
+        return indices
+
+    def _transform_fluent_exp(
+            self,
+            old_problem: Problem,
+            new_problem: Problem,
+            node: FNode,
+            int_params: Dict[str, int],
+            instantiations: Tuple[int, ...]
+    ) -> Union[FNode, None]:
+        """Transform fluent expression, handling arrays."""
+        # Transform arguments first
+        new_args = []
+        for arg in node.args:
+            transformed = self._transform_expression(old_problem, new_problem, arg, int_params, instantiations)
+            if transformed is None:
+                return None
+            new_args.append(transformed)
+
+        fluent_base_name = node.fluent().name.split('[')[0]
+        old_fluent = old_problem.fluent(fluent_base_name)
+
+        # Array fluent: extract indices from name
+        if old_fluent.type.is_array_type():
+            assert new_args == [], "Array fluents with parameters not supported"
+
+            new_fluent = new_problem.fluent(fluent_base_name)
+            index_params = self._extract_array_indices(
+                new_problem, node.fluent().name, int_params, instantiations
+            )
+
+            if index_params is None:
+                return None
+
+            return new_fluent(*index_params)
+
+        # Regular fluent
+        return node.fluent()(*new_args)
+
+    def _extract_variables(self, variables: List) -> Tuple[Tuple, Dict[str, Tuple[int, int]]]:
+        """Separate regular variables from range variables."""
+        regular_vars = []
+        range_vars = {}
+        for var in variables:
+            if isinstance(var, RangeVariable):
+                range_vars[var.name] = (var.initial, var.last)
+            else:
+                regular_vars.append(var)
+        return tuple(regular_vars), range_vars
+
+    def _update_range_vars(
+            self, range_vars: Dict[str, Tuple[int, int]], int_params: Dict[str, int], instantiations: Tuple[int, ...]
+    ) -> Dict[str, Tuple[int, int]]:
+        """Evaluate range expressions with current parameter values."""
+        updated = {}
+        for var_name, (initial, last) in range_vars.items():
+            # Convert to strings for replacement
+            initial_str = str(initial)
+            last_str = str(last)
+            # Replace parameters with their values
+            for param_name, param_idx in int_params.items():
+                param_value = str(instantiations[param_idx])
+                initial_str = initial_str.replace(param_name, param_value)
+                last_str = last_str.replace(param_name, param_value)
+
+            # Evaluate expressions
+            updated[var_name] = (eval(initial_str), eval(last_str))
+        return updated
+
+    def _get_range_instantiations(self, ranges: Dict[str, Tuple[int, int]]) -> List[Tuple[int, ...]]:
+        """Generate all combinations of values for range variables."""
+        if not ranges:
+            return [()]
+        range_iterables = [
+            range(start, end + 1)
+            for start, end in ranges.values()
+        ]
+        return list(product(*range_iterables))
+
+    def _transform_quantifier(
+            self,
+            old_problem: Problem,
+            new_problem: Problem,
+            node: FNode,
+            int_params: Dict[str, int],
+            instantiations: Tuple[int, ...],
+            bounds: Dict
+    ) -> FNode:
+        """Transform forall/exists by expanding range variables."""
+        regular_vars, range_vars = self._extract_variables(node.variables())
+
+        if not range_vars:
+            # No range variables: keep quantifier
+            new_args = [
+                self._transform_expression(old_problem, new_problem, arg, int_params, instantiations, bounds)
+                for arg in node.args
+            ]
+            new_args = self._handle_none_args(node.node_type, new_args)
+            if new_args is None:
+                return None
+            em = old_problem.environment.expression_manager
+            return em.create_node(node.node_type, tuple(new_args), regular_vars).simplify()
+
+        # Update ranges with current parameter values
+        updated_ranges = self._update_range_vars(range_vars, int_params, instantiations)
+
+        # ho he girat d'ordre
+
+        # Expand range variables
+        expanded_int_params = int_params.copy()
+        for var_name in range_vars.keys():
+            expanded_int_params[var_name] = len(expanded_int_params)
+
+        # Get all instantiations for range variables
+        range_instantiations = self._get_range_instantiations(updated_ranges)
+        # Expand quantifier body for each instantiation
+        expanded_args = []
+        for range_inst in range_instantiations:
+            full_inst = instantiations + range_inst
+            for arg in node.args:
+                transformed = self._transform_expression(
+                    old_problem, new_problem, arg, expanded_int_params, full_inst, bounds
+                )
+                if transformed is not None:
+                    expanded_args.append(transformed)
+        if not expanded_args:
             return None
 
-    def _manage_node(
-            self,
-            new_problem: "up.model.AbstractProblem",
-            node: "up.model.fnode.FNode",
-            integer_parameters: Optional[dict[str, int]] = {},
-            instantiations: Optional[tuple] = (),
-            bounds: Optional[dict["up.model.fnode.FNode", int]] = {},
-    ) -> Union["up.model.fnode.FNode", None]:
+        # Combine with appropriate operator
         em = new_problem.environment.expression_manager
-        if node.is_fluent_exp():
-            # controlar parametres primer (fluents poden estar anidats!!!)
-            new_args = []
-            for arg in node.args:
-                new_args.append(self._manage_node(new_problem, arg, integer_parameters, instantiations))
-            if None in new_args:
-                return None
-            original_fluent = new_problem.fluent(node.fluent().name.split('[')[0])
-            if original_fluent.type.is_array_type():
-                fluent = node.fluent()
-                new_name = self._get_fluent_name(new_problem, fluent.name, integer_parameters, instantiations)
-                if new_name is None:
-                    return None
-                return Fluent(new_name, fluent.type, fluent.signature, fluent.environment)(*new_args)
-            return node.fluent()(*new_args)
-        elif node.is_parameter_exp():
-            if integer_parameters.get(node.parameter().name) is not None:
-                return Int(instantiations[integer_parameters.get(node.parameter().name)])
-            return node
-        elif node.is_constant() or node.is_variable_exp() or node.is_timing_exp():
-            return node
-        elif node.is_not() and node.arg(0).is_equals():
-            subnode = node.arg(0)
-            # si no esta a la llista de bounds... sempre es complira -> cert
-            var, constant = (subnode.arg(0), subnode.arg(1)) \
-                if subnode.arg(0).is_fluent_exp() or subnode.arg(0).is_parameter_exp() \
-                else (subnode.arg(1), subnode.arg(0))
-            new_var = self._manage_node(new_problem, var, integer_parameters, instantiations, bounds)
-            new_constant = self._manage_node(new_problem, constant, integer_parameters, instantiations, bounds)
-            if new_var in bounds.keys():
-                value = new_constant.object() if new_constant.type.is_user_type() else new_constant.constant_value()
-                if len(bounds[new_var]) == 1:
-                    if bounds[new_var][0] != value:
-                        return TRUE()
-                    else:
-                        return FALSE()
-                elif value not in bounds[new_var]:
-                    return TRUE()
-                elif value in bounds[new_var]:
-                    return Not(Equals(new_var, new_constant))
-                else:
-                    return None
-            else:
-                return Not(Equals(new_var, new_constant))
+        new_op = OperatorKind.AND if node.is_forall() else OperatorKind.OR
+        return em.create_node(new_op, tuple(expanded_args)).simplify()
 
-        elif node.is_equals():
-            var, constant = (node.arg(0), node.arg(1)) \
-                if node.arg(0).is_fluent_exp() or node.arg(0).is_parameter_exp() \
-                else (node.arg(1), node.arg(0))
-            new_var = self._manage_node(new_problem, var, integer_parameters, instantiations, bounds)
-            new_constant = self._manage_node(new_problem, constant, integer_parameters, instantiations, bounds)
-            if new_var is None or new_constant is None:
-                return None
-            if new_var in bounds.keys():
-                value = new_constant.object() if new_constant.is_object_exp() else new_constant.constant_value()
-                if len(bounds[new_var]) == 1:
-                    if bounds[new_var][0] == value:
-                        return TRUE()
-                    else:
-                        return None
-                elif value in bounds[new_var]:
-                    return Equals(new_var, new_constant)
-                else:
-                    return None
-            else:
-                return Equals(new_var, new_constant)
-        else:
-            if node.is_forall() or node.is_exists():
-                new_forall, range_vars = self._process_forall(node.variables())
-                if not new_forall:
-                    this_integer_parameters = integer_parameters.copy()
-                    for key in range_vars.keys():
-                        this_integer_parameters[key] = len(this_integer_parameters)
+    def _transform_array_comparison(
+            self,
+            old_problem: Problem,
+            new_problem: Problem,
+            node: FNode,
+            int_params: Dict[str, int],
+            instantiations: Tuple[int, ...]
+    ) -> FNode:
+        """
+        Transform comparison with array fluent.
+        Example: board == [[1,2],[3,4]] → multiple comparisons
+        """
+        assert all(arg.type.is_array_type() for arg in node.args), \
+            "All arguments must be array type"
 
-                    updated_range_vars = self._update_range_vars(range_vars, this_integer_parameters,
-                                                                 instantiations) if range_vars else {}
-                    ranges = [updated_range_vars[n] for n in updated_range_vars] if updated_range_vars else []
-                    instantiation_combinations = self._get_instantiations(ranges) if ranges else [()]
-                    new_args = []
-                    for ti in instantiation_combinations:
-                        this_instantiations = instantiations + ti
-                        for arg in node.args:
-                            new_args.append(self._manage_node(new_problem, arg, this_integer_parameters, this_instantiations, bounds))
-                    new_node_type = OperatorKind.AND if node.is_forall() else OperatorKind.OR
-                    if None in new_args:
-                        new_args = self._is_problematic(new_node_type, new_args)
-                    if new_args is None:
-                        return None
-                    return em.create_node(new_node_type, tuple(new_args)).simplify()
-                else:
-                    new_args = [self._manage_node(new_problem, arg, integer_parameters, instantiations, bounds) for arg in
-                                node.args]
-                    if None in new_args:
-                        new_args = self._is_problematic(node.node_type, new_args)
-                    if new_args is None or new_args is []:
-                        return None
-                    return em.create_node(node.node_type, tuple(new_args), new_forall).simplify()
-            new_args = [self._manage_node(new_problem, arg, integer_parameters, instantiations, bounds) for arg in node.args]
-            if None in new_args:
-                new_args = self._is_problematic(node.node_type, new_args)
-            if new_args is None or new_args is []:
-                return None
-            return em.create_node(node.node_type, tuple(new_args)).simplify()
+        # Identify fluent and value
+        fluent_arg, value_arg = (
+            (node.arg(0), node.arg(1))
+            if node.arg(1).is_constant()
+            else (node.arg(1), node.arg(0))
+        )
+        fluent_base_name = fluent_arg.fluent().name.split('[')[0]
+        new_fluent = new_problem.fluent(fluent_base_name)
 
-    def _is_problematic(self, node_type, args) -> Union[list[FNode], None]:
+        # Generate comparison for each position
+        em = new_problem.environment.expression_manager
+        comparisons = []
+        for pos, val in self._get_new_fluent_value(new_problem, new_fluent, fluent_arg, value_arg).items():
+            comparison = em.create_node(node.node_type, (pos, val))
+            comparisons.append(comparison.simplify())
+        return And(comparisons)
+
+    def _handle_none_args(self, node_type: OperatorKind, args: List) -> Union[List[FNode], None]:
+        """
+        Handle undefined (None) values in arguments based on operator semantics.
+        - OR/EXISTS/COUNT: ignore None
+        - IMPLIES: special handling
+        - AND/FORALL/...: None propagates
+        """
+        if None not in args:
+            return args
         if node_type in {OperatorKind.OR, OperatorKind.COUNT, OperatorKind.EXISTS}:
             return [arg for arg in args if arg is not None]
-        elif node_type in {OperatorKind.IMPLIES}:
-            return [args[0], FALSE()] if (args[1] is None and args[0] is not None) else args[1]
-        # LE, LT, NOT, EQUALS, FORALL, IFF, AND, ARITHMETIC OPERATIONS ...
+        elif node_type == OperatorKind.IMPLIES:
+            if args[1] is None and args[0] is not None:
+                return [args[0], FALSE()]
+            return args[1]
         else:
-            return None if None in args else args
+            return None
 
-    def _process_forall(self, forall):
-        new_forall = []
-        range_info = {}
-        for f in forall:
-            if isinstance(f, RangeVariable):
-                range_info[f.name] = (f.initial, f.last)
-            else:
-                new_forall.append(f)
-        return tuple(new_forall), range_info
+    def _transform_generic(
+            self,
+            old_problem: Problem,
+            new_problem: Problem,
+            node: FNode,
+            int_params: Dict[str, int],
+            instantiations: Tuple[int, ...],
+            bounds: Dict
+    ) -> Union[FNode, None]:
+        """Generic recursive transformation."""
+        em = old_problem.environment.expression_manager
 
-    def _update_range_vars(self, range_vars, int_parameters: dict[str, int], instantiations) -> dict[str, Tuple[int, int]]:
-        for n, r in range_vars.items():
-            new_r_0 = str(r[0])
-            new_r_1 = str(r[1])
-            for key, index in int_parameters.items():
-                if key in new_r_0:
-                    new_r_0 = str(new_r_0).replace(key, str(instantiations[index]))
-                if key in new_r_1:
-                    new_r_1 = str(new_r_1).replace(key, str(instantiations[index]))
-            range_vars[n] = (eval(new_r_0), eval(new_r_1))
-        return range_vars
+        new_args = [
+            self._transform_expression(old_problem, new_problem, arg, int_params, instantiations, bounds)
+            for arg in node.args
+        ]
+        new_args = self._handle_none_args(node.node_type, new_args)
+        if new_args is None or new_args == []:
+            return None
+        return em.create_node(node.node_type, tuple(new_args)).simplify()
 
-    def _get_instantiations(self, ranges: list[(int, int)]):
+    def _transform_expression(
+            self,
+            old_problem: Problem,
+            new_problem: Problem,
+            node: FNode,
+            int_params: Optional[Dict[str, int]] = None,
+            instantiations: Optional[Tuple[int, ...]] = None,
+            bounds: Optional[Dict[FNode, List]] = None
+    ) -> Union[FNode, None]:
         """
-        Generates all possible combinations given a list of ranges.
-
-        :param ranges: A list of tuples (start, end), where each tuple defines an inclusive range.
-        :return: A list of tuples with all the possible combinations.
+        Transform expression by substituting integer parameters.
+        :param int_params: Map from parameter name to its position
+        :param instantiations: Tuple of integer values for parameters
+        :param bounds: Bounds analysis for optimization
         """
-        ranges_as_iterables = [range(start, end + 1) for start, end in ranges]
-        return list(product(*ranges_as_iterables))
+        if int_params is None:
+            int_params = {}
+        if instantiations is None:
+            instantiations = ()
+        if bounds is None:
+            bounds = {}
 
-    def _add_effect(self, action, effect_type: str, fluent, value, condition, forall):
-        """
-        Adds an effect to the specified action.
+        # Base cases
+        if node.is_constant() or node.is_variable_exp() or node.is_timing_exp():
+            return node
 
-        :param action: The action to which the effect will be added.
-        :param effect_type: A string indicating the type of the effect (e.g., "add", "delete", or "modify").
-        :param fluent: The fluent being affected by the effect.
-        :param value: The value to be assigned to the fluent as part of the effect.
-        :param condition: The condition under which the effect is applied. This can be a logical condition or a fluent expression.
-        :param forall: A list or iterable representing the variables that must satisfy the effect's condition (used for universally quantified effects).
-        :return: None. The effect is directly added to the action.
-        """
+        if node.is_parameter_exp():
+            # Replace integer parameters with constants
+            param_name = node.parameter().name
+            if param_name in int_params:
+                param_index = int_params[param_name]
+                return Int(instantiations[param_index])
+            return node
+        if node.is_fluent_exp():
+            return self._transform_fluent_exp(old_problem, new_problem, node, int_params, instantiations)
+        if node.is_forall() or node.is_exists():
+            return self._transform_quantifier(old_problem, new_problem, node, int_params, instantiations, bounds)
+        # Special case: array fluent comparisons
+        if node.arg(0).type.is_array_type():
+            return self._transform_array_comparison(old_problem, new_problem, node, int_params, instantiations)
+        # Generic recursive transformation
+        return self._transform_generic(old_problem, new_problem, node, int_params, instantiations, bounds)
+
+    # ==================== ACTION TRANSFORMATION ====================
+
+    def _transform_actions(self, problem: Problem, new_problem: Problem) -> Dict[Action, Tuple[Action, Tuple[int, ...]]]:
+        """Transform all actions by grounding integer parameters."""
+        trace_back_map = {}
+        for action in problem.actions:
+            instantiated_actions = self._instantiate_action(problem, new_problem, action)
+            for new_action, instantiation in instantiated_actions:
+                new_problem.add_action(new_action)
+                trace_back_map[new_action] = (action, instantiation)
+        return trace_back_map
+
+    def _add_effect_to_action(
+            self, action: Action, effect_type: str, fluent: FNode, value: FNode, condition: FNode, forall: Tuple
+    ):
+        """Add effect to action based on type."""
         if effect_type == 'increase':
             action.add_increase_effect(fluent, value, condition, forall)
         elif effect_type == 'decrease':
@@ -345,333 +585,212 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
         else:
             action.add_effect(fluent, value, condition, forall)
 
-    def _apply_negation(self, node):
-        constants = {
-            OperatorKind.BOOL_CONSTANT,
-            OperatorKind.INT_CONSTANT,
-            OperatorKind.LIST_CONSTANT,
-            OperatorKind.REAL_CONSTANT,
-            OperatorKind.FLUENT_EXP,
-            OperatorKind.OBJECT_EXP,
-            OperatorKind.PARAM_EXP,
-            OperatorKind.VARIABLE_EXP
-        }
-        if node.node_type in constants:
-            return Not(node).simplify()
-        elif node.node_type == OperatorKind.LE:
-            return GT(node.arg(0), node.arg(1)).simplify()
-        elif node.node_type == OperatorKind.LT:
-            return GE(node.arg(0), node.arg(1)).simplify()
-        elif node.node_type == OperatorKind.AND:
-            return Or(Not(a) for a in node.args).simplify()
-        elif node.node_type == OperatorKind.OR:
-            return And(Not(a) for a in node.args).simplify()
-        elif node.node_type == OperatorKind.NOT:
-            return node.arg(0).simplify()
+    def _add_single_effect(
+            self,
+            action: Action,
+            effect_type: str,
+            fluent: FNode,
+            value: FNode,
+            condition: FNode,
+            original_condition: FNode,
+            forall: Tuple
+    ) -> bool:
+        """Add single effect to action. Returns False if action should be pruned."""
+        # Check for invalid values (out of bounds for integers)
+        if fluent is not None and value is not None:
+            if fluent.type.is_int_type():
+                lower = fluent.type.lower_bound
+                upper = fluent.type.upper_bound
+                # Check if value is provably out of bounds
+                if (value < lower).simplify() == TRUE() or (value > upper).simplify() == TRUE():
+                    value = None
+        # Handle unconditional effects
+        if original_condition == TRUE():
+            if fluent is None or value is None:
+                # Invalid unconditional effect -> prune action
+                return False
+            self._add_effect_to_action( action, effect_type, fluent, value, condition, forall)
+        # Handle conditional effects
         else:
-            raise UPProblemDefinitionError(f"Negation not supported for {node.node_type}")
+            if condition not in (None, FALSE()) and fluent is not None and value is not None:
+                self._add_effect_to_action(action, effect_type, fluent, value, condition, forall)
+        return True
 
-    def _to_nnf(self, new_problem, node):
-        constants = {
-            OperatorKind.BOOL_CONSTANT,
-            OperatorKind.INT_CONSTANT,
-            OperatorKind.LIST_CONSTANT,
-            OperatorKind.REAL_CONSTANT,
-            OperatorKind.FLUENT_EXP,
-            OperatorKind.OBJECT_EXP,
-            OperatorKind.PARAM_EXP,
-            OperatorKind.VARIABLE_EXP
-        }
-        if node.node_type in constants:
-            return node.simplify()
-        elif node.node_type == OperatorKind.NOT:
-            if node.arg(0).node_type in constants:
-                return Not(self._to_nnf(new_problem, node.arg(0))).simplify()
-            elif node.arg(0).is_equals(): # deixar el not equals
-                #Or(GT(node.arg(0).arg(0), node.arg(0).arg(1)), LT(node.arg(0).arg(0), node.arg(0).arg(1)))
-                return node.simplify()
-            else:
-                return self._to_nnf(new_problem, self._apply_negation(node.arg(0))).simplify()
-        elif node.node_type == OperatorKind.IMPLIES:
-            return Or(self._to_nnf(new_problem, Not(node.arg(0))), self._to_nnf(new_problem, node.arg(1))).simplify()
-        elif node.node_type == OperatorKind.IFF:
-            return And(Or(self._to_nnf(new_problem, Not(node.arg(0))), self._to_nnf(new_problem, node.arg(1))),
-                       Or(self._to_nnf(new_problem, node.arg(0)), self._to_nnf(new_problem, Not(node.arg(1))))).simplify()
+    def _add_instantiated_effect(
+            self,
+            problem: Problem,
+            new_problem: Problem,
+            effect: Effect,
+            new_action: Action,
+            int_param_map: Dict[str, int],
+            instantiation: Tuple[int, ...]
+    ) -> bool:
+        """Add single effect to action. Returns False if action should be pruned."""
+        # Determine effect type
+        if effect.is_increase():
+            effect_type = 'increase'
+        elif effect.is_decrease():
+            effect_type = 'decrease'
         else:
-            em = new_problem.environment.expression_manager
-            return em.create_node(node.node_type, tuple([self._to_nnf(new_problem, a) for a in node.args])).simplify()
+            effect_type = 'none'
 
-    def _get_bounds(self, problem, node, bounds):
-        if node.is_and():
-            for a in node.args:
-                self._get_bounds(problem, a, bounds)
-                return True
-        elif node.is_not() and node.arg(0).is_equals():
-            subnode = node.arg(0)
-            if subnode.arg(0).type.is_int_type() and (subnode.arg(0).is_constant() or subnode.arg(1).is_constant()):
-                switch = subnode.arg(1).type.is_fluent_exp()
-                fluent, value = (
-                    (subnode.arg(0), subnode.arg(1).constant_value()) # CONSTANT O NO?
-                    if not switch else
-                    (subnode.arg(1), subnode.arg(0).constant_value())
-                )
-                current_bounds = bounds.get(
-                    fluent,
-                    list(range(fluent.type.lower_bound, fluent.type.upper_bound + 1))
-                )
-                idx = bisect.bisect_left(current_bounds, value)
+        # Handle forall effects
+        regular_forall, range_vars = self._extract_variables(effect.forall)
+        if not range_vars:
+            # No range variables in forall
+            new_fluent = self._transform_expression(problem, new_problem, effect.fluent, int_param_map, instantiation)
+            new_value = self._transform_expression(problem, new_problem, effect.value, int_param_map, instantiation)
+            new_condition = self._transform_expression(problem, new_problem, effect.condition, int_param_map, instantiation)
 
-                if idx < len(current_bounds) and current_bounds[idx] == value:
-                    new_bounds = current_bounds[:idx] + current_bounds[idx + 1:]
-                    if not new_bounds:
-                        return None
-                    bounds[fluent] = new_bounds
-                return True
+            return self._add_single_effect(
+                new_action, effect_type, new_fluent, new_value, new_condition, effect.condition, regular_forall
+            )
 
-            elif subnode.arg(0).type.is_user_type() and (subnode.arg(0).is_object_exp() or subnode.arg(1).is_object_exp()):
-                var, value = (
-                    (subnode.arg(0), subnode.arg(1).object())
-                    if subnode.arg(0).is_fluent_exp() or subnode.arg(0).is_parameter_exp() else
-                    (subnode.arg(1), subnode.arg(0).object())
-                )
-                current_bounds = bounds.get(
-                    var,
-                    list(problem.objects(var.type))
-                )
-                if value not in current_bounds:
-                    return None
-                new_bounds = [obj for obj in current_bounds if obj != value]
-                if not new_bounds:
-                    return None
-                bounds[var] = new_bounds
+        # ho he girat
+        updated_ranges = self._update_range_vars(range_vars, int_param_map, instantiation)
 
-        elif node.is_equals():
-            if ((node.arg(0).type.is_int_type() or node.is_lt() or node.is_le()) and
-                    (node.arg(0).is_constant() or node.arg(1).is_constant())):
-                switch = node.arg(1).is_fluent_exp()
-                fluent, value = (
-                    (node.arg(0), node.arg(1).constant_value())
-                    if not switch else
-                    (node.arg(1), node.arg(0).constant_value())
-                )
-                current_bounds = bounds.get(
-                    fluent,
-                    list(range(fluent.type.lower_bound, fluent.type.upper_bound + 1))
-                )
-                # Decide bisect mode based on operator and side
-                if node.is_lt():
-                    left_fn, right_fn = bisect.bisect_left, bisect.bisect_right
-                    take_lower = not switch
-                elif node.is_le():
-                    left_fn, right_fn = bisect.bisect_right, bisect.bisect_left
-                    take_lower = not switch
-                else:  # equals
-                    if value not in current_bounds:
-                        return None
-                    bounds[fluent] = [value]
-                    return True
+        # Expand forall with range variables
+        expanded_int_params = int_param_map.copy()
+        for var_name in range_vars.keys():
+            expanded_int_params[var_name] = len(expanded_int_params)
 
-                # Apply slicing
-                if take_lower:
-                    idx = left_fn(current_bounds, value)
-                    new_bounds = current_bounds[:idx]
-                else:
-                    idx = right_fn(current_bounds, value)
-                    new_bounds = current_bounds[idx:]
+        range_insts = self._get_range_instantiations(updated_ranges)
+        for range_inst in range_insts:
+            full_inst = instantiation + range_inst
+            new_fluent = self._transform_expression(problem, new_problem, effect.fluent, expanded_int_params, full_inst)
+            new_value = self._transform_expression(problem, new_problem, effect.value, expanded_int_params, full_inst)
+            new_condition = self._transform_expression(problem, new_problem, effect.condition, expanded_int_params, full_inst)
+            success = self._add_single_effect(
+                new_action, effect_type, new_fluent, new_value, new_condition, effect.condition, regular_forall
+            )
+            if not success:
+                return False
+        return True
 
-                bounds[fluent] = new_bounds
-            elif node.arg(0).type.is_user_type() and (node.arg(0).is_object_exp() or node.arg(1).is_object_exp()):
-                var, value = (
-                    (node.arg(0), node.arg(1).object())
-                    if node.arg(0).is_fluent_exp() or node.arg(0).is_parameter_exp() else
-                    (node.arg(1), node.arg(0).object())
-                )
-                current_bounds = bounds.get(
-                    var,
-                    list(problem.objects(var.type))
-                )
-                if value not in current_bounds:
-                    return None
-                bounds[var] = [value]
-        #else:
-        #    raise NotImplementedError(f"Node type {node.node_type} not implemented")
+    def _add_instantiated_effects(
+            self,
+            problem: Problem,
+            new_problem: Problem,
+            old_action: Action,
+            new_action: Action,
+            int_param_map: Dict[str, int],
+            instantiation: Tuple[int, ...]
+    ) -> bool:
+        """Add all effects to instantiated action. Returns True if any effects added."""
+        for effect in old_action.effects:
+            success = self._add_instantiated_effect(
+                problem, new_problem, effect, new_action, int_param_map, instantiation
+            )
+            if not success:
+                return False
+        return len(new_action.effects) > 0
 
-    def _get_assignations(self, problem, preconditions):
-        # de moment nomes suporta enters
-        bounds = {}
-        for p in preconditions:
-            self._get_bounds(problem, p, bounds)
-        if {k: v[0] for k, v in bounds.items() if len(v) == 0}:
+    def _create_instantiated_action(
+            self,
+            problem: Problem,
+            new_problem: Problem,
+            action: Action,
+            regular_params: OrderedDict,
+            int_param_map: Dict[str, int],
+            instantiation: Tuple[int, ...]
+    ) -> Union[Action, None]:
+        """Create single instantiated action."""
+        # Generate unique name
+        action_name = get_fresh_name(new_problem, action.name, list(map(str, instantiation)))
+
+        # Create action with only regular parameters
+        assert isinstance(action, InstantaneousAction), "Only InstantaneousActions are supported"
+        new_action = InstantaneousAction(action_name, regular_params, action.environment)
+        # Transform preconditions
+        for precondition in action.preconditions:
+            new_precondition = self._transform_expression(
+                problem, new_problem, precondition, int_param_map, instantiation
+            )
+            if new_precondition is None or new_precondition == FALSE():
+                # Impossible action
+                return None
+            new_action.add_precondition(new_precondition)
+
+        # Transform effects
+        has_valid_effects = self._add_instantiated_effects(
+            problem, new_problem, action, new_action, int_param_map, instantiation
+        )
+        if not has_valid_effects:
             return None
+        return new_action
 
-        return {k: v for k, v in bounds.items()}
-
-    def _compile(
-        self,
-        problem: "up.model.AbstractProblem",
-        compilation_kind: "up.engines.CompilationKind",
-    ) -> CompilerResult:
+    def _instantiate_action(
+            self, problem: Problem, new_problem: Problem, action: Action
+    ) -> List[Tuple[Action, Tuple[int, ...]]]:
         """
-        Takes an instance of a :class:`~unified_planning.model.Problem` and the `INT_PARAMETER_ACTIONS_REMOVING` `~unified_planning.engines.CompilationKind`
-        and returns a `CompilerResult` where the `Problem` does not have `Actions` with integer parameters.
-
-        :param problem: The instance of the `Problem` that must be returned without integer parameters.
-        :param compilation_kind: The `CompilationKind` that must be applied on the given problem;
-            only `INT_PARAMETER_ACTIONS_REMOVING` is supported by this compiler
-        :return: The resulting `CompilerResult` data structure.
+        Create all instantiations of an action for integer parameters.
+        Returns list of (new_action, instantiation) pairs.
         """
-        assert isinstance(problem, Problem)
+        # Separate regular and integer parameters
+        regular_params = OrderedDict()
+        int_param_map = {}
+        int_param_ranges = []
 
-        trace_back_map: Dict[Action, Tuple[Action, List["up.model.fnode.FNode"]]] = {}
-
-        new_problem = problem.clone()
-        new_problem.name = f"{self.name}_{problem.name}"
-        new_problem.clear_actions()
-        new_problem.clear_axioms()
-        new_problem.clear_quality_metrics()
-
-        for action in problem.actions:
-            new_parameters = OrderedDict()
-            integer_parameters = {}
-            integers_domains = []
-
-            for old_parameter in action.parameters:
-                if old_parameter.type.is_user_type():
-                    new_parameters.update({old_parameter.name: old_parameter.type})
-                else:
-                    assert old_parameter.type.is_int_type(), "Type of parameter not supported"
-                    integers_domains.append((old_parameter.type.lower_bound, old_parameter.type.upper_bound))
-                    integer_parameters[old_parameter.name] = len(integer_parameters)
-
-            for instantiations in self._get_instantiations(integers_domains):
-                new_action_name = get_fresh_name(new_problem, action.name, list(map(str, instantiations)))
-                if isinstance(action, InstantaneousAction):
-                    new_action = InstantaneousAction(new_action_name, new_parameters, action.environment)
-                elif isinstance(action, DurativeAction):
-                    new_action = DurativeAction(new_action_name, new_parameters, action.environment)
-                else:
-                    new_action = Action(new_action_name, new_parameters, action.environment)
-                remove_action = False
-                temporal_preconditions = []
-                for precondition in action.preconditions:
-                    new_precondition = self._manage_node(new_problem, precondition, integer_parameters, instantiations)
-                    if new_precondition is None or new_precondition == FALSE():
-                        remove_action = True
-                        break
-                    if new_precondition.is_and():
-                        for np in new_precondition.args:
-                            temporal_preconditions.append(self._to_nnf(new_problem, np).simplify())
-                    elif new_precondition is not TRUE():
-                        temporal_preconditions.append(self._to_nnf(new_problem, new_precondition).simplify())
-
-                # Search assignations
-                bounds = self._get_assignations(problem, temporal_preconditions)
-                if bounds is None:
-                    break
-
-                # Replace values in other preconditions
-                if bounds:
-                    for fluent, value in bounds.items():
-                        if len(value) == 1:
-                            new_action.add_precondition(Equals(fluent, value[0]))
-
-                    for op in temporal_preconditions:
-                        new_op = self._manage_node(new_problem, op, {}, (), bounds)
-                        if new_op is None or new_op == FALSE():
-                            remove_action = True
-                            break
-                        if new_op != TRUE():
-                            new_action.add_precondition(new_op)
-                else:
-                    for op in temporal_preconditions:
-                        new_action.add_precondition(op)
-
-                if not remove_action:
-                    for effect in action.effects:
-                        effect_type = 'increase' if effect.is_increase() else 'decrease' if effect.is_decrease() else 'none'
-                        new_forall, range_vars = self._process_forall(effect.forall)
-                        this_integer_parameters = integer_parameters.copy()
-                        for key in range_vars.keys():
-                            this_integer_parameters[key] = len(this_integer_parameters)
-
-                        updated_range_vars = self._update_range_vars(range_vars, this_integer_parameters,
-                                                                     instantiations) if range_vars else {}
-                        ranges = [updated_range_vars[n] for n in updated_range_vars] if updated_range_vars else []
-                        instantiation_combinations = self._get_instantiations(ranges) if ranges else [()]
-
-                        for ti in instantiation_combinations:
-                            this_instantiations = instantiations + ti
-                            new_fluent = self._manage_node(new_problem, effect.fluent, this_integer_parameters, this_instantiations)
-                            new_value = self._manage_node(new_problem, effect.value, this_integer_parameters, this_instantiations, bounds)
-                            new_condition = self._manage_node(new_problem, effect.condition, this_integer_parameters, this_instantiations, bounds)
-
-                            # Invalid value if it is out of range
-                            if None not in (new_fluent, new_value):
-                                if new_fluent.type.is_int_type():
-                                    t = new_fluent.type
-                                    if ((new_value < t.lower_bound).simplify() == TRUE() or
-                                        (new_value > t.upper_bound).simplify() == TRUE()):
-                                        new_value = None
-                            # Unconditional effect
-                            if effect.condition == TRUE():
-                                if None in (new_fluent, new_value):
-                                    remove_action = True
-                                    break
-                                else:
-                                    self._add_effect(new_action, effect_type, new_fluent, new_value, new_condition, new_forall)
-                            # Conditional effect
-                            else:
-                                if new_condition not in (None, FALSE()) and None not in (new_fluent, new_value):
-                                    self._add_effect(new_action, effect_type, new_fluent, new_value, new_condition, new_forall)
-                        if remove_action:
-                            break
-                    if not remove_action and new_action.effects != []:
-                        new_problem.add_action(new_action)
-                        trace_back_map[new_action] = (action, instantiations)
-
-        for qm in problem.quality_metrics:
-            if qm.is_minimize_sequential_plan_length() or qm.is_minimize_makespan():
-                new_problem.add_quality_metric(qm)
-            elif qm.is_minimize_action_costs():
-                assert isinstance(qm, MinimizeActionCosts)
-                new_costs: Dict["up.model.Action", "up.model.Expression"] = {}
-                for new_act, old_act in trace_back_map.items():
-                    if old_act is None:
-                        continue
-                    new_cost = qm.get_action_cost(old_act[0])
-                    if new_cost.is_parameter_exp():
-                        i = 0
-                        for p in old_act[0].parameters:
-                            if p.name == str(new_cost):
-                                break
-                            if p.type.is_int_type():
-                                i += 1
-                        new_costs[new_act] = old_act[1][i]
-                    else:
-                        new_costs[new_act] = new_cost
-                new_problem.add_quality_metric(
-                    MinimizeActionCosts(new_costs, environment=new_problem.environment)
-                )
+        for param in action.parameters:
+            if param.type.is_user_type():
+                regular_params[param.name] = param.type
+            elif param.type.is_int_type():
+                int_param_map[param.name] = len(int_param_map)
+                int_param_ranges.append((param.type.lower_bound, param.type.upper_bound))
             else:
-                new_problem.add_quality_metric(qm)
+                raise UPProblemDefinitionError(f"Parameter type {param.type} not supported")
 
+        # Generate all instantiations
+        instantiations = self._get_range_instantiations(
+            {f"p{i}": r for i, r in enumerate(int_param_ranges)}
+        ) if int_param_ranges else [()]
+
+        result = []
+        for inst in instantiations:
+            new_action = self._create_instantiated_action(
+                problem, new_problem, action, regular_params, int_param_map, inst
+            )
+            if new_action is not None:
+                result.append((new_action, inst))
+        return result
+
+    # ==================== GOAL TRANSFORMATION ====================
+
+    def _transform_goals(self, problem: Problem, new_problem: Problem):
+        """Transform all goals."""
+        for goal in problem.goals:
+            new_goal = self._transform_expression(problem, new_problem, goal)
+            if new_goal is not None:
+                new_problem.add_goal(new_goal)
+
+    # ==================== AXIOMS TRANSFORMATION ====================
+
+    def _transform_axioms(self, problem: Problem, new_problem: Problem, trace_back_map: Dict):
+        """Transform axioms"""
         for axiom in problem.axioms:
+            # Check for integer parameters
+            for param in axiom.parameters:
+                if param.type.is_int_type():
+                    raise NotImplementedError(
+                        "Integer parameters in axioms are not supported!"
+                    )
+
+            # Clone and transform
             new_axiom = axiom.clone()
             new_axiom.name = get_fresh_name(new_problem, new_axiom.name)
             new_axiom.clear_preconditions()
             new_axiom.clear_effects()
-            for parameter in axiom.parameters:
-                if parameter.type.is_int_type():
-                    raise NotImplementedError(
-                        "Integer parameters in axioms are not supported!"
-                    )
+
             for precondition in axiom.preconditions:
-                new_precondition = self._manage_node(new_problem, precondition)
-                new_axiom.add_precondition(new_precondition)
+                new_precondition = self._transform_expression(problem, new_problem, precondition)
+                if new_precondition is not None:
+                    new_axiom.add_precondition(new_precondition)
+
             for effect in axiom.effects:
-                new_fluent = self._manage_node(new_problem, effect.fluent)
-                new_value = self._manage_node(new_problem, effect.value)
-                new_condition = self._manage_node(new_problem, effect.condition)
+                new_fluent = self._transform_expression(problem, new_problem, effect.fluent)
+                new_value = self._transform_expression(problem, new_problem, effect.value)
+                new_condition = self._transform_expression(problem, new_problem, effect.condition)
+
                 if not new_condition.is_false() and new_fluent is not None:
                     if effect.is_increase():
                         new_axiom.add_increase_effect(new_fluent, new_value, new_condition, effect.forall)
@@ -682,6 +801,76 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
 
             new_problem.add_axiom(new_axiom)
             trace_back_map[new_axiom] = axiom
+
+    # ==================== QUALITY METRICS TRANSFORMATION ====================
+
+    def _transform_quality_metrics(
+            self, problem: Problem, new_problem: Problem, trace_back_map: Dict[Action, Tuple[Action, Tuple[int, ...]]]
+    ):
+        """Transform quality metrics, handling action costs specially."""
+        for qm in problem.quality_metrics:
+            if qm.is_minimize_sequential_plan_length() or qm.is_minimize_makespan():
+                new_problem.add_quality_metric(qm)
+            elif qm.is_minimize_action_costs():
+                assert isinstance(qm, MinimizeActionCosts)
+                new_costs = self._transform_action_costs(qm, trace_back_map)
+                new_problem.add_quality_metric(
+                    MinimizeActionCosts(new_costs, environment=new_problem.environment)
+                )
+            else:
+                new_problem.add_quality_metric(qm)
+
+    def _transform_action_costs(
+            self,
+            qm: MinimizeActionCosts,
+            trace_back_map: Dict[Action, Tuple[Action, Tuple[int, ...]]]
+    ) -> Dict[Action, "up.model.Expression"]:
+        """Transform action costs, substituting integer parameters."""
+        new_costs = {}
+        for new_action, (old_action, instantiation) in trace_back_map.items():
+            if old_action is None:
+                continue
+            old_cost = qm.get_action_cost(old_action)
+            # If cost is a parameter, substitute its value
+            if old_cost.is_parameter_exp():
+                # Find which integer parameter this is
+                param_idx = 0
+                for param in old_action.parameters:
+                    if param.name == str(old_cost):
+                        break
+                    if param.type.is_int_type():
+                        param_idx += 1
+                new_costs[new_action] = Int(instantiation[param_idx])
+            else:
+                new_costs[new_action] = old_cost
+        return new_costs
+
+    def _compile(
+        self,
+        problem: "up.model.AbstractProblem",
+        compilation_kind: "up.engines.CompilationKind",
+    ) -> CompilerResult:
+        """Main compilation"""
+        assert isinstance(problem, Problem)
+
+        # Create new problem
+        new_problem = problem.clone()
+        new_problem.name = f"{self.name}_{problem.name}"
+        new_problem.clear_fluents()
+        new_problem.clear_actions()
+        new_problem.clear_axioms()
+        new_problem.clear_goals()
+        new_problem.clear_quality_metrics()
+        new_problem.initial_values.clear()
+
+        self.domains.clear()
+
+        # Transform components
+        self._transform_fluents(problem, new_problem)
+        trace_back_map = self._transform_actions(problem, new_problem)
+        self._transform_goals(problem, new_problem)
+        self._transform_quality_metrics(problem, new_problem, trace_back_map)
+        self._transform_axioms(problem, new_problem, trace_back_map)
 
         return CompilerResult(
             new_problem,
