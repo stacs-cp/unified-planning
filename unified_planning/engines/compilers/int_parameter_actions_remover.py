@@ -296,7 +296,6 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
         """Extract and evaluate array indices from fluent name."""
         pattern = r'\[(.*?)\]'
         indices = []
-
         for access_expr in re.findall(pattern, fluent_name):
             if access_expr.isdigit():
                 # Constant index
@@ -314,8 +313,13 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                     index_value = eval(evaluated_expr)
                 except:
                     return None
-            indices.append(self._get_index_object(new_problem, index_value))
-        return indices
+            indices.append(index_value)
+        valid_accesses = self.domains[fluent_name.split('[')[0]]
+        if tuple(indices) in valid_accesses:
+            object_indices = [self._get_index_object(new_problem, i) for i in indices]
+            return object_indices
+        else:
+            return None
 
     def _transform_fluent_exp(
             self,
@@ -345,10 +349,8 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             index_params = self._extract_array_indices(
                 new_problem, node.fluent().name, int_params, instantiations
             )
-
             if index_params is None:
                 return None
-
             return new_fluent(*index_params)
 
         # Regular fluent
