@@ -180,14 +180,16 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
         self.domains[fluent.name] = valid_positions
         return dimensions, current_type
 
+    def _get_param_combinations(self, problem: Problem, signature):
+        """Get all combinations of parameter values."""
+        param_values = [problem.objects(param.type) for param in signature]
+        return list(product(*param_values))
+
     def _add_array_as_indexed_fluent(self, problem, new_problem, fluent, default_value, index_ut):
         """
         Transform array fluent into indexed fluent.
         Example: board[3][3]: int → board(i1: Index, i2: Index): int with (i1, i2, i3): Index new objects
         """
-        assert fluent.signature == [], \
-            "Array fluents with parameters not supported in this compilation"
-
         # Get domain and element type
         n_elements, element_type = self._get_array_domain_and_type(fluent)
         max_index = max(n_elements)
@@ -201,7 +203,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
         new_signature = [
             Parameter(f'i_{dim + 1}', index_ut)
             for dim in range(len(n_elements))
-        ]
+        ] + list(fluent.signature)
 
         new_fluent = Fluent(fluent.name, element_type, new_signature, fluent.environment)
         new_problem.add_fluent(new_fluent, default_initial_value=default_value)
@@ -239,10 +241,11 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
         pre_indices = tuple(int(i) for i in re.findall(r'\[([0-9]+)\]', f.fluent().name))
 
         new_equalities = {}
+        old_params = list(f.args)
 
         if pre_indices:
             # Partial array assignment: board[2] = value
-            new_params = [self._get_index_object(new_problem, i) for i in pre_indices]
+            new_params = [self._get_index_object(new_problem, i) for i in pre_indices] + old_params
 
             if not f.fluent().type.is_array_type():
                 # Single element: board[2][3] = 5
@@ -266,7 +269,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             # Full array assignment: board = [[1,2],[3,4]]
             for pos in self.domains[new_fluent.name]:
                 element_value = self._get_element_value(v, pos)
-                params = [self._get_index_object(new_problem, i) for i in pos]
+                params = [self._get_index_object(new_problem, i) for i in pos] + old_params
                 new_equalities[new_fluent(*params)] = element_value
 
         return new_equalities
@@ -291,7 +294,11 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
     # ==================== EXPRESSION TRANSFORMATION ====================
 
     def _extract_array_indices(
-            self, new_problem: Problem, fluent_name: str, int_params: Dict[str, int], instantiations: Tuple[int, ...]
+            self,
+            new_problem: Problem,
+            fluent_name: str,
+            int_params: Optional[Dict[str, int]] = None,
+            instantiations: Optional[Tuple[int, ...]] = None
     ) -> Union[List[Object], None]:
         """Extract and evaluate array indices from fluent name."""
         pattern = r'\[(.*?)\]'
