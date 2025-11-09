@@ -15,6 +15,7 @@
 
 from warnings import warn
 import unified_planning as up
+from unified_planning.environment import get_environment
 from unified_planning.model.expression import ConstantExpression
 from unified_planning.exceptions import UPProblemDefinitionError, UPValueError
 from typing import Optional, List, Dict, Union, Iterable, Set
@@ -147,15 +148,15 @@ class FluentsSetMixin:
         self._fluents.append(fluent)
         if not default_initial_value is None:
             assert not (type(default_initial_value) == list), \
-                f"The default initial value must match the type of the deepest elements in the array structure."
+                f"The default initial value must match the type of the deepest elements in the structure."
+            if fluent.type.is_set_type():
+                assert default_initial_value == get_environment().expression_manager.EMPTY_SET() or isinstance(default_initial_value, (set, Set)), f"The default initial value must be a set type."
             (v_exp,) = self.environment.expression_manager.auto_promote(
                 default_initial_value
             )
             if fluent.type.is_array_type():
                 this_fluent = fluent.type
-                domain = []
                 while this_fluent.is_array_type():
-                    domain.append(list(range(this_fluent.size)))
                     this_fluent = this_fluent.elements_type
                 assert this_fluent.is_compatible(v_exp.type), \
                     (f"Default initial value: {default_initial_value} does not match the type of the deepest elements "

@@ -946,6 +946,8 @@ class _KindFactory:
             self.kind.set_conditions_kind("UNIVERSAL_CONDITIONS")
         if OperatorKind.COUNT in ops:
             self.kind.set_conditions_kind("COUNTING")
+        if OperatorKind.SET_MEMBER in ops:
+            self.kind.set_conditions_kind("MEMBERING")
         is_linear, _, _ = self.linear_checker.get_fluents(exp)
         if not is_linear:
             self.kind.unset_problem_type("SIMPLE_NUMERIC_PLANNING")
@@ -979,6 +981,8 @@ class _KindFactory:
             self.kind.set_fluents_type("OBJECT_FLUENTS")
         elif type.is_array_type():
             self.kind.set_fluents_type("ARRAY_FLUENTS")
+        elif type.is_set_type():
+            self.kind.set_fluents_type("SET_FLUENTS")
         for param in fluent.signature:
             pt = param.type
             self.update_problem_kind_type(pt)

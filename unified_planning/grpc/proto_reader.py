@@ -58,8 +58,10 @@ def convert_type_str(s: str, problem: Problem) -> model.types.Type:
             lower_bound=fractions.Fraction(s.split("[")[1].split(",")[0]),
             upper_bound=fractions.Fraction(s.split(",")[1].split("]")[0]),
         )
-    elif s == "up:list":
+    elif s == "up:array":
         return problem.environment.type_manager.ArrayType()
+    elif s == "up:set":
+        return problem.environment.type_manager.SetType()
     else:
         assert not s.startswith("up:"), f"Unhandled builtin type: {s}"
         return problem.user_type(s)

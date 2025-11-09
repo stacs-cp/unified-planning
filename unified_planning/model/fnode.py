@@ -71,12 +71,24 @@ class FNode(object):
             return str(self.constant_value())
         elif self.is_real_constant():
             return str(self.constant_value())
-        elif self.is_list_constant():
+        elif self.is_array_constant():
             return str(list(self.constant_value()))
+        elif self.is_set_constant():
+            return str(set(self.constant_value()))
         elif self.is_fluent_exp():
             return self.fluent().name + self.get_nary_expression_string(", ", self.args)
         elif self.is_dot():
             return f"{self.agent()}.{self.arg(0)}"
+        elif self.is_set_member():
+            return f"{self.arg(0)} in {self.arg(1)}"
+        elif self.is_set_cardinality():
+            return f"len({self.arg(0)})"
+        elif self.is_set_add() or self.is_set_union():
+            return f"{self.arg(0)} u {self.arg(1)}"
+        elif self.is_set_intersect():
+            return f"{self.arg(0)} ∩ {self.arg(1)}"
+        elif self.is_set_remove() or self.is_set_difference():
+            return f"{self.arg(0)} - {self.arg(1)}"
         elif self.is_parameter_exp():
             return self.parameter().name
         elif self.is_variable_exp():
@@ -179,15 +191,18 @@ class FNode(object):
             self.node_type == OperatorKind.BOOL_CONSTANT
             or self.node_type == OperatorKind.INT_CONSTANT
             or self.node_type == OperatorKind.REAL_CONSTANT
-            or self.node_type == OperatorKind.LIST_CONSTANT
+            or self.node_type == OperatorKind.ARRAY_CONSTANT
+            or self.node_type == OperatorKind.SET_CONSTANT
             or self.node_type == OperatorKind.OBJECT_EXP
         )
 
-    def constant_value(self) -> Union[bool, int, Fraction, list, tuple]:
+    def constant_value(self) -> Union[bool, int, Fraction, list, set, tuple]:
         """Returns the constant value stored in this expression."""
         assert self.is_constant()
-        if self.node_type == OperatorKind.LIST_CONSTANT:
+        if self.node_type == OperatorKind.ARRAY_CONSTANT:
             return list(self._content.payload)
+        if self.node_type == OperatorKind.SET_CONSTANT:
+            return set(self._content.payload)
         return self._content.payload
 
     def bool_constant_value(self) -> bool:
@@ -205,9 +220,9 @@ class FNode(object):
         assert self.is_real_constant()
         return self._content.payload
 
-    def list_constant_value(self) -> List:
-        """Returns the `list` constant value stored in this expression."""
-        assert self.is_list_constant()
+    def array_constant_value(self) -> List:
+        """Returns the `array` constant value stored in this expression."""
+        assert self.is_array_constant()
         return list(self._content.payload)
 
     def fluent(self) -> "unified_planning.model.fluent.Fluent":
@@ -294,9 +309,13 @@ class FNode(object):
         """Test whether the expression is a `real` constant."""
         return self.node_type == OperatorKind.REAL_CONSTANT
 
-    def is_list_constant(self) -> bool:
+    def is_array_constant(self) -> bool:
         """Test whether the expression is a `real` constant."""
-        return self.node_type == OperatorKind.LIST_CONSTANT
+        return self.node_type == OperatorKind.ARRAY_CONSTANT
+
+    def is_set_constant(self) -> bool:
+        """Test whether the expression is a `real` constant."""
+        return self.node_type == OperatorKind.SET_CONSTANT
 
     def is_true(self) -> bool:
         """Test whether the expression is the `True` Boolean constant."""
@@ -414,6 +433,34 @@ class FNode(object):
         """Test whether the node is the `DOT` operator."""
         return self.node_type == OperatorKind.DOT
 
+    def is_set_member(self) -> bool:
+        """Test whether the node is the `MEMBER` operator."""
+        return self.node_type == OperatorKind.SET_MEMBER
+
+    def is_set_cardinality(self) -> bool:
+        """Test whether the node is the `CARDINALITY` operator."""
+        return self.node_type == OperatorKind.SET_CARDINALITY
+
+    def is_set_add(self) -> bool:
+        """Test whether the node is the `SET_ADD` operator."""
+        return self.node_type == OperatorKind.SET_ADD
+
+    def is_set_remove(self) -> bool:
+        """Test whether the node is the `SET_REMOVE` operator."""
+        return self.node_type == OperatorKind.SET_REMOVE
+
+    def is_set_union(self) -> bool:
+        """Test whether the node is the `SET_UNION` operator."""
+        return self.node_type == OperatorKind.SET_UNION
+
+    def is_set_intersect(self) -> bool:
+        """Test whether the node is the `SET_UNION` operator."""
+        return self.node_type == OperatorKind.SET_INTERSECT
+
+    def is_set_difference(self) -> bool:
+        """Test whether the node is the `SET_UNION` operator."""
+        return self.node_type == OperatorKind.SET_DIFFERENCE
+
     #
     # Infix operators
     #
@@ -513,3 +560,15 @@ class FNode(object):
 
     def Iff(self, right):
         return self._env.expression_manager.Iff(self, right)
+
+    def SetMember(self, element):
+        return self._env.expression_manager.SetMember(element, self)
+
+    def SetCardinality(self):
+        return self._env.expression_manager.SetCardinality(self)
+
+    def SetAdd(self, element):
+        return self._env.expression_manager.SetAdd(element, self)
+
+    def SetRemove(self, element):
+        return self._env.expression_manager.SetRemove(element, self)

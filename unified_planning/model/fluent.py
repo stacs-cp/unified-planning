@@ -28,7 +28,7 @@ from typing import List, OrderedDict, Optional, Union, Iterator, cast, Tuple
 class Fluent:
     """Represents a fluent."""
 
-    def __init__(
+    def     __init__(
         self,
         name: str,
         typename: Optional["up.model.types.Type"] = None,
@@ -133,6 +133,31 @@ class Fluent:
             index = up.model.parameter.Parameter(str(index), self._env.type_manager.IntType(index,index), self.environment)
         assert index.type.is_int_type() or index is up.model.range_variable.RangeVariable, "The parameter has no integer type "
         return Fluent(self.name+'['+str(index.name)+']', self.type.elements_type, self.signature, self.environment)
+
+    def add(self, element):
+        """ Adds `element` to `Fluent` that has a Set Type """
+        assert self.type.is_set_type(), "The Fluent must be a set type to use add()"
+        return self._env.expression_manager.SetAdd(element, self)
+
+    def remove(self, element):
+        """ Removes `element` from `Fluent` that has a Set Type """
+        assert self.type.is_set_type(), "The Fluent must be a set type to use remove()"
+        return self._env.expression_manager.SetRemove(element, self)
+
+    def union(self, other):
+        """ Returns a new set with all items from both sets. """
+        assert self.type.is_set_type(), "The Fluent must be a set type to use union()"
+        return self._env.expression_manager.SetUnion(self, other)
+
+    def intersection(self, other):
+        """ Return a set that contains the items that exist in both sets. """
+        assert self.type.is_set_type(), "The Fluent must be a set type to use intersection()"
+        return self._env.expression_manager.SetIntersection(self, other)
+
+    def difference(self, other):
+        """ Return a set that contains the items that only exist in the set, and not in `other`. """
+        assert self.type.is_set_type(), "The Fluent must be a set type to use difference()"
+        return self._env.expression_manager.SetDifference(self, other)
 
     @property
     def name(self) -> str:

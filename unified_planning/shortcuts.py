@@ -23,6 +23,7 @@ import unified_planning.model.types
 import unified_planning.model.multi_agent
 from unified_planning.environment import get_environment
 from unified_planning.model import *
+from unified_planning.model.expression import SetExpression
 from unified_planning.model.tamp import *
 from unified_planning.model.problem_kind_versioning import LATEST_PROBLEM_KIND_VERSION
 from unified_planning.engines import (
@@ -319,6 +320,9 @@ def FALSE() -> FNode:
     """Return the boolean constant ``False``."""
     return get_environment().expression_manager.FALSE()
 
+def EMPTY_SET() -> FNode:
+    """Return the boolean constant ``False``."""
+    return get_environment().expression_manager.EMPTY_SET()
 
 def Bool(value: bool) -> FNode:
     """
@@ -474,6 +478,58 @@ def Dot(
     """
     return get_environment().expression_manager.Dot(agent, fluent_exp)
 
+def SetMember(element: Expression, set_expr: SetExpression) -> FNode:
+    """
+    Creates an expression of the form:
+        ``element in set_expr``.
+
+    :param element: The element to check if it is a member of ``set_expr``.
+    :param set_expr: The set expression (can be a fluent returning a set or a set constant).
+    :return: The created ``SetMember`` expression.
+    """
+    return get_environment().expression_manager.SetMember(element, set_expr)
+
+def SetCardinality(set_expr: SetExpression) -> FNode:
+    """
+    Creates an expression of the form:
+        ``len(set_expr)``.
+
+    :param set_expr: The set expression (can be a fluent returning a set or a set constant).
+    :return: The created ``SetCardinality`` expression.
+    """
+    return get_environment().expression_manager.SetCardinality(set_expr)
+
+def SetAdd(element: Expression, set_expr: SetExpression) -> FNode:
+    """
+    Creates an expression of the form:
+        ``set_expr.add(element)``.
+
+    :param set_expr: The set expression (can be a fluent returning a set or a set constant).
+    :return: The created ``SetAdd`` expression.
+    """
+    return get_environment().expression_manager.SetAdd(element, set_expr)
+
+def SetRemove(element: Expression, set_expr: SetExpression) -> FNode:
+    """
+    Creates an expression of the form:
+        ``set_expr.remove(element)``.
+
+    :param set_expr: The set expression (can be a fluent returning a set or a set constant).
+    :return: The created ``SetRemove`` expression.
+    """
+    return get_environment().expression_manager.SetRemove(element, set_expr)
+
+def SetUnion(set_expr1: SetExpression, set_expr2: SetExpression) -> FNode:
+    """
+    Creates an expression of the form:
+        ``set_expr1.union(set_expr2)``.
+
+    :param set_expr1: The set expression (can be a fluent returning a set or a set constant).
+    :param set_expr1: The set expression (can be a fluent returning a set or a set constant).
+    :return: The created ``SetUnion`` expression.
+    """
+    return get_environment().expression_manager.SetUnion(set_expr1, set_expr2)
+
 
 def BoolType() -> unified_planning.model.types.Type:
     """Returns the global environment's boolean type."""
@@ -516,6 +572,11 @@ def ArrayType(
         size: int, elements_type: Type = None
 ) -> unified_planning.model.types.Type:
     return get_environment().type_manager.ArrayType(size, elements_type)
+
+def SetType(
+        elements_type: Type = None
+) -> unified_planning.model.types.Type:
+    return get_environment().type_manager.SetType(elements_type)
 
 def UserType(
     name: str, father: Optional[Type] = None

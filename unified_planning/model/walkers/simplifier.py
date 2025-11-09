@@ -352,6 +352,58 @@ class Simplifier(walkers.dag.DagWalker):
         else:
             return self.manager.Count(new_args_count)
 
+    def walk_set_member(self, expression: FNode, args: List[FNode]) -> FNode:
+        assert len(args) == 2
+        if args[0] == self.manager.EMPTY_SET():
+            return self.manager.FALSE()
+        if args[0].is_constant() and args[1].is_constant():
+            if args[0].constant_value() in args[1].constant_value():
+                return self.manager.TRUE()
+        return self.manager.SetMember(args[0], args[1])
+
+    def walk_set_cardinality(self, expression: FNode, args: List[FNode]) -> FNode:
+        assert len(args) == 1
+        # mirar els elements del set... si a;gun es constant,
+        if args[0] == self.manager.EMPTY_SET():
+            return self.manager.Int(0)
+        if args[0].is_constant():
+            return self.manager.Int(len(args[0].constant_value()))
+        return self.manager.SetCardinality(args[0])
+
+    def walk_set_add(self, expression: FNode, args: List[FNode]) -> FNode:
+        assert len(args) == 2
+        if args[1] == self.manager.EMPTY_SET():
+            return self.manager.Set(args[0])
+        # if the set is constant, add the element if it is not already in
+        if args[1].is_constant():
+            new_args = args[1].constant_value().add(args[0])
+            return self.manager.Set(new_args)
+        return self.manager.SetAdd(*args)
+
+    def walk_set_remove(self, expression: FNode, args: List[FNode]) -> FNode:
+        assert len(args) == 2
+        if args[1] == self.manager.EMPTY_SET():
+            return self.manager.EMPTY_SET()
+       # if the set is constant, remove the
+        if args[1].is_constant():
+            new_args = []
+            for a in args[1].constant_value():
+                if a != args[0].constant_value():
+                    new_args.append(a)
+
+        return self.manager.SetRemove(*args)
+
+    def walk_set_union(self, expression: FNode, args: List[FNode]) -> FNode:
+        assert len(args) == 2
+        if args[1] == self.manager.EMPTY_SET():
+            return self.manager.Set(args[0])
+        elif args[0] == self.manager.EMPTY_SET():
+            return self.manager.Set(args[1])
+
+        # implementar simplificador!
+        return self.manager.SetUnion(*args)
+
+
     def walk_plus(self, expression: FNode, args: List[FNode]) -> FNode:
         new_args_plus: List[FNode] = list()
         accumulator: Union[int, Fraction] = 0

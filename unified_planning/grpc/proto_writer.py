@@ -92,7 +92,9 @@ def proto_type(tpe: model.Type) -> str:
     elif tpe.is_int_type() or tpe.is_real_type():
         return f"up:{tpe}"
     elif tpe.is_array_type():
-        return "up:list"
+        return "up:array"
+    elif tpe.is_set_type():
+        return "up:set"
     elif isinstance(tpe, model.types._UserType):
         return str(tpe.name)
 
@@ -118,10 +120,10 @@ def real_expression(value: fractions.Fraction) -> proto.Expression:
     )
 
 
-def list_expression(value: list) -> proto.Expression:
+def array_expression(value: list) -> proto.Expression:
     return proto.Expression(
         atom=proto.Atom(list=value),
-        type="up:list",
+        type="up:array",
         kind=proto.ExpressionKind.Value("CONSTANT"),
     )
 
@@ -165,10 +167,10 @@ class FNode2Protobuf(walkers.DagWalker):
     ) -> proto.Expression:
         return real_expression(expression.real_constant_value())
 
-    def walk_list_constant(
+    def walk_array_constant(
         self, expression: model.FNode, args: List[proto.Expression]
     ) -> proto.Expression:
-        return list_expression(expression.list_constant_value())
+        return array_expression(expression.list_constant_value())
 
 
     def walk_param_exp(

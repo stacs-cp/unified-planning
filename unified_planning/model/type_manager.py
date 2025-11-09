@@ -24,7 +24,7 @@ from unified_planning.model.types import (
     _UserType,
     BOOL,
     DERIVED_BOOL,
-    TIME,
+    TIME, _SetType,
 )
 from unified_planning.model.tamp.types import (
     _MovableType,
@@ -34,6 +34,8 @@ from unified_planning.model.tamp.types import (
 from unified_planning.exceptions import UPTypeError
 from fractions import Fraction
 from typing import Optional, Dict, Tuple, Union, cast
+
+from unified_planning.shortcuts import EMPTY_SET
 
 
 class TypeManager:
@@ -45,6 +47,7 @@ class TypeManager:
         self._ints: Dict[Tuple[Optional[int], Optional[int]], Type] = {}
         self._reals: Dict[Tuple[Optional[Fraction], Optional[Fraction]], Type] = {}
         self._arrays: Dict[Tuple[int, Type], Type] = {}
+        self._sets: Dict[Type, Type] = {}
         self._user_types: Dict[Tuple[str, Optional[Type]], Type] = {}
         self._movable_types: Dict[Tuple[str, Optional[Type]], Type] = {}
         self._configuration_types: Dict[Tuple[str, OccupancyMap, int], Type] = {}
@@ -69,6 +72,9 @@ class TypeManager:
         elif type.is_array_type():
             assert isinstance(type, _ArrayType)
             return self._arrays.get((type.size, type.elements_type), None) == type
+        elif type.is_set_type():
+            assert isinstance(type, _SetType)
+            return self._sets.get(type.elements_type, None) == type
         elif type.is_time_type():
             return type == TIME
         elif type.is_movable_type():
@@ -149,7 +155,7 @@ class TypeManager:
             size: int,
             elements_type: Type = None
     ) -> Type:
-        """Returns the list type with a specific element type."""
+        """Returns the array type with a specific element type."""
         #assert size > 1, "Size of ArrayType must be greater than 1."
         if elements_type is None:
             elements_type = self.BoolType()
@@ -160,6 +166,19 @@ class TypeManager:
             at = _ArrayType(size, elements_type)
             self._arrays[k] = at
             return at
+
+    def SetType(
+            self,
+            elements_type: Type = None
+    ) -> Type:
+        """Returns the set type with a specific element type."""
+        k = elements_type
+        if k in self._sets:
+            return self._sets[k]
+        else:
+            st = _SetType(elements_type)
+            self._sets[k] = st
+            return st
 
     def UserType(self, name: str, father: Optional[Type] = None) -> Type:
         """

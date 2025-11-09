@@ -403,6 +403,8 @@ class MultiAgentProblem(  # type: ignore[misc]
             self._kind.set_fluents_type("OBJECT_FLUENTS")
         elif fluent.type.is_array_type():
             self._kind.set_fluents_type("ARRAY_FLUENTS")
+        elif fluent.type.is_set_type():
+            self._kind.set_fluents_type("SET_FLUENTS")
         for p in fluent.signature:
             self._update_problem_kind_type(p.type)
 

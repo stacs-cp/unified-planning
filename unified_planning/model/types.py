@@ -44,6 +44,10 @@ class Type(ABC):
         """Returns true iff is a list type."""
         return False
 
+    def is_set_type(self) -> bool:
+        """Returns true iff is a list type."""
+        return False
+
     def is_int_type(self) -> bool:
         """Returns `True` iff is `integer Type`."""
         return False
@@ -266,6 +270,23 @@ class _ArrayType(Type):
         """Returns the type of elements in this list."""
         return self._size
 
+class _SetType(Type):
+    """Represents a set composed with a given type (elements_type)."""
+    def __init__(self, elements_type: Type):
+        Type.__init__(self)
+        self._elements_type = elements_type
+
+    def __repr__(self) -> str:
+        return f"set{{{self._elements_type if self._elements_type is not None else ''}}}"
+
+    def is_set_type(self) -> bool:
+        """Returns true iff is a set type."""
+        return True
+
+    @property
+    def elements_type(self) -> Type:
+        """Returns the type of elements in this set."""
+        return self._elements_type
 
 BOOL = _BoolType()
 DERIVED_BOOL = _DerivedBoolType()
@@ -352,10 +373,20 @@ def is_compatible_type(
         # compatible if t_right is a subclass of t_left
         return t_left in t_right.ancestors
     if t_left.is_array_type() or t_right.is_array_type():
-        if t_right.is_array_type() and t_right.is_array_type():
+        if t_left.is_array_type() and t_right.is_array_type():
             assert isinstance(t_left, _ArrayType) and isinstance(t_right, _ArrayType)
             assert t_left.size == t_right.size
             return is_compatible_type(t_left.elements_type, t_right.elements_type)
+        else:
+            return False
+    if t_left.is_set_type() or t_right.is_set_type():
+        if t_right.is_set_type() and t_right.is_set_type():
+            assert (isinstance(t_left, _SetType) and
+                    isinstance(t_right, _SetType))
+            if t_left.elements_type is None or t_right.elements_type is None:
+                return True
+            else:
+                return is_compatible_type(t_left.elements_type, t_right.elements_type)
         else:
             return False
     if not (
