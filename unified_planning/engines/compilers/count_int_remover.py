@@ -13,15 +13,13 @@
 # limitations under the License.
 #
 """This module defines the count int remover class."""
+from itertools import product
 
 import unified_planning.engines as engines
-import re
-
-from itertools import product
 from unified_planning.engines.mixins.compiler import CompilationKind, CompilerMixin
 from unified_planning.engines.results import CompilerResult
 from unified_planning.exceptions import UPProblemDefinitionError
-from unified_planning.model import Problem, Action, ProblemKind, OperatorKind, FNode, AbstractProblem
+from unified_planning.model import Problem, Action, ProblemKind, OperatorKind, FNode, AbstractProblem, Fluent, Parameter
 from unified_planning.model.problem_kind_versioning import LATEST_PROBLEM_KIND_VERSION
 from unified_planning.engines.compilers.utils import replace_action, updated_minimize_action_costs
 from typing import Dict, List, Optional, Union, Set
@@ -193,6 +191,11 @@ class CountIntRemover(engines.engine.Engine, CompilerMixin):
             self._check_argument(a)
         return
 
+    def _get_param_combinations(self, problem: Problem, signature):
+        """Get all combinations of parameter values."""
+        param_values = [problem.objects(param.type) for param in signature]
+        return list(product(*param_values))
+
     def _replace_count_with_fluents(self, problem: Problem, expression: FNode, count_registry: Dict[str, FNode]) -> FNode:
         """Replace Count expressions with sums of fluents."""
         em = problem.environment.expression_manager
@@ -206,8 +209,6 @@ class CountIntRemover(engines.engine.Engine, CompilerMixin):
         if expression.is_count():
             sum_args = []
             for arg in expression.args:
-                # If the argument contains a parameter or a variable - not fully instantiated (depends on each specific action)
-                self._check_argument(arg)
                 # Skip trivial cases
                 if arg.is_false():
                     continue
@@ -225,15 +226,35 @@ class CountIntRemover(engines.engine.Engine, CompilerMixin):
                     # Create new count fluent
                     fluent_name = f'count_{len(count_registry)}'
                     count_registry[fluent_name] = arg
+                    count_parameters = [Parameter(str(a), a.type) for a in arg.args if a.is_parameter_exp()]
                     # Evaluate initial value
-                    initial_eval = self._evaluate_expression(problem, arg)
-                    assert initial_eval.is_bool_constant(), \
-                        f"Count argument initial value must be boolean constant, got: {initial_eval}"
-                    initial_value = Int(1) if initial_eval.is_true() else Int(0)
-                    # Add fluent to problem
-                    problem.add_fluent(fluent_name, tm.IntType(0, 1))
-                    problem.set_initial_value(problem.fluent(fluent_name), initial_value)
-                    sum_args.append(problem.fluent(fluent_name)())
+                    if not count_parameters:
+                        initial_eval = self._evaluate_expression(problem, arg)
+                        assert initial_eval.is_bool_constant(), \
+                            f"Count argument initial value must be boolean constant, got: {initial_eval}"
+                        initial_value = Int(1) if initial_eval.is_true() else Int(0)
+                        # Add fluent to problem
+                        new_fluent = Fluent(fluent_name, tm.IntType(0, 1))
+                        problem.add_fluent(new_fluent)
+                        problem.set_initial_value(new_fluent, initial_value)
+                        sum_args.append(new_fluent())
+                    else:
+                        # Add fluent to problem
+                        new_fluent = Fluent(fluent_name, tm.IntType(0, 1), count_parameters)
+                        problem.add_fluent(new_fluent)
+                        instantiations = self._get_param_combinations(problem, count_parameters)
+                        for i in instantiations:
+                            this_params = []
+                            for old_p in arg.args:
+                                if old_p.is_parameter_exp():
+                                    this_params.append(*i)
+                                else:
+                                    this_params.append(old_p)
+                            initial_eval = self._evaluate_expression(problem, arg.fluent()(*this_params))
+                            initial_value = Int(1) if initial_eval.is_true() else Int(0)
+                            problem.set_initial_value(problem.fluent(fluent_name)(*i), initial_value)
+
+                        sum_args.append(problem.fluent(fluent_name)(*count_parameters))
 
             # Return sum of all count fluents
             if not sum_args:
@@ -250,27 +271,26 @@ class CountIntRemover(engines.engine.Engine, CompilerMixin):
     # ==================== EFFECT GENERATION ====================
 
     def _add_count_effect_to_action(
-            self, action: Action, problem: Problem, count_name: str, new_expr: FNode, condition: Optional[FNode]
+            self, action: Action, count: FNode, new_expr: FNode, condition: Optional[FNode]
     ):
         """Add conditional effect to update count fluent."""
-        count_fluent = problem.fluent(count_name)
         if new_expr.is_bool_constant():
             # Expression evaluates to constant
             value = 1 if new_expr.is_true() else 0
             if condition:
-                action.add_effect(count_fluent, value, condition)
+                action.add_effect(count, value, condition)
             else:
-                action.add_effect(count_fluent, value)
+                action.add_effect(count, value)
         else:
             # Expression is conditional
             if condition:
                 # True case
-                action.add_effect(count_fluent, 1, And(new_expr, condition).simplify())
+                action.add_effect(count, 1, And(new_expr, condition).simplify())
                 # False case
-                action.add_effect(count_fluent, 0, And(Not(new_expr), condition).simplify())
+                action.add_effect(count, 0, And(Not(new_expr), condition).simplify())
             else:
-                action.add_effect(count_fluent, 1, new_expr)
-                action.add_effect(count_fluent, 0, Not(new_expr).simplify())
+                action.add_effect(count, 1, new_expr)
+                action.add_effect(count, 0, Not(new_expr).simplify())
 
     def _generate_count_effects(self, problem: Problem, action: Action, count_registry: Dict[str, FNode]) -> Action:
         """
@@ -281,7 +301,6 @@ class CountIntRemover(engines.engine.Engine, CompilerMixin):
         for count_name, count_expr in count_registry.items():
             # Find which fluents in count_expr are affected by action
             affected_fluents = self._find_affected_fluents(count_expr)
-
             # Process each effect
             for effect in action.effects:
                 # Check if this effect can affect any tracked fluent
@@ -312,6 +331,8 @@ class CountIntRemover(engines.engine.Engine, CompilerMixin):
                     effect_type = 'increase' if effect.is_increase() else 'decrease' if effect.is_decrease() else None
 
                     new_expr = self._evaluate_expression(problem, count_expr, tracked_fluent, effect.value, effect_type)
+                    count_parameters = [Parameter(str(a), a.type) for a in count_expr.args if a.is_parameter_exp()]
+
                     # effect condition + equality conditions
                     condition = None
                     if effect.is_conditional():
@@ -320,7 +341,8 @@ class CountIntRemover(engines.engine.Engine, CompilerMixin):
                         condition = And(condition, eq_cond).simplify() if condition else eq_cond
 
                     # Add effect to action
-                    self._add_count_effect_to_action(action, problem, count_name, new_expr, condition)
+                    count_fluent = problem.fluent(count_name)(*count_parameters)
+                    self._add_count_effect_to_action(action, count_fluent, new_expr, condition)
         return action
 
     def _compile(
