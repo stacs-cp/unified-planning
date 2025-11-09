@@ -361,6 +361,13 @@ class Simplifier(walkers.dag.DagWalker):
                 return self.manager.TRUE()
         return self.manager.SetMember(args[0], args[1])
 
+    def walk_set_disjoint(self, expression: FNode, args: List[FNode]) -> FNode:
+        # la interseccio es buida?
+        assert len(args) == 2
+        if args[0] == self.manager.EMPTY_SET() or args[1] == self.manager.EMPTY_SET():
+            return self.manager.TRUE()
+        return self.manager.SetDisjoint(args[0], args[1])
+
     def walk_set_cardinality(self, expression: FNode, args: List[FNode]) -> FNode:
         assert len(args) == 1
         # mirar els elements del set... si a;gun es constant,
@@ -403,6 +410,23 @@ class Simplifier(walkers.dag.DagWalker):
         # implementar simplificador!
         return self.manager.SetUnion(*args)
 
+    def walk_set_intersect(self, expression: FNode, args: List[FNode]) -> FNode:
+        assert len(args) == 2
+        if args[0] == self.manager.EMPTY_SET() or args[1] == self.manager.EMPTY_SET():
+            return self.manager.EMPTY_SET()
+
+        # implementar simplificador!
+        return self.manager.SetIntersection(*args)
+
+    def walk_set_difference(self, expression: FNode, args: List[FNode]) -> FNode:
+        assert len(args) == 2
+        if args[1] == self.manager.EMPTY_SET():
+            return self.manager.Set(args[0])
+        elif args[0] == self.manager.EMPTY_SET():
+            return self.manager.EMPTY_SET()
+
+        # implementar simplificador!
+        return self.manager.SetIntersection(*args)
 
     def walk_plus(self, expression: FNode, args: List[FNode]) -> FNode:
         new_args_plus: List[FNode] = list()

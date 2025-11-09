@@ -81,6 +81,8 @@ class FNode(object):
             return f"{self.agent()}.{self.arg(0)}"
         elif self.is_set_member():
             return f"{self.arg(0)} in {self.arg(1)}"
+        elif self.is_set_disjoint():
+            return f"{self.arg(0)} ∩ {self.arg(1)} == ∅)"
         elif self.is_set_cardinality():
             return f"len({self.arg(0)})"
         elif self.is_set_add() or self.is_set_union():
@@ -436,6 +438,10 @@ class FNode(object):
     def is_set_member(self) -> bool:
         """Test whether the node is the `MEMBER` operator."""
         return self.node_type == OperatorKind.SET_MEMBER
+
+    def is_set_disjoint(self) -> bool:
+        """Test whether the node is the `DISJOINT` operator."""
+        return self.node_type == OperatorKind.SET_DISJOINT
 
     def is_set_cardinality(self) -> bool:
         """Test whether the node is the `CARDINALITY` operator."""

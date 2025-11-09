@@ -502,6 +502,17 @@ def SetMember(element: Expression, set_expr: SetExpression) -> FNode:
     """
     return get_environment().expression_manager.SetMember(element, set_expr)
 
+def SetDisjoint(set_expr1: SetExpression, set_expr2: SetExpression) -> FNode:
+    """
+    Creates an expression of the form:
+        ``set_expr1.disjoint(set_expr2)``.
+
+    :param set_expr1: The set expression (can be a fluent returning a set or a set constant).
+    :param set_expr2: The set expression (can be a fluent returning a set or a set constant).
+    :return: The created ``SetDisjoint`` expression.
+    """
+    return get_environment().expression_manager.SetDisjoint(set_expr1, set_expr2)
+
 def SetCardinality(set_expr: SetExpression) -> FNode:
     """
     Creates an expression of the form:
@@ -538,11 +549,32 @@ def SetUnion(set_expr1: SetExpression, set_expr2: SetExpression) -> FNode:
         ``set_expr1.union(set_expr2)``.
 
     :param set_expr1: The set expression (can be a fluent returning a set or a set constant).
-    :param set_expr1: The set expression (can be a fluent returning a set or a set constant).
+    :param set_expr2: The set expression (can be a fluent returning a set or a set constant).
     :return: The created ``SetUnion`` expression.
     """
     return get_environment().expression_manager.SetUnion(set_expr1, set_expr2)
 
+def SetIntersection(set_expr1: SetExpression, set_expr2: SetExpression) -> FNode:
+    """
+    Creates an expression of the form:
+        ``set_expr1.intersection(set_expr2)``.
+
+    :param set_expr1: The set expression (can be a fluent returning a set or a set constant).
+    :param set_expr2: The set expression (can be a fluent returning a set or a set constant).
+    :return: The created ``SetIntersection`` expression.
+    """
+    return get_environment().expression_manager.SetIntersection(set_expr1, set_expr2)
+
+def SetDifference(set_expr1: SetExpression, set_expr2: SetExpression) -> FNode:
+    """
+    Creates an expression of the form:
+        ``set_expr1.difference(set_expr2)``.
+
+    :param set_expr1: The set expression (can be a fluent returning a set or a set constant).
+    :param set_expr2: The set expression (can be a fluent returning a set or a set constant).
+    :return: The created ``SetDifference`` expression.
+    """
+    return get_environment().expression_manager.SetDifference(set_expr1, set_expr2)
 
 def BoolType() -> unified_planning.model.types.Type:
     """Returns the global environment's boolean type."""

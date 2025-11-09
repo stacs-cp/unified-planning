@@ -30,9 +30,9 @@ from unified_planning.engines.compilers.utils import (
     get_fresh_name,
     replace_action, updated_minimize_action_costs,
 )
-from typing import Dict, Optional
+from typing import Dict, Optional, Union
 from functools import partial
-from unified_planning.shortcuts import BoolType, EMPTY_SET, Count, Or, Not, And, TRUE, Iff, Equals
+from unified_planning.shortcuts import BoolType, EMPTY_SET, Count, Or, Not, And, TRUE, Iff, Equals, FALSE
 
 
 class SetsRemover(engines.engine.Engine, CompilerMixin):
@@ -251,7 +251,6 @@ class SetsRemover(engines.engine.Engine, CompilerMixin):
         """Transform fluent expression."""
         fluent = node.fluent()
         new_args = [self._transform_expression(new_problem, arg) for arg in node.args]
-
         if new_problem.has_fluent(fluent.name):
             return new_problem.fluent(fluent.name)(*new_args)
         else:
@@ -267,11 +266,44 @@ class SetsRemover(engines.engine.Engine, CompilerMixin):
         element = node.args[0]
         set_expr = node.args[1]
         assert set_expr.type.is_set_type(), "Second arg must be a set"
-        assert set_expr.is_fluent_exp(), "Set expression must be a fluent"
+        assert set_expr.is_fluent_exp() or set_expr.is_constant(), "Set expression must be a fluent or a constant"
 
-        new_fluent = self._fluent_mapping[set_expr.fluent().name]
-        new_args = [element] + list(set_expr.args)
-        return new_fluent(*new_args)
+        if set_expr.is_fluent_exp():
+            new_fluent = self._fluent_mapping[set_expr.fluent().name]
+            new_args = [element] + list(set_expr.args)
+            return new_fluent(*new_args)
+        else:
+            or_expr = []
+            for element_set in list(set_expr.constant_value()):
+                or_expr.append(Equals(element, element_set))
+            return Or(*or_expr)
+
+    def _transform_disjoint(self, new_problem: Problem, node: FNode) -> FNode:
+        """
+        Transform: set_1 ∩ set_2 == ∅
+        Into: And([Not(And(fluent1(obj1, ...), fluent2(obj1, ...))), ...])
+        """
+        set1 = node.args[0]
+        set2 = node.args[1]
+        assert set1.type.is_set_type() and set2.type.is_set_type(), "Both arguments must be sets"
+        assert set1.is_fluent_exp() or set1.is_constant(), "Set expression must be a fluent or a constant"
+        assert set2.is_fluent_exp() or set2.is_constant(), "Set expression must be a fluent or a constant"
+
+        elements_type = set1.type.elements_type if set1.is_fluent_exp() else set2.type.elements_type
+        elements = list(new_problem.objects(elements_type))
+        and_expr = []
+
+        if set1.is_fluent_exp() and set2.is_fluent_exp():
+            fluent1 = self._fluent_mapping[set1.fluent().name]
+            fluent2 = self._fluent_mapping[set2.fluent().name]
+            for elem in elements:
+                and_expr.append(Not(And(fluent1(elem, *set1.args), fluent2(elem, *set2.args))).simplify())
+        else:
+            fluent, constant = (set1, set2.constant_value()) if set1.is_fluent_exp() else (set2, set1.constant_value())
+            new_fluent = self._fluent_mapping[fluent.fluent().name]
+            for elem in constant:
+                and_expr.append(Not(new_fluent(elem, *fluent.args)).simplify())
+        return And(*and_expr)
 
     def _transform_cardinality(self, new_problem: Problem, node: FNode) -> FNode:
         """
@@ -348,6 +380,11 @@ class SetsRemover(engines.engine.Engine, CompilerMixin):
         constant_set = None
         other_set_fluent = None
 
+        print("equality")
+        assert (left.is_fluent_exp() and (right.is_parameter_exp() or right.is_constant()) or
+                (right.is_fluent_exp() and (left.is_parameter_exp() or left.is_constant()))), \
+            f"Expression of the form {node} not supported"
+
         if left.is_fluent_exp() and left.fluent().type.is_set_type():
             set_fluent = left
             if right.is_set_constant():
@@ -418,12 +455,15 @@ class SetsRemover(engines.engine.Engine, CompilerMixin):
         Transform expressions recursively.
         Delegates to specific handlers based on node type.
         """
+        print("arg:", node)
         if node.is_fluent_exp():
             return self._transform_fluent_exp(new_problem, node)
         elif node.is_parameter_exp() or node.is_variable_exp() or node.is_constant():
             return node
         elif node.is_set_member():
             return self._transform_member(new_problem, node)
+        elif node.is_set_disjoint():
+            return self._transform_disjoint(new_problem, node)
         elif node.is_set_cardinality():
             return self._transform_cardinality(new_problem, node)
         elif node.is_set_add() or node.is_set_remove():
@@ -454,6 +494,12 @@ class SetsRemover(engines.engine.Engine, CompilerMixin):
             self._transform_add_remove_effect(new_problem, new_action, effect)
         elif effect.value.is_set_union():
             self._transform_union_effect(new_problem, new_action, effect)
+        elif effect.value.is_set_intersect():
+            print("intersect")
+            self._transform_intersect_effect(new_problem, new_action, effect)
+        elif effect.value.is_set_difference():
+            print("difference")
+            self._transform_difference_effect(new_problem, new_action, effect)
         elif effect.value.is_set_constant():
             self._transform_set_constant_effect(new_problem, new_action, effect)
         else:
@@ -472,7 +518,7 @@ class SetsRemover(engines.engine.Engine, CompilerMixin):
             else:
                 new_action.add_effect(new_fluent, new_value, new_condition, effect.forall)
 
-    def _transform_action(self, problem: Problem, new_problem: Problem, action: Action) -> Action:
+    def _transform_action(self, new_problem: Problem, action: Action) -> Union[Action, None]:
         """Transform a single action."""
         new_action = action.clone()
         new_action.name = get_fresh_name(new_problem, action.name)
@@ -482,8 +528,9 @@ class SetsRemover(engines.engine.Engine, CompilerMixin):
         # Transform preconditions
         for precondition in action.preconditions:
             new_precondition = self._transform_expression(new_problem, precondition)
-            if new_precondition is not None:
-                new_action.add_precondition(new_precondition)
+            if new_precondition in [FALSE(), None]:
+                return None
+            new_action.add_precondition(new_precondition)
 
         # Transform effects
         for effect in action.effects:
@@ -496,9 +543,10 @@ class SetsRemover(engines.engine.Engine, CompilerMixin):
         new_to_old = {}
 
         for action in problem.actions:
-            new_action = self._transform_action(problem, new_problem, action)
-            new_problem.add_action(new_action)
-            new_to_old[new_action] = action
+            new_action = self._transform_action(new_problem, action)
+            if new_action is not None:
+                new_problem.add_action(new_action)
+                new_to_old[new_action] = action
 
         return new_to_old
 
@@ -507,8 +555,14 @@ class SetsRemover(engines.engine.Engine, CompilerMixin):
         Transform: set_fluent := set_fluent.add(elem)
         Into: set_fluent(elem, ...) := True
         """
-        assert effect.fluent == effect.value.arg(1), \
+        set_expr = effect.value.arg(1)
+        # No nested expressions allowed
+        assert set_expr.is_fluent_exp() or set_expr.is_constant() or set_expr.is_parameter_exp(), \
+            "Nesting of Set methods not supported!"
+
+        assert effect.fluent == set_expr, \
             "Assignment to different set not supported with Add/Remove"
+        # aixo no es dificil de fer - potser?
 
         new_fluent = self._transform_expression(new_problem, effect.value)
         new_value = effect.value.is_set_add()  # True for add, False for remove
@@ -519,9 +573,15 @@ class SetsRemover(engines.engine.Engine, CompilerMixin):
     def _transform_union_effect(self, new_problem: Problem, new_action: Action, effect: Effect):
         """
         Transform: result_set := set1 ∪ set2
-        Into: for each object o: result_set(o) := set1(o) ∨ set2(o)
+        Into: for each object o: result_set(o) := set1(o) || set2(o)
         """
         set1, set2 = effect.value.args
+
+        # No nested expressions allowed
+        assert set1.is_fluent_exp() or set1.is_constant() or set1.is_parameter_exp(), \
+            "Nesting of Set methods not supported!"
+        assert set2.is_fluent_exp() or set2.is_constant() or set2.is_parameter_exp(), \
+            "Nesting of Set methods not supported!"
 
         elements_type = set1.type.elements_type
         elements = list(new_problem.objects(elements_type))
@@ -534,6 +594,62 @@ class SetsRemover(engines.engine.Engine, CompilerMixin):
             new_condition = Or(
                 fluent1(elem, *set1.args),
                 fluent2(elem, *set2.args)
+            )
+            new_fluent_expr = new_fluent(elem, *effect.fluent.args)
+            new_action.add_effect(new_fluent_expr, True, new_condition, effect.forall)
+
+    def _transform_intersect_effect(self, new_problem: Problem, new_action: Action, effect: Effect):
+        """
+        Transform: result_set := set1 ∩ set2
+        Into: for each object o: result_set(o) := set1(o) & set2(o)
+        """
+        set1, set2 = effect.value.args
+
+        # No nested expressions allowed
+        assert set1.is_fluent_exp() or set1.is_constant() or set1.is_parameter_exp(), \
+            "Nesting of Set methods not supported!"
+        assert set2.is_fluent_exp() or set2.is_constant() or set2.is_parameter_exp(), \
+            "Nesting of Set methods not supported!"
+
+        elements_type = set1.type.elements_type
+        elements = list(new_problem.objects(elements_type))
+
+        new_fluent = self._fluent_mapping[effect.fluent.fluent().name]
+        fluent1 = self._fluent_mapping[set1.fluent().name]
+        fluent2 = self._fluent_mapping[set2.fluent().name]
+
+        for elem in elements:
+            new_condition = And(
+                fluent1(elem, *set1.args),
+                fluent2(elem, *set2.args)
+            )
+            new_fluent_expr = new_fluent(elem, *effect.fluent.args)
+            new_action.add_effect(new_fluent_expr, True, new_condition, effect.forall)
+
+    def _transform_difference_effect(self, new_problem: Problem, new_action: Action, effect: Effect):
+        """
+        Transform: result_set := set1 \ set2
+        Into: for each object o: result_set(o) := set1(o) & ¬set2(o)
+        """
+        set1, set2 = effect.value.args
+
+        # No nested expressions allowed
+        assert set1.is_fluent_exp() or set1.is_constant() or set1.is_parameter_exp(), \
+            "Nesting of Set methods not supported!"
+        assert set2.is_fluent_exp() or set2.is_constant() or set2.is_parameter_exp(), \
+            "Nesting of Set methods not supported!"
+
+        elements_type = set1.type.elements_type
+        elements = list(new_problem.objects(elements_type))
+
+        new_fluent = self._fluent_mapping[effect.fluent.fluent().name]
+        fluent1 = self._fluent_mapping[set1.fluent().name]
+        fluent2 = self._fluent_mapping[set2.fluent().name]
+
+        for elem in elements:
+            new_condition = And(
+                fluent1(elem, *set1.args),
+                Not(fluent2(elem, *set2.args))
             )
             new_fluent_expr = new_fluent(elem, *effect.fluent.args)
             new_action.add_effect(new_fluent_expr, True, new_condition, effect.forall)

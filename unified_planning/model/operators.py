@@ -55,6 +55,7 @@ class OperatorKind(Enum):
     DOT = auto()
     COUNT = auto()
     SET_MEMBER = auto()
+    SET_DISJOINT = auto()
     SET_CARDINALITY = auto()
     SET_ADD = auto()
     SET_REMOVE = auto()

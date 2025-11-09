@@ -512,6 +512,19 @@ class TypeChecker(walkers.dag.DagWalker):
             return None
         return BOOL
 
+    @walkers.handles(OperatorKind.SET_DISJOINT)
+    def walk_disjoint(
+        self, expression: FNode, args: List["unified_planning.model.types.Type"]
+    ) -> Optional["unified_planning.model.types.Type"]:
+        assert expression is not None
+        assert expression.is_set_disjoint()
+        set1 = args[0]
+        set2 = args[1]
+        if set1.elements_type != set2.elements_type:
+            return None
+        # fer alguna altra comprovacio?
+        return BOOL
+
     @walkers.handles(OperatorKind.SET_CARDINALITY)
     def walk_cardinality(
         self, expression: FNode, args: List["unified_planning.model.types.Type"]

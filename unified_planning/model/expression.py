@@ -287,7 +287,7 @@ class ExpressionManager(object):
         """
         | Creates an expression of the form:
 
-            * ``Member(element,set_expr)``
+            * ``SetMember(element,set_expr)``
 
         | Restriction: ``set_expr`` must be of ``set type`` and ``element`` must be of the same type as the elements
         of the set.
@@ -298,6 +298,24 @@ class ExpressionManager(object):
         """
         element, set_expr = self.auto_promote(element, set_expr)
         return self.create_node(node_type=OperatorKind.SET_MEMBER, args=(element, set_expr))
+
+    def SetDisjoint(
+        self, set_expr1: SetExpression, set_expr2: SetExpression
+    ) -> "up.model.fnode.FNode":
+        """
+        | Creates an expression of the form:
+
+            * ``disjoint(set_expr1,set_expr2)``
+
+        | Restriction: ``set_expr`` must be of ``set type`` and ``element`` must be of the same type as the elements
+        of the set.
+
+        :param element: The element to check if it is a member of ``set_expr``.
+        :param set_expr: The set expression (can be a fluent returning a set or a set constant).
+        :return: The ``MEMBER`` expression created.
+        """
+        set_expr1, set_expr2 = self.auto_promote(set_expr1, set_expr2)
+        return self.create_node(node_type=OperatorKind.SET_DISJOINT, args=(set_expr1, set_expr2))
 
     def SetCardinality(self, set_expr: SetExpression) -> "up.model.fnode.FNode":
         """
@@ -317,7 +335,7 @@ class ExpressionManager(object):
         return self.create_node(node_type=OperatorKind.SET_CARDINALITY, args=(set_expr,))
 
     def SetAdd(
-            self, element: Expression, set_expr: Expression
+            self, element: Expression, set_expr: SetExpression
     ) -> "up.model.fnode.FNode":
         """
         | Creates an expression that adds an element to a set:
@@ -337,7 +355,7 @@ class ExpressionManager(object):
         return self.create_node(node_type=OperatorKind.SET_ADD, args=(element, set_expr))
 
     def SetRemove(
-            self, element: Expression, set_expr: Expression
+            self, element: Expression, set_expr: SetExpression
     ) -> "up.model.fnode.FNode":
         """
         | Creates an expression that removes an element from a set:
@@ -357,7 +375,7 @@ class ExpressionManager(object):
         return self.create_node(node_type=OperatorKind.SET_REMOVE, args=(element, set_expr))
 
     def SetUnion(
-            self, *args: Union[Expression, Iterable[Expression]]
+            self, set_expr1: SetExpression, set_expr2: SetExpression
     ) -> "up.model.fnode.FNode":
         """
         | Creates a union of sets:
@@ -371,55 +389,43 @@ class ExpressionManager(object):
                         or an unpacked version of it, like ``s1, s2, s3``.
         :return: The ``SET_UNION`` expression created.
         """
-        tuple_args = tuple(self.auto_promote(*args))
-
-        if len(tuple_args) == 0:
-            return self.EMPTY_SET()  # Empty set
-        elif len(tuple_args) == 1:
-            return tuple_args[0]
-
-        return self.create_node(node_type=OperatorKind.SET_UNION, args=tuple_args)
+        set_expr1, set_expr2 = tuple(self.auto_promote(set_expr1, set_expr2))
+        return self.create_node(node_type=OperatorKind.SET_UNION, args=(set_expr1, set_expr2))
 
     def SetIntersection(
-            self, *args: Union[Expression, Iterable[Expression]]
+            self, set_expr1: SetExpression, set_expr2: SetExpression
     ) -> "up.model.fnode.FNode":
         """
         | Creates an intersection of sets:
 
-            * ``SetIntersection(set1, set2, set3)`` equivalent to ``set1 ∩ set2 ∩ set3``
+            * ``SetIntersection(set_expr1, set_expr2)`` equivalent to ``set_expr1 ∩ set_expr2``
 
         | This function has polymorphic n-arguments.
         | Restriction: All arguments must be of ``set type`` with the same element type.
 
-        :param \\*args: Either an ``Iterable`` of set expressions, like ``[s1, s2, s3]``,
-                        or an unpacked version of it, like ``s1, s2, s3``.
+        :param set_expr1: The set to subtract from.
+        :param set_expr2: The set to subtract.
         :return: The ``SET_INTERSECTION`` expression created.
         """
-        tuple_args = tuple(self.auto_promote(*args))
-
-        if len(tuple_args) == 0:
-            return self.EMPTY_SET()  # Empty set
-        elif len(tuple_args) == 1:
-            return tuple_args[0]
-
-        return self.create_node(node_type=OperatorKind.SET_INTERSECTION, args=tuple_args)
+        set_expr1, set_expr2 = tuple(self.auto_promote(set_expr1, set_expr2))
+        return self.create_node(node_type=OperatorKind.SET_INTERSECT, args=(set_expr1, set_expr2))
 
     def SetDifference(
-            self, left: Expression, right: Expression
+            self, set_expr1: SetExpression, set_expr2: SetExpression
     ) -> "up.model.fnode.FNode":
         """
         | Creates a set difference:
 
-            * ``SetDifference(set1, set2)`` equivalent to ``set1 \ set2``
+            * ``SetDifference(set_expr1, set_expr2)`` equivalent to ``set_expr1 \ set_expr2``
 
         | Restriction: Both arguments must be of ``set type`` with the same element type.
 
-        :param left: The set to subtract from.
-        :param right: The set to subtract.
+        :param set_expr1: The set to subtract from.
+        :param set_expr2: The set to subtract.
         :return: The ``SET_DIFFERENCE`` expression created.
         """
-        left, right = self.auto_promote(left, right)
-        return self.create_node(node_type=OperatorKind.SET_DIFFERENCE, args=(left, right))
+        set_expr1, set_expr2 = self.auto_promote(set_expr1, set_expr2)
+        return self.create_node(node_type=OperatorKind.SET_DIFFERENCE, args=(set_expr1, set_expr2))
 
     def And(
         self, *args: Union[BoolExpression, Iterable[BoolExpression]]
