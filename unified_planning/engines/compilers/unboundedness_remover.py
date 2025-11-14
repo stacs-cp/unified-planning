@@ -69,7 +69,6 @@ class UnboundednessRemover(engines.engine.Engine, CompilerMixin):
         supported_kind.set_fluents_type("INT_FLUENTS")
         supported_kind.set_fluents_type("REAL_FLUENTS")
         supported_kind.set_fluents_type("OBJECT_FLUENTS")
-        supported_kind.set_fluents_type("ARRAY_FLUENTS")
         supported_kind.set_conditions_kind("NEGATIVE_CONDITIONS")
         supported_kind.set_conditions_kind("DISJUNCTIVE_CONDITIONS")
         supported_kind.set_conditions_kind("EQUALITIES")
@@ -162,6 +161,7 @@ class UnboundednessRemover(engines.engine.Engine, CompilerMixin):
             new_action.clear_preconditions()
             new_action.clear_effects()
             for precondition in action.preconditions:
+                # check out of bounds
                 new_action.add_precondition(precondition)
             for effect in action.effects:
                 fluent = effect.fluent.fluent()

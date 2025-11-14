@@ -24,7 +24,8 @@ from unified_planning.model.problem_kind_versioning import LATEST_PROBLEM_KIND_V
 from unified_planning.engines.compilers.utils import replace_action, updated_minimize_action_costs
 from typing import Dict, List, Optional, Union, Set
 from functools import partial
-from unified_planning.shortcuts import Int, Not, And, Equals
+from unified_planning.shortcuts import Int, Not, And, Equals, IntType
+
 
 class CountIntRemover(engines.engine.Engine, CompilerMixin):
     """
@@ -44,6 +45,7 @@ class CountIntRemover(engines.engine.Engine, CompilerMixin):
     def __init__(self):
         engines.engine.Engine.__init__(self)
         CompilerMixin.__init__(self, CompilationKind.COUNT_INT_REMOVING)
+        self._count_registry: Dict[str, FNode] = {}
 
     @property
     def name(self):
@@ -196,10 +198,9 @@ class CountIntRemover(engines.engine.Engine, CompilerMixin):
         param_values = [problem.objects(param.type) for param in signature]
         return list(product(*param_values))
 
-    def _replace_count_with_fluents(self, problem: Problem, expression: FNode, count_registry: Dict[str, FNode]) -> FNode:
+    def _replace_count_with_fluents(self, problem: Problem, expression: FNode) -> FNode:
         """Replace Count expressions with sums of fluents."""
         em = problem.environment.expression_manager
-        tm = problem.environment.type_manager
 
         # Base cases
         if expression.is_fluent_exp() or expression.is_parameter_exp() or expression.is_constant():
@@ -217,15 +218,15 @@ class CountIntRemover(engines.engine.Engine, CompilerMixin):
                     continue
                 # Check if we already have a fluent for this expression
                 existing_name = next(
-                    (name for name, expr in count_registry.items() if expr == arg),
+                    (name for name, expr in self._count_registry.items() if expr == arg),
                     None
                 )
                 if existing_name:
                     sum_args.append(problem.fluent(existing_name)())
                 else:
                     # Create new count fluent
-                    fluent_name = f'count_{len(count_registry)}'
-                    count_registry[fluent_name] = arg
+                    fluent_name = f'count_{len(self._count_registry)}'
+                    self._count_registry[fluent_name] = arg
                     count_parameters = [Parameter(str(a), a.type) for a in arg.args if a.is_parameter_exp()]
                     # Evaluate initial value
                     if not count_parameters:
@@ -234,13 +235,13 @@ class CountIntRemover(engines.engine.Engine, CompilerMixin):
                             f"Count argument initial value must be boolean constant, got: {initial_eval}"
                         initial_value = Int(1) if initial_eval.is_true() else Int(0)
                         # Add fluent to problem
-                        new_fluent = Fluent(fluent_name, tm.IntType(0, 1))
+                        new_fluent = Fluent(fluent_name, IntType(0, 1))
                         problem.add_fluent(new_fluent)
                         problem.set_initial_value(new_fluent, initial_value)
                         sum_args.append(new_fluent())
                     else:
                         # Add fluent to problem
-                        new_fluent = Fluent(fluent_name, tm.IntType(0, 1), count_parameters)
+                        new_fluent = Fluent(fluent_name, IntType(0, 1), count_parameters)
                         problem.add_fluent(new_fluent)
                         instantiations = self._get_param_combinations(problem, count_parameters)
                         for i in instantiations:
@@ -265,7 +266,7 @@ class CountIntRemover(engines.engine.Engine, CompilerMixin):
                 return em.Plus(*sum_args)
 
         # Recursive case
-        new_args = [self._replace_count_with_fluents(problem, arg, count_registry) for arg in expression.args]
+        new_args = [self._replace_count_with_fluents(problem, arg) for arg in expression.args]
         return em.create_node(expression.node_type, tuple(new_args))
 
     # ==================== EFFECT GENERATION ====================
@@ -292,13 +293,13 @@ class CountIntRemover(engines.engine.Engine, CompilerMixin):
                 action.add_effect(count, 1, new_expr)
                 action.add_effect(count, 0, Not(new_expr).simplify())
 
-    def _generate_count_effects(self, problem: Problem, action: Action, count_registry: Dict[str, FNode]) -> Action:
+    def _generate_count_effects(self, problem: Problem, action: Action) -> Action:
         """
         Generate effects for count fluents based on action effects.
         For each count fluent tracking expression E:
         - If action effects change fluents in E, add conditional effects to update the count fluent accordingly
         """
-        for count_name, count_expr in count_registry.items():
+        for count_name, count_expr in self._count_registry.items():
             # Find which fluents in count_expr are affected by action
             affected_fluents = self._find_affected_fluents(count_expr)
             # Process each effect
@@ -360,7 +361,6 @@ class CountIntRemover(engines.engine.Engine, CompilerMixin):
         new_problem.clear_goals()
         new_problem.clear_quality_metrics()
 
-        count_registry: Dict[str, FNode] = {}
         new_to_old: Dict[Action, Action] = {}
 
         # Transform actions (preconditions only, effects later)
@@ -369,19 +369,19 @@ class CountIntRemover(engines.engine.Engine, CompilerMixin):
             new_action = action.clone()
             new_action.clear_preconditions()
             for precondition in action.preconditions:
-                new_precondition = self._replace_count_with_fluents(new_problem, precondition, count_registry)
+                new_precondition = self._replace_count_with_fluents(new_problem, precondition)
                 new_action.add_precondition(new_precondition)
             temp_actions.append(new_action)
 
         # Transform goals
         for goal in problem.goals:
-            new_goal = self._replace_count_with_fluents(new_problem, goal, count_registry)
+            new_goal = self._replace_count_with_fluents(new_problem, goal)
             new_problem.add_goal(new_goal)
 
         # Add effects for count fluents
         final_actions = []
         for temp_action, old_action in zip(temp_actions, problem.actions):
-            final_action = self._generate_count_effects(new_problem, temp_action, count_registry)
+            final_action = self._generate_count_effects(new_problem, temp_action)
             final_actions.append(final_action)
             new_problem.add_action(final_action)
             new_to_old[final_action] = old_action

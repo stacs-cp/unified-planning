@@ -20,10 +20,11 @@ import unified_planning.engines as engines
 from unified_planning import model
 from unified_planning.engines.mixins.compiler import CompilationKind, CompilerMixin
 from unified_planning.engines.results import CompilerResult
+from unified_planning.exceptions import UPProblemDefinitionError
 from unified_planning.model import (
     Problem,
     Action,
-    ProblemKind, Fluent, Effect, FNode,
+    ProblemKind, Fluent, Effect, FNode, Parameter,
 )
 from unified_planning.model.problem_kind_versioning import LATEST_PROBLEM_KIND_VERSION
 from unified_planning.engines.compilers.utils import (
@@ -32,7 +33,7 @@ from unified_planning.engines.compilers.utils import (
 )
 from typing import Dict, Optional, Union
 from functools import partial
-from unified_planning.shortcuts import BoolType, EMPTY_SET, Count, Or, Not, And, TRUE, Iff, Equals, FALSE
+from unified_planning.shortcuts import BoolType, EMPTY_SET, Count, Or, Not, And, TRUE, Iff, Equals, FALSE, IntType, Plus
 
 
 class SetsRemover(engines.engine.Engine, CompilerMixin):
@@ -49,6 +50,7 @@ class SetsRemover(engines.engine.Engine, CompilerMixin):
         CompilerMixin.__init__(self, CompilationKind.SETS_REMOVING)
         self.mode = mode
         self._fluent_mapping = {}
+        self._cardinality_registry: Dict[str, Fluent] = {}
 
     @property
     def name(self):
@@ -249,10 +251,10 @@ class SetsRemover(engines.engine.Engine, CompilerMixin):
 
     # ==================== EXPRESSION TRANSFORMATION ====================
 
-    def _transform_fluent_exp(self, new_problem: Problem, node: FNode) -> FNode:
+    def _transform_fluent_exp(self, old_problem, new_problem: Problem, node: FNode) -> FNode:
         """Transform fluent expression."""
         fluent = node.fluent()
-        new_args = [self._transform_expression(new_problem, arg) for arg in node.args]
+        new_args = [self._transform_expression(old_problem, new_problem, arg) for arg in node.args]
         if new_problem.has_fluent(fluent.name):
             return new_problem.fluent(fluent.name)(*new_args)
         else:
@@ -307,18 +309,71 @@ class SetsRemover(engines.engine.Engine, CompilerMixin):
                 and_expr.append(Not(new_fluent(elem, *fluent.args)).simplify())
         return And(*and_expr)
 
-    def _transform_cardinality(self, new_problem: Problem, node: FNode) -> FNode:
+    def _transform_cardinality(self, old_problem, new_problem: Problem, node: FNode) -> FNode:
         """
         Transform: |set_expr|
-        Into: Count([fluent(obj1, ...), fluent(obj2, ...), ...])
+        Into: creating an integer fluent that stores the cardinality of the set_expr thorough the problem
         """
         set_expr = node.args[0]
         elements_type = set_expr.type.elements_type if set_expr.is_fluent_exp() else set_expr.args[0].type.elements_type
         elements = list(new_problem.objects(elements_type))
 
+        print("transform cardinality", set_expr)
+
+        # guardar que?
+        # un diccionari amb el nom d'un fluent (old)
+        #   que es relaciona amb una llista de fluents (els nous card_int)
+        # perque quan vagi efecte per efecte mirare els fluents que es toquen i llavors haure de saber els nous
+        #   "fluents int" que esta afectant per a poder afegir efectes condicionals!
+
+
         if set_expr.is_fluent_exp():
-            new_fluent = self._fluent_mapping[set_expr.fluent().name]
-            count_args = [new_fluent(elem, *set_expr.args) for elem in elements]
+            # crear un fluent enter (amb els mateixos parametres que el fluent) que guardara el numero d'elements
+            old_fluent = set_expr.fluent()
+
+            # implementar amb parametres o sense...
+
+            card_parameters = [a for a in set_expr.args if a.is_parameter_exp()]
+
+            # Contains action parameters
+            if card_parameters:
+                fluent_name = f'card_{old_fluent.name}'
+
+                if fluent_name in self._cardinality_registry:
+                    print("already in cache")
+                    return self._cardinality_registry[fluent_name](*set_expr.args)
+
+                # New cardinality fluent contains a value from 0 to the number of objects of the type it contains in the problem
+                new_fluent = Fluent(fluent_name, IntType(0, len(elements)), card_parameters)
+                default_initial_value = len(old_problem.fluents_defaults[old_fluent].constant_value())
+
+                new_problem.add_fluent(new_fluent, default_initial_value=default_initial_value)
+                return new_fluent(*set_expr.args)
+
+            # Contains no action parameters
+            else:
+                fluent_name = f'card_{old_fluent.name}_{str(*set_expr.args)}'
+
+                if fluent_name in self._cardinality_registry:
+                    print("already in cache")
+                    return self._cardinality_registry[fluent_name](*set_expr.args)
+
+                new_fluent = Fluent(fluent_name, IntType(0, len(elements)))
+                default_initial_value = len(old_problem.fluents_defaults[old_fluent].constant_value())
+                new_problem.add_fluent(new_fluent, default_initial_value=default_initial_value)
+
+                # Initialise with arguments parameters (if so)
+                try:
+                    # If the instantiation has an initial value, add it
+                    initial_value = len(old_problem.explicit_initial_values[old_fluent(*set_expr.args)].constant_value())
+                    print("initial value", initial_value)
+                    new_problem.set_initial_value(new_fluent(*set_expr.args), initial_value)
+                except:
+                    pass
+
+                # guardant amb els parametres instanciats tal com venia
+                self._cardinality_registry[fluent_name] = new_fluent
+                return new_fluent(*set_expr.args)
 
         elif set_expr.is_set_add():
             # |add-element(set1, x)|: count all elements in set1 OR the new element x
@@ -333,6 +388,73 @@ class SetsRemover(engines.engine.Engine, CompilerMixin):
             fluent = self._fluent_mapping[base_set.fluent().name]
             count_args = [And(fluent(elem, *base_set.args), Not(Equals(elem, removed_elem))).simplify()
                           for elem in elements]
+
+        elif set_expr.is_set_union():
+            # crear un fluent enter (amb els mateixos parametres que els fluents) que guardara el numero d'elements
+
+            # els dos sets no contenen parametres en els enters
+            set1, set2 = set_expr.args
+            parameters1 = [p for p in set1.args if p.is_parameter_exp()]
+            parameters2 = [p for p in set2.args if p.is_parameter_exp()]
+            print(parameters1, parameters2)
+
+            if parameters1 and parameters2:
+                # tenir en compte que poden tenir algun parametre igual!!!
+                fluent_name = f'card_{set1.fluent().name}_u_{set1.fluent().name}'
+                print("fluent te parametres")
+                if fluent_name in self._cardinality_registry:
+                    print("already in cache")
+                    return self._cardinality_registry[fluent_name](*set_expr.args)
+                # i afegir els parametres al fluent
+                new_fluent = Fluent(fluent_name, IntType(0, len(elements)), parameters1+parameters2)
+                print("new fluent", new_fluent)
+
+            # un pot tenir parametres i l'altre no
+            elif parameters1 or parameters2:
+                print("FALTA CONTROLAR AQUEST CAS")
+                raise NotImplementedError(f"Cardinality of {set_expr.node_type} with only one expression "
+                                          f"containing action parameters not supported yet")
+
+            else:
+                fluent_name = f'card_{set1.fluent().name}_{str(*set1.args)}_u_{str(set1.fluent().name)}_{str(*set2.args)}'
+                print("cap fluent te parametres", fluent_name)
+
+                if fluent_name in self._cardinality_registry:
+                    print("already in cache")
+                    return self._cardinality_registry[fluent_name](*set_expr.args)
+
+                new_fluent = Fluent(fluent_name, IntType(0, len(elements)))
+                print("new fluent", new_fluent)
+
+
+
+            card_parameters = [Parameter(str(a), a.type) for a in set_expr.args if a.is_parameter_exp()]
+            # New cardinality fluent contains a value from 0 to the number of objects of the type it contains in the problem
+            new_fluent = Fluent(fluent_name, IntType(0, len(elements)), card_parameters)
+
+            print(new_fluent)
+
+            # calcular el default value - agafar els 2 fluents i fer la unio
+            #default_initial_value = len(old_problem.fluents_defaults[old_fluent].constant_value())
+            #new_problem.add_fluent(new_fluent, default_initial_value=default_initial_value)
+
+
+
+            print("set expression union", set_expr)
+            set1, set2 = set_expr.args
+            print(set1, set2)
+            fluent1 = self._fluent_mapping[set1.fluent().name]
+            fluent2 = self._fluent_mapping[set2.fluent().name]
+            # provsr aixo:
+            new_args = []
+
+            # crear un nou fluent amb els parametres que tenen els 2 fluents... osti aixo pot portar simetries no?
+            # i llavors inicialitzar tmb... es massa liada?
+
+
+            print("new args", new_args)
+
+            print("union")
 
         else:
             set1, set2 = set_expr.args
@@ -366,7 +488,7 @@ class SetsRemover(engines.engine.Engine, CompilerMixin):
         """Union should not appear alone, only in comparison operations, cardinality or effects."""
         raise NotImplementedError("Outest union expressions only accepted in effects context")
 
-    def _transform_equality(self, new_problem: Problem, node: FNode) -> FNode:
+    def _transform_equality(self, old_problem: Problem, new_problem: Problem, node: FNode) -> FNode:
         """"
         Transform equality between sets.
         Cases:
@@ -447,17 +569,17 @@ class SetsRemover(engines.engine.Engine, CompilerMixin):
 
         # Not a set equality - transform args recursively
         else:
-            new_left = self._transform_expression(new_problem, left)
-            new_right = self._transform_expression(new_problem, right)
+            new_left = self._transform_expression(old_problem, new_problem, left)
+            new_right = self._transform_expression(old_problem, new_problem, right)
             return Equals(new_left, new_right).simplify()
 
-    def _transform_expression(self, new_problem: Problem, node: FNode) -> FNode:
+    def _transform_expression(self, old_problem: Problem, new_problem: Problem, node: FNode) -> FNode:
         """
         Transform expressions recursively.
         Delegates to specific handlers based on node type.
         """
         if node.is_fluent_exp():
-            return self._transform_fluent_exp(new_problem, node)
+            return self._transform_fluent_exp(old_problem, new_problem, node)
         elif node.is_parameter_exp() or node.is_variable_exp() or node.is_constant():
             return node
         elif node.is_set_member():
@@ -465,16 +587,19 @@ class SetsRemover(engines.engine.Engine, CompilerMixin):
         elif node.is_set_disjoint():
             return self._transform_disjoint(new_problem, node)
         elif node.is_set_cardinality():
-            return self._transform_cardinality(new_problem, node)
+            print("node:", node)
+            new = self._transform_cardinality(old_problem, new_problem, node)
+            print("new:", new)
+            return new
         elif node.is_set_add() or node.is_set_remove():
             return self._transform_add_remove(new_problem, node)
         elif node.is_set_union():
             return self._transform_union(new_problem, node)
         elif node.is_equals():
-            return self._transform_equality(new_problem, node)
+            return self._transform_equality(old_problem, new_problem, node)
         else:
             em = new_problem.environment.expression_manager
-            new_args = [self._transform_expression(new_problem, arg) for arg in node.args]
+            new_args = [self._transform_expression(old_problem, new_problem, arg) for arg in node.args]
             if None in new_args:
                 return None
             if node.is_exists() or node.is_forall():
@@ -535,18 +660,6 @@ class SetsRemover(engines.engine.Engine, CompilerMixin):
             self._transform_effect(new_problem, new_action, effect)
 
         return new_action
-
-    def _transform_actions(self, problem: Problem, new_problem: Problem) -> Dict[Action, Action]:
-        """Transform all actions."""
-        new_to_old = {}
-
-        for action in problem.actions:
-            new_action = self._transform_action(new_problem, action)
-            if new_action is not None:
-                new_problem.add_action(new_action)
-                new_to_old[new_action] = action
-
-        return new_to_old
 
     def _transform_add_remove_effect(self, new_problem: Problem, new_action: Action, effect: Effect):
         """
@@ -687,15 +800,6 @@ class SetsRemover(engines.engine.Engine, CompilerMixin):
             fluent_expr = new_fluent(elem, *effect.fluent.args)
             new_action.add_effect(fluent_expr, value, True, effect.forall)
 
-    # ==================== GOAL TRANSFORMATION ====================
-
-    def _transform_goals(self, problem: Problem, new_problem: Problem):
-        """Transform all goals."""
-        for goal in problem.goals:
-            new_goal = self._transform_expression(new_problem, goal)
-            if new_goal is not None:
-                new_problem.add_goal(new_goal)
-
     # ==================== MAIN COMPILATION ====================
 
     def _compile(
@@ -724,10 +828,54 @@ class SetsRemover(engines.engine.Engine, CompilerMixin):
 
         self._fluent_mapping.clear()
 
-        # Transform components
+        new_to_old: Dict[Action, Action] = {}
+
+        # Transform set fluents
         self._transform_fluents(problem, new_problem)
+
+        # Transform actions (preconditions only, effects later)
+        temp_actions = []
+        for action in problem.actions:
+            new_action = action.clone()
+            new_action.name = get_fresh_name(new_problem, action.name)
+            new_action.clear_preconditions()
+            new_action.clear_effects()
+
+            # Transform preconditions
+            for precondition in action.preconditions:
+                new_precondition = self._transform_expression(problem, new_problem, precondition)
+                if new_precondition in [FALSE(), None]:
+                    break
+                new_action.add_precondition(new_precondition)
+            temp_actions.append(new_action)
+
+        #print("temporal actions:", temp_actions)
+        # Transform goals
+        for goal in problem.goals:
+            new_goal = self._transform_expression(problem, new_problem, goal)
+            if new_goal is None:
+                raise UPProblemDefinitionError(f"The Goal expression cannot be evaluated!")
+            new_problem.add_goal(new_goal)
+
+
+        #print("new goals:", new_problem.goals)
+
+
+        # Add effects that affect fluents within cardinality expressions
+        for temp_action, old_action in zip(temp_actions, problem.actions):
+            # ns encara com
+            if new_action is not None:
+                new_problem.add_action(new_action)
+                new_to_old[new_action] = action
+
         new_to_old = self._transform_actions(problem, new_problem)
-        self._transform_goals(problem, new_problem)
+
+
+
+        # Transform effects
+        for effect in action.effects:
+            self._transform_effect(new_problem, new_action, effect)
+
 
         # Transform quality metrics
         for qm in problem.quality_metrics:

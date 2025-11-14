@@ -268,7 +268,8 @@ class ArraysLogarithmicRemover(engines.engine.Engine, CompilerMixin):
                         lt_node = Or(or_node)
 
                     return Or(equals_node, lt_node)
-                #elif operation == 'plus':
+                elif operation == 'plus' or operation == 'minus' or operation == 'div' or operation == 'mult':
+                    raise NotImplementedError(f"Operation {operation} not supported")
                 #elif operation == 'minus':
                 #elif operation == 'div':
                 #elif operation == 'mult':
@@ -303,12 +304,12 @@ class ArraysLogarithmicRemover(engines.engine.Engine, CompilerMixin):
         """Convert fluent and value to bits."""
         name_fluent = fluent.fluent().name.split('[')[0]
         n_bits = self.n_bits[name_fluent]
-
         if fluent.type.is_int_type():
             new_fluents = self._get_new_fluent(new_problem, fluent)
             if value.is_fluent_exp():
                 new_values = self._get_new_fluent(new_problem, value)
             else:
+                assert value.is_constant(), "Value must be a constant!"
                 new_values = self._convert_value(value.constant_value(), n_bits)
         else:
             assert fluent.type.is_array_type()
@@ -350,13 +351,15 @@ class ArraysLogarithmicRemover(engines.engine.Engine, CompilerMixin):
             # Change the integer array fluents
             if fluent.type.is_array_type():
                 Position = new_problem.environment.type_manager.UserType('Position')
-                new_user_type = new_problem.environment.type_manager.UserType(fluent.name.capitalize(), Position)
-                new_parameter = up.model.Parameter('p', new_user_type)
+                #new_user_type = new_problem.environment.type_manager.UserType(fluent.name.capitalize(), Position)
+                new_parameter = up.model.Parameter('p', Position)
 
                 combination = self._get_fluent_domain(fluent, True)
+                print(combination)
                 for c in combination:
-                    new_problem.add_object(model.Object(f'p_{"_".join(map(str, c))}', new_user_type))
-
+                    new_object = model.Object(f'p_{"_".join(map(str, c))}', Position)
+                    if not new_problem.has_object(new_object.name):
+                        new_problem.add_object(new_object)
                 n_bits = self.n_bits[fluent.name]
                 # Default initial values
                 default_value = problem.fluents_defaults.get(fluent)

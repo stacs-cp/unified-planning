@@ -428,20 +428,16 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
         return node.fluent()(*new_args)
 
     def _handle_none_args(self, node_type: OperatorKind, args: List) -> Union[List[FNode], None]:
-        """
-        Handle undefined (None) values in arguments based on operator semantics.
-        - OR/EXISTS/COUNT: ignore None
-        - IMPLIES: special handling
-        - AND/FORALL/...: None propagates
-        """
+        """Handle undefined (None) values in arguments based on operator semantics."""
         if None not in args:
             return args
         if node_type in {OperatorKind.OR, OperatorKind.COUNT, OperatorKind.EXISTS}:
-            return [arg for arg in args if arg is not None]
+            filtered = [arg for arg in args if arg is not None]
+            return filtered if filtered else None
         elif node_type == OperatorKind.IMPLIES:
             if args[1] is None and args[0] is not None:
                 return [args[0], FALSE()]
-            return args[1]
+            return [TRUE(), args[1]] if args[1] is not None else None
         else:
             return None
 
@@ -562,10 +558,16 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             if fluent is None or value is None:
                 # Invalid unconditional effect -> prune action
                 return False
+            if fluent.type.is_int_type() and value.is_constant():
+                if not fluent.type.lower_bound <= value.constant_value() <= fluent.type.upper_bound:
+                    return False
             self._add_effect_to_action( action, effect_type, fluent, value, condition, forall)
         # Handle conditional effects
         else:
-            if condition not in (None, FALSE()) and fluent is not None and value is not None:
+            if condition not in [None, FALSE()] and fluent is not None and value is not None:
+                if (fluent.type.is_int_type() and
+                        not fluent.type.lower_bound <= value.constant_value() <= fluent.type.upper_bound):
+                    return True
                 self._add_effect_to_action(action, effect_type, fluent, value, condition, forall)
         return True
 

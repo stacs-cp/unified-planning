@@ -39,7 +39,7 @@ class Fluent:
             ]
         ] = None,
         environment: Optional[Environment] = None,
-        undefined_positions: Optional[List[Union[int, Tuple[int, int]]]] = None,
+        undefined_positions: Optional[List[Tuple[int]]] = None,
         **kwargs: "up.model.types.Type",
     ):
         self._env = get_environment(environment)
@@ -51,21 +51,17 @@ class Fluent:
                 typename
             ), "type of parameter does not belong to the same environment of the fluent"
             self._typename = typename
-        self._undefined_positions = undefined_positions
         sizes = None
         if undefined_positions is not None:
             assert typename.is_array_type(), "'undefined_positions' parameter is only allowed with ArrayType Fluents."
-            if typename.elements_type.is_array_type():
-                for position in undefined_positions:
-                    assert type(position) == tuple, f"Position {position} not in the correct format: tuple"
-            else:
-                for position in undefined_positions:
-                    assert type(position) == int, f"Position {position} not in the correct format: int"
+            for position in undefined_positions:
+                assert type(position) == tuple, f"Position {position} not in the correct format: tuple"
+        self._undefined_positions = undefined_positions
         if self._typename.is_array_type():
             sizes = typename.size
             if typename.elements_type.is_array_type():
                 sizes = (sizes, typename.elements_type.size)
-        self._sizes: Optional[Union[int, Tuple[int, int]]] = sizes
+        self._sizes: Optional[Tuple[int]] = sizes
         self._signature: List["up.model.parameter.Parameter"] = []
         if _signature is not None:
             assert len(kwargs) == 0
@@ -170,12 +166,12 @@ class Fluent:
         return self._typename
 
     @property
-    def undefined_positions(self) -> Optional[List[Union[int, Tuple[int, int]]]]:
+    def undefined_positions(self) -> Optional[List[Tuple[int]]]:
         """Returns the `Fluent` `Type`."""
         return self._undefined_positions
 
     @property
-    def sizes(self) -> Optional[Union[int, Tuple[int, int]]]:
+    def sizes(self) -> Optional[Tuple[int]]:
         """Returns the `Fluent` `Type`."""
         return self._sizes
 

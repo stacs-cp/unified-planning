@@ -69,6 +69,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
         supported_kind.set_fluents_type("INT_FLUENTS")
         supported_kind.set_fluents_type("REAL_FLUENTS")
         supported_kind.set_fluents_type("ARRAY_FLUENTS")
+        supported_kind.set_fluents_type("SET_FLUENTS")
         supported_kind.set_fluents_type("OBJECT_FLUENTS")
         supported_kind.set_fluents_type("DERIVED_FLUENTS")
         supported_kind.set_conditions_kind("NEGATIVE_CONDITIONS")
@@ -77,6 +78,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
         supported_kind.set_conditions_kind("EXISTENTIAL_CONDITIONS")
         supported_kind.set_conditions_kind("UNIVERSAL_CONDITIONS")
         supported_kind.set_conditions_kind("COUNTING")
+        supported_kind.set_conditions_kind("MEMBERING")
         supported_kind.set_effects_kind("CONDITIONAL_EFFECTS")
         supported_kind.set_effects_kind("INCREASE_EFFECTS")
         supported_kind.set_effects_kind("DECREASE_EFFECTS")
@@ -244,32 +246,15 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
         """Handle undefined (None) values in arguments based on operator semantics."""
         if None not in args:
             return args
-
         if node_type in {OperatorKind.OR, OperatorKind.COUNT, OperatorKind.EXISTS}:
             filtered = [arg for arg in args if arg is not None]
             return filtered if filtered else None
         elif node_type == OperatorKind.IMPLIES:
             if args[1] is None and args[0] is not None:
                 return [args[0], FALSE()]
-            return [args[1]] if args[1] is not None else None
+            return[TRUE(), args[1]] if args[1] is not None else None
         else:
             return None
-
-    def _transform_generic(self, old_problem: Problem, new_problem: Problem, node: FNode) -> Union[FNode, None]:
-        """Generic recursive transformation."""
-        em = old_problem.environment.expression_manager
-
-        new_args = [
-            self._transform_expression(old_problem, new_problem, arg)
-            for arg in node.args
-        ]
-
-        new_args = self._handle_none_args(node.node_type, new_args)
-
-        if new_args is None or not new_args:
-            return None
-
-        return em.create_node(node.node_type, tuple(new_args)).simplify()
 
     def _transform_quantifier(
             self,
@@ -298,22 +283,26 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
             node: FNode
     ) -> Union[FNode, None]:
         """Transform expression by substituting array accesses."""
-        # Base cases
         if node.is_constant() or node.is_variable_exp() or node.is_timing_exp() or node.is_parameter_exp():
             return node
-
         if node.is_fluent_exp():
             return self._transform_fluent_exp(old_problem, new_problem, node)
-
         if node.is_forall() or node.is_exists():
             return self._transform_quantifier(old_problem, new_problem, node)
-
         # Special case: array fluent comparisons
         if node.args and node.arg(0).type.is_array_type():
             return self._transform_array_comparison(new_problem, node)
 
         # Generic recursive transformation
-        return self._transform_generic(old_problem, new_problem, node)
+        em = old_problem.environment.expression_manager
+        new_args = [
+            self._transform_expression(old_problem, new_problem, arg)
+            for arg in node.args
+        ]
+        new_args = self._handle_none_args(node.node_type, new_args)
+        if new_args is None or not new_args:
+            return None
+        return em.create_node(node.node_type, tuple(new_args)).simplify()
 
     # ==================== ACTION TRANSFORMATION ====================
 
@@ -348,7 +337,6 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
         else:
             if condition not in (None, FALSE()) and fluent is not None and value is not None:
                 self._add_effect_to_action(action, effect_type, fluent, value, condition, forall)
-
         return True
 
     def _add_instantiated_effect(
@@ -417,14 +405,11 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
     def _transform_actions(self, problem: Problem, new_problem: Problem) -> Dict[Action, Action]:
         """Transform all actions by substituting array accesses."""
         new_to_old = {}
-
         for action in problem.actions:
             new_action = self._transform_action_arrays(problem, new_problem, action)
-
             if new_action is not None:
                 new_problem.add_action(new_action)
                 new_to_old[new_action] = action
-
         return new_to_old
 
     # ==================== FLUENT TRANSFORMATION ====================
@@ -514,10 +499,8 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
             self._get_index_object(new_problem, i)
 
         # Create new signature with Index parameters
-        new_signature = [
-                            Parameter(f'i_{dim + 1}', index_ut)
-                            for dim in range(len(n_elements))
-                        ] + list(fluent.signature)
+        new_signature = [Parameter(f'i_{dim + 1}', index_ut)
+                         for dim in range(len(n_elements))] + list(fluent.signature)
 
         new_fluent = Fluent(fluent.name, element_type, new_signature, fluent.environment)
         new_problem.add_fluent(new_fluent, default_initial_value=default_value)
@@ -564,8 +547,6 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
     ) -> CompilerResult:
         """Main compilation method."""
         assert isinstance(problem, Problem)
-
-        new_to_old: Dict[Action, Action] = {}
 
         # Create new problem
         new_problem = problem.clone()
