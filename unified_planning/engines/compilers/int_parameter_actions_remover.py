@@ -709,16 +709,6 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                 result.append((new_action, inst))
         return result
 
-    # ==================== GOAL TRANSFORMATION ====================
-
-    def _transform_goals(self, problem: Problem, new_problem: Problem):
-        """Transform all goals."""
-        for goal in problem.goals:
-            new_goal = self._transform_expression(problem, new_problem, goal)
-            # AIXO ?
-            if new_goal is not None:
-                new_problem.add_goal(new_goal)
-
     # ==================== AXIOMS TRANSFORMATION ====================
 
     def _transform_axioms(self, problem: Problem, new_problem: Problem, new_to_old: Dict):
@@ -815,7 +805,6 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
         new_problem.name = f"{self.name}_{problem.name}"
         new_problem.clear_actions()
         new_problem.clear_axioms()
-        new_problem.clear_goals()
         new_problem.clear_quality_metrics()
 
         # Transform components
@@ -824,7 +813,6 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                 self._save_array_domain(fluent)
 
         new_to_old = self._transform_actions(problem, new_problem)
-        self._transform_goals(problem, new_problem)
         self._transform_quality_metrics(problem, new_problem, new_to_old)
         self._transform_axioms(problem, new_problem, new_to_old)
 
