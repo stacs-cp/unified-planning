@@ -476,11 +476,10 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             int_params = {}
         if instantiations is None:
             instantiations = ()
-
         # Check cache
         cache_key = (id(node), instantiations)
         if cache_key in self._expression_cache:
-            if self._expression_cache[cache_key] in [FALSE(), None]:
+            if self._expression_cache[cache_key] is None:
                 return None
             return self._expression_cache[cache_key]
 
@@ -495,7 +494,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                 param_index = int_params[param_name]
                 result = Int(instantiations[param_index])
                 self._expression_cache[cache_key] = result
-                if result in [FALSE(), None]:
+                if result is None:
                     return None
                 return result
             return node
@@ -503,19 +502,19 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
         if node.is_fluent_exp():
             result = self._transform_fluent_exp(old_problem, new_problem, node, int_params, instantiations)
             self._expression_cache[cache_key] = result
-            if result in [FALSE(), None]:
+            if result is None:
                 return None
             return result
 
         if node.is_forall() or node.is_exists():
             result = self._transform_quantifier(old_problem, new_problem, node, int_params, instantiations)
             self._expression_cache[cache_key] = result
-            if result in [FALSE(), None]:
+            if result is None:
                 return None
             return result
         result = self._transform_generic(old_problem, new_problem, node, int_params, instantiations)
         self._expression_cache[cache_key] = result
-        if result in [FALSE(), None]:
+        if result is None:
             return None
         return result
 
