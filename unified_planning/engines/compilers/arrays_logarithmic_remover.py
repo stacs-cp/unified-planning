@@ -35,7 +35,7 @@ from unified_planning.engines.compilers.utils import (
 )
 from typing import Dict, List, Optional, OrderedDict, Iterable, Tuple, Iterator
 from functools import partial
-from unified_planning.shortcuts import And, Not, Iff, Equals, Or
+from unified_planning.shortcuts import And, Not, Iff, Equals, Or, FALSE
 import re
 
 
@@ -229,45 +229,71 @@ class ArraysLogarithmicRemover(engines.engine.Engine, CompilerMixin):
                             iff_node.append(Iff(f, v))
                         return Or(or_node)
                     else:
-                        # es podria millorar ?
-                        or_node = []
-                        for i in range(value.constant_value()-1):
-                            lower_value_bits = self._convert_value(i, len(new_values))
-                            and_node = []
-                            for f, v in zip(new_fluents, lower_value_bits):
-                                and_node.append(f if v else Not(f))
-                            or_node.append(And(and_node))
-                        return Or(or_node)
+                        # Comparació fluent < constant
+                        value_bits = self._convert_value(value.constant_value(), len(new_fluents))
+                        # Lexicographic comparison: f < v
+                        # Find first position where f has 0 and v has 1
+                        # and all previous bits are equal
+                        or_terms = []
+                        equals_prefix = []  # Acumula igualtat dels bits anteriors
+
+                        for i in range(len(new_fluents) - 1, -1, -1):
+                            f_bit = new_fluents[i]
+                            v_bit = value_bits[i]
+
+                            if v_bit:  # v té 1 en aquesta posició
+                                # f < v si: (bits anteriors iguals) AND (f té 0 aquí) AND (v té 1)
+                                term = And(equals_prefix + [Not(f_bit)])
+                                or_terms.append(term)
+                            # Si v té 0 en aquesta posició, no pot ser f < v amb aquest prefix
+                            # Afegeix igualtat d'aquest bit per al següent prefix
+                            if v_bit:
+                                equals_prefix.append(f_bit)
+                            else:
+                                equals_prefix.append(Not(f_bit))
+
+                        return Or(or_terms) if or_terms else FALSE()
 
                 elif operation == 'le':
-                    and_node = []
-                    for f, v in zip(new_fluents, new_values):
-                        if value.is_fluent_exp():
-                            and_node.append(Iff(f, v))
-                        else:
-                            and_node.append(f if v else Not(f))
-                    equals_node = And(and_node)
-
                     if value.is_fluent_exp():
+                        # Fluent <= fluent (equals OR lt)
+                        and_node = []
+                        for f, v in zip(new_fluents, new_values):
+                            and_node.append(Iff(f, v))
+                        equals_node = And(and_node)
                         or_node = []
                         iff_node = []
                         for f, v in zip(new_fluents, new_values):
                             new_and_node = And(Not(f), v)
+
                             or_node.append(And(iff_node, new_and_node))
                             iff_node.append(Iff(f, v))
                         lt_node = Or(or_node)
-
+                        return Or(equals_node, lt_node)
                     else:
-                        or_node = []
-                        for i in range(value.constant_value()-1):
-                            lower_value_bits = self._convert_value(i, len(new_values))
-                            and_node = []
-                            for f, v in zip(new_fluents, lower_value_bits):
-                                and_node.append(f if v else Not(f))
-                            or_node.append(And(and_node))
-                        lt_node = Or(or_node)
+                        value_bits = self._convert_value(value.constant_value(), len(new_fluents))
+                        # Equals part
+                        equals_and = []
+                        for f, v_bit in zip(new_fluents, value_bits):
+                            equals_and.append(f if v_bit else Not(f))
+                        equals_node = And(equals_and)
+                        # LT part (optimized)
+                        or_terms = []
+                        equals_prefix = []
+                        for i in range(len(new_fluents) - 1, -1, -1):
+                            f_bit = new_fluents[i]
+                            v_bit = value_bits[i]
+                            if v_bit:
+                                term = And(equals_prefix + [Not(f_bit)])
+                                or_terms.append(term)
+                            if v_bit:
+                                equals_prefix.append(f_bit)
+                            else:
+                                equals_prefix.append(Not(f_bit))
+                        lt_node = Or(or_terms) if or_terms else FALSE()
 
-                    return Or(equals_node, lt_node)
+                        return Or(equals_node, lt_node)
+
                 elif operation == 'plus' or operation == 'minus' or operation == 'div' or operation == 'mult':
                     raise NotImplementedError(f"Operation {operation} not supported")
                 #elif operation == 'minus':
