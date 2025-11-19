@@ -31,9 +31,9 @@ from unified_planning.engines.compilers.utils import (
     get_fresh_name,
     replace_action, updated_minimize_action_costs,
 )
-from typing import Dict, Optional, Union, List, Tuple
+from typing import Dict, Optional, Union, List
 from functools import partial
-from unified_planning.shortcuts import BoolType, EMPTY_SET, Count, Or, Not, And, TRUE, Iff, Equals, FALSE, IntType, Plus
+from unified_planning.shortcuts import BoolType, EMPTY_SET, Or, Not, And, TRUE, Iff, Equals, FALSE, IntType
 
 
 class SetsRemover(engines.engine.Engine, CompilerMixin):
@@ -149,6 +149,7 @@ class SetsRemover(engines.engine.Engine, CompilerMixin):
     def _add_set_as_boolean_fluent(self, problem: Problem, new_problem: Problem, fluent: Fluent, default_value):
         """Transform set{T} fluent into bool fluent with extra T parameter and set initial values"""
         elements_type = fluent.type.elements_type
+        assert elements_type.is_user_type(), "Only UserType types are supported"
         element_param = model.Parameter(
             str(elements_type)[0].lower(),
             elements_type
@@ -383,13 +384,11 @@ class SetsRemover(engines.engine.Engine, CompilerMixin):
             set1, set2 = set_expr.args
             parameters1 = [p.parameter() for p in set1.args if p.is_parameter_exp()]
             parameters2 = [p.parameter() for p in set2.args if p.is_parameter_exp()]
-            print(parameters1, parameters2)
             old_fluent1 = set1.fluent()
             old_fluent2 = set2.fluent()
 
             fluent_name = f'card_{set1.fluent().name}_u_{set2.fluent().name}'
 
-            print("fluent te parametres")
             if new_problem.has_fluent(fluent_name):
                 return new_problem.fluent(fluent_name)(*set_expr.args)
 
@@ -398,12 +397,9 @@ class SetsRemover(engines.engine.Engine, CompilerMixin):
 
                 # i afegir els parametres al fluent
                 new_fluent = Fluent(fluent_name, IntType(0, len(elements)), parameters1+parameters2)
-                print("new fluent", new_fluent)
 
                 # afegir default i initial values
                 default_value = len(set(old_problem.fluents_defaults[old_fluent1].constant_value() + old_problem.fluents_defaults[old_fluent2].constant_value()))
-                print(old_problem.fluents_defaults[old_fluent1].constant_value(), old_problem.fluents_defaults[old_fluent2].constant_value())
-                print("union values", default_value)
                 default_initial_value = default_value
 
                 self._cardinality_registry[fluent_name] = set_expr
@@ -428,25 +424,21 @@ class SetsRemover(engines.engine.Engine, CompilerMixin):
 
             # un pot tenir parametres i l'altre no
             elif parameters1 or parameters2:
-                print("FALTA CONTROLAR AQUEST CAS")
                 raise NotImplementedError(f"Cardinality of {set_expr.node_type} with only one expression "
                                           f"containing action parameters not supported yet")
 
             else:
                 fluent_name = f'card_{set1.fluent().name}_{str(*set1.args)}_u_{str(set2.fluent().name)}_{str(*set2.args)}'
-                print("cap fluent te parametres", fluent_name)
 
                 if new_problem.has_fluent(fluent_name):
                     return new_problem.fluent(fluent_name)(*set_expr.args)
 
                 new_fluent = Fluent(fluent_name, IntType(0, len(elements)))
-                print("new fluent", new_fluent)
 
                 # afegir default i initial values
                 default_value = len(set(
                     old_problem.fluents_defaults[old_fluent1].constant_value() |
                     old_problem.fluents_defaults[old_fluent2].constant_value()))
-                print("union values", default_value)
                 default_initial_value = default_value
                 new_problem.add_fluent(new_fluent, default_initial_value=default_initial_value)
 
@@ -790,7 +782,6 @@ class SetsRemover(engines.engine.Engine, CompilerMixin):
         for elem in all_elements:
             value = TRUE() if elem in constant_elements else FALSE()
             fluent_expr = new_fluent(elem, *effect.fluent.args)
-            print(fluent_expr, value, True, effect.kind, effect.forall)
             new_effects.append(Effect(fluent_expr, value, TRUE(), effect.kind, effect.forall))
         return new_effects
 
@@ -856,7 +847,6 @@ class SetsRemover(engines.engine.Engine, CompilerMixin):
     ):
         """Add conditional effect to update count fluent."""
         card_expr = self._cardinality_registry[card.fluent().name]
-        print("old_value:", old_value)
         # estem assumint que els efectes no tenen condicions!
         if old_value.is_constant():
             if card_expr.is_fluent_exp():
