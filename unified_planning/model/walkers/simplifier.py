@@ -361,6 +361,15 @@ class Simplifier(walkers.dag.DagWalker):
                 return self.manager.TRUE()
         return self.manager.SetMember(args[0], args[1])
 
+    def walk_set_subseteq(self, expression: FNode, args: List[FNode]) -> FNode:
+        assert len(args) == 2
+        if args[0] == self.manager.EMPTY_SET():
+            return self.manager.FALSE()
+        if args[0].is_constant() and args[1].is_constant():
+            if args[0].constant_value() in args[1].constant_value():
+                return self.manager.TRUE()
+        return self.manager.SetSubseteq(args[0], args[1])
+
     def walk_set_disjoint(self, expression: FNode, args: List[FNode]) -> FNode:
         # la interseccio es buida?
         assert len(args) == 2

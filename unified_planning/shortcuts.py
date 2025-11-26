@@ -502,6 +502,18 @@ def SetMember(element: Expression, set_expr: SetExpression) -> FNode:
     """
     return get_environment().expression_manager.SetMember(element, set_expr)
 
+def SetSubseteq(set_expr1: SetExpression, set_expr2: SetExpression) -> FNode:
+    """
+    Creates an expression of the form:
+        ``set_expr1 in set_expr2``.
+
+    :param set_expr1: The set expression to check if it is a subseteq of ``set_expr2``.
+    :param set_expr2: The set expression (can be a fluent returning a set or a set constant).
+    :return: The created ``SetMember`` expression.
+    """
+    return get_environment().expression_manager.SetSubseteq(set_expr1, set_expr2)
+
+
 def SetDisjoint(set_expr1: SetExpression, set_expr2: SetExpression) -> FNode:
     """
     Creates an expression of the form:

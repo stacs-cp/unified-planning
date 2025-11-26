@@ -55,6 +55,7 @@ class OperatorKind(Enum):
     DOT = auto()
     COUNT = auto()
     SET_MEMBER = auto()
+    SET_SUBSETEQ = auto()
     SET_DISJOINT = auto()
     SET_CARDINALITY = auto()
     SET_ADD = auto()
@@ -73,6 +74,7 @@ BOOL_OPERATORS = frozenset(
         OperatorKind.EXISTS,
         OperatorKind.FORALL,
         OperatorKind.SET_MEMBER,
+        OperatorKind.SET_SUBSETEQ,
     ]
 )
 

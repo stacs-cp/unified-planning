@@ -278,7 +278,6 @@ class ExpressionManager(object):
         :return: The ``ARRAY_INDEX`` expression created.
         """
         array_expr, index = self.auto_promote(array_expr, index)
-        print("expression: ",array_expr, index)
         return self.create_node(node_type=OperatorKind.ARRAY_INDEX, args=(array_expr, index))
 
     def SetMember(
@@ -299,6 +298,23 @@ class ExpressionManager(object):
         element, set_expr = self.auto_promote(element, set_expr)
         return self.create_node(node_type=OperatorKind.SET_MEMBER, args=(element, set_expr))
 
+    def SetSubseteq(
+        self, set_expr1: SetExpression, set_expr2: SetExpression
+    ) -> "up.model.fnode.FNode":
+        """
+        | Creates an expression of the form:
+
+            * ``SetSubseteq(set_expr1,set_expr2)``
+
+        | Restriction: ``set_expr1`` and ``set_expr1`` must be of ``set type`` and the elements have to be of the same type.
+
+        :param set_expr1: The set expression to check if it is a subseteq of ``set_expr2``.
+        :param set_expr2: The set expression (can be a fluent returning a set or a set constant).
+        :return: The ``SUBSETEQ`` expression created.
+        """
+        set_expr1, set_expr2 = self.auto_promote(set_expr1, set_expr2)
+        return self.create_node(node_type=OperatorKind.SET_SUBSETEQ, args=(set_expr1, set_expr2))
+
     def SetDisjoint(
         self, set_expr1: SetExpression, set_expr2: SetExpression
     ) -> "up.model.fnode.FNode":
@@ -307,12 +323,11 @@ class ExpressionManager(object):
 
             * ``disjoint(set_expr1,set_expr2)``
 
-        | Restriction: ``set_expr`` must be of ``set type`` and ``element`` must be of the same type as the elements
-        of the set.
+        | Restriction: ``set_expr1`` and ``set_expr1`` must be of ``set type`` and the elements have to be of the same type.
 
-        :param element: The element to check if it is a member of ``set_expr``.
-        :param set_expr: The set expression (can be a fluent returning a set or a set constant).
-        :return: The ``MEMBER`` expression created.
+        :param set_expr1: The element to check if it is a member of ``set_expr``.
+        :param set_expr2: The set expression (can be a fluent returning a set or a set constant).
+        :return: The ``DISJOINT`` expression created.
         """
         set_expr1, set_expr2 = self.auto_promote(set_expr1, set_expr2)
         return self.create_node(node_type=OperatorKind.SET_DISJOINT, args=(set_expr1, set_expr2))

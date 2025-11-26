@@ -12,7 +12,7 @@ args = parser.parse_args()
 compilation = args.compilation
 solving = args.solving
 
-instance = subprocess.run(['python3', 'read_instance.py', 'i_2'], text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+instance = subprocess.run(['python3', '/Users/cds26/PycharmProjects/unified-planning/experiments/sokoban/read_instance.py', 'i_2'], text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 output = instance.stdout.split("---")
 print(output)
 initial_state = eval(output[0].strip())

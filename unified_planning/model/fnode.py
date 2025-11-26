@@ -81,6 +81,8 @@ class FNode(object):
             return f"{self.agent()}.{self.arg(0)}"
         elif self.is_set_member():
             return f"{self.arg(0)} in {self.arg(1)}"
+        elif self.is_set_subseteq():
+            return f"{self.arg(0)} in {self.arg(1)}"
         elif self.is_set_disjoint():
             return f"{self.arg(0)} ∩ {self.arg(1)} == ∅)"
         elif self.is_set_cardinality():
@@ -439,6 +441,10 @@ class FNode(object):
         """Test whether the node is the `MEMBER` operator."""
         return self.node_type == OperatorKind.SET_MEMBER
 
+    def is_set_subseteq(self) -> bool:
+        """Test whether the node is the `SUBSETEQ` operator."""
+        return self.node_type == OperatorKind.SET_SUBSETEQ
+
     def is_set_disjoint(self) -> bool:
         """Test whether the node is the `DISJOINT` operator."""
         return self.node_type == OperatorKind.SET_DISJOINT
@@ -569,6 +575,9 @@ class FNode(object):
 
     def SetMember(self, element):
         return self._env.expression_manager.SetMember(element, self)
+
+    def SetSubseteq(self, element):
+        return self._env.expression_manager.SetSubseteq(element, self)
 
     def SetCardinality(self):
         return self._env.expression_manager.SetCardinality(self)
