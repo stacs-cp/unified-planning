@@ -41,7 +41,8 @@ from unified_planning.engines.compilers.utils import (
 from typing import Dict, List, Optional, Tuple, OrderedDict, Union
 from functools import partial
 
-from unified_planning.shortcuts import Int, FALSE, TRUE, And, UserType
+from unified_planning.shortcuts import Int, FALSE, TRUE, And, UserType, Exists, Forall
+
 
 class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
     """
@@ -373,6 +374,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
 
         # Get all instantiations for range variables
         range_instantiations = self._get_range_instantiations(updated_ranges)
+
         # Expand quantifier body for each instantiation
         expanded_args = []
         for range_inst in range_instantiations:
@@ -389,7 +391,15 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
         # Combine with appropriate operator
         em = new_problem.environment.expression_manager
         new_op = OperatorKind.AND if node.is_forall() else OperatorKind.OR
-        return em.create_node(new_op, tuple(expanded_args)).simplify()
+        new_node = em.create_node(new_op, tuple(expanded_args)).simplify()
+        if regular_vars:
+            if node.is_exists():
+                return Exists(new_node, *regular_vars)
+            elif node.is_forall():
+                return Forall(new_node, *regular_vars)
+            else:
+                raise UPProblemDefinitionError(f"Error handling quantifiers!")
+        return new_node
 
     def _transform_fluent_exp(
             self,
@@ -725,12 +735,17 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             new_axiom.name = get_fresh_name(new_problem, new_axiom.name)
             new_axiom.clear_preconditions()
             new_axiom.clear_effects()
-
+            skip_axiom = False
             for precondition in axiom.preconditions:
                 new_precondition = self._transform_expression(problem, new_problem, precondition)
-                if new_precondition is not None:
-                    new_axiom.add_precondition(new_precondition)
 
+                if new_precondition is None:
+                    skip_axiom = True
+                    break
+                else:
+                    new_axiom.add_precondition(new_precondition)
+            if skip_axiom:
+                continue
             for effect in axiom.effects:
                 new_fluent = self._transform_expression(problem, new_problem, effect.fluent)
                 new_value = self._transform_expression(problem, new_problem, effect.value)
