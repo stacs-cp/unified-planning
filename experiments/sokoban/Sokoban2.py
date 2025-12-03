@@ -12,7 +12,7 @@ args = parser.parse_args()
 compilation = args.compilation
 solving = args.solving
 
-instance = subprocess.run(['python3', 'read_instance.py', 'i_1'], text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+instance = subprocess.run(['python3', '/Users/cds26/PycharmProjects/unified-planning/experiments/sokoban/read_instance.py', 'i_1'], text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 output = instance.stdout.split("---")
 print(instance)
 initial_state = eval(output[0].strip())
@@ -40,7 +40,7 @@ move_right = InstantaneousAction('move_right', r=IntType(0, rows - 1), c=IntType
 r = move_right.parameter('r')
 c = move_right.parameter('c')
 move_right.add_precondition(Equals(grid[r][c], P))
-move_right.add_precondition(And(Equals(grid[r][c+1], E)))
+move_right.add_precondition(Equals(grid[r][c+1], E))
 move_right.add_effect(grid[r][c], E)
 move_right.add_effect(grid[r][c+1], P)
 
@@ -48,7 +48,7 @@ move_left = InstantaneousAction('move_left', r=IntType(0, rows - 1), c=IntType(0
 r = move_left.parameter('r')
 c = move_left.parameter('c')
 move_left.add_precondition(Equals(grid[r][c], P))
-move_left.add_precondition(And(Equals(grid[r][c-1], E)))
+move_left.add_precondition(Equals(grid[r][c-1], E))
 move_left.add_effect(grid[r][c], E)
 move_left.add_effect(grid[r][c-1], P)
 
@@ -56,7 +56,7 @@ move_up = InstantaneousAction('move_up', r=IntType(0, rows - 1), c=IntType(0, co
 r = move_up.parameter('r')
 c = move_up.parameter('c')
 move_up.add_precondition(Equals(grid[r][c], P))
-move_up.add_precondition(And(Equals(grid[r-1][c], E)))
+move_up.add_precondition(Equals(grid[r-1][c], E))
 move_up.add_effect(grid[r][c], E)
 move_up.add_effect(grid[r-1][c], P)
 
@@ -64,7 +64,7 @@ move_down = InstantaneousAction('move_down', r=IntType(0, rows - 1), c=IntType(0
 r = move_down.parameter('r')
 c = move_down.parameter('c')
 move_down.add_precondition(Equals(grid[r][c], P))
-move_down.add_precondition(And(Equals(grid[r+1][c], E)))
+move_down.add_precondition(Equals(grid[r+1][c], E))
 move_down.add_effect(grid[r][c], E)
 move_down.add_effect(grid[r+1][c], P)
 

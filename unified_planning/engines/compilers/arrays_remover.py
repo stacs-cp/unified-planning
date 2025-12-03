@@ -24,7 +24,7 @@ from unified_planning.engines.results import CompilerResult
 from unified_planning.model import Problem, Action, ProblemKind, InstantaneousAction, FNode, Object, Parameter, Fluent, \
     Type, OperatorKind, Effect
 from unified_planning.model.problem_kind_versioning import LATEST_PROBLEM_KIND_VERSION
-from unified_planning.engines.compilers.utils import replace_action, updated_minimize_action_costs
+from unified_planning.engines.compilers.utils import replace_action, updated_minimize_action_costs, get_fresh_name
 from typing import Dict, List, Optional, Tuple, OrderedDict, Union
 from functools import partial
 from unified_planning.shortcuts import FALSE, UserType, And, TRUE
@@ -274,7 +274,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
             return None
 
         em = old_problem.environment.expression_manager
-        return em.create_node(node.node_type, tuple(new_args), node.variables()).simplify()
+        return em.create_node(node.node_type, tuple(new_args), tuple(node.variables())).simplify()
 
     def _transform_expression(
             self,
@@ -529,6 +529,51 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
                     if f.fluent() == fluent:
                         new_problem.set_initial_value(fluent(*f.args), v)
 
+    # ==================== AXIOMS TRANSFORMATION ====================
+
+    def _transform_axioms(self, problem: Problem, new_problem: Problem, new_to_old: Dict):
+        """Transform axioms"""
+        for axiom in problem.axioms:
+            # Check for integer parameters
+            for param in axiom.parameters:
+                if param.type.is_int_type():
+                    raise NotImplementedError(
+                        "Integer parameters in axioms are not supported!"
+                    )
+            # Clone and transform
+            new_axiom = axiom.clone()
+            new_axiom.name = get_fresh_name(new_problem, new_axiom.name)
+            new_axiom.clear_preconditions()
+            new_axiom.clear_effects()
+            new_to_old = {}
+            skip_axiom = False
+            for precondition in axiom.preconditions:
+                new_precondition = self._transform_expression(problem, new_problem, precondition)
+
+                if new_precondition is None:
+                    skip_axiom = True
+                    break
+                else:
+                    new_axiom.add_precondition(new_precondition)
+            if skip_axiom:
+                continue
+            for effect in axiom.effects:
+                new_fluent = self._transform_expression(problem, new_problem, effect.fluent)
+                new_value = self._transform_expression(problem, new_problem, effect.value)
+                new_condition = self._transform_expression(problem, new_problem, effect.condition)
+
+                if not new_condition.is_false() and new_fluent is not None:
+                    if effect.is_increase():
+                        new_axiom.add_increase_effect(new_fluent, new_value, new_condition, effect.forall)
+                    elif effect.is_decrease():
+                        new_axiom.add_decrease_effect(new_fluent, new_value, new_condition, effect.forall)
+                    else:
+                        new_axiom.add_effect(new_fluent, new_value, new_condition, effect.forall)
+
+            new_problem.add_axiom(new_axiom)
+            new_to_old[new_axiom] = axiom
+
+
     # ==================== GOAL TRANSFORMATION ====================
 
     def _transform_goals(self, problem: Problem, new_problem: Problem):
@@ -563,6 +608,7 @@ class ArraysRemover(engines.engine.Engine, CompilerMixin):
         self._transform_fluents(problem, new_problem)
         new_to_old = self._transform_actions(problem, new_problem)
         self._transform_goals(problem, new_problem)
+        self._transform_axioms(problem, new_problem, new_to_old)
 
         # Transform quality metrics
         for metric in problem.quality_metrics:
