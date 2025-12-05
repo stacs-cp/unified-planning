@@ -31,7 +31,7 @@ from unified_planning.model import (
     MinimizeActionCosts,
     RangeVariable,
     OperatorKind,
-    Object, Effect,
+    Object, Effect, Axiom, Expression,
 )
 from unified_planning.model.problem_kind_versioning import LATEST_PROBLEM_KIND_VERSION
 from unified_planning.engines.compilers.utils import (
@@ -190,7 +190,6 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
         pattern = r'\[(.*?)\]'
         indices = []
         fluent_name = fluent.name
-
         for access_expr in re.findall(pattern, fluent_name):
             if access_expr.isdigit():
                 # Constant index
@@ -199,11 +198,11 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                 # Expression with parameters - substitute directly
                 evaluated_expr = access_expr
                 for param_name, param_idx in int_params.items():
-                    if param_name in evaluated_expr:
-                        evaluated_expr = evaluated_expr.replace(
-                            param_name,
-                            str(instantiations[param_idx])
-                        )
+                    evaluated_expr = re.sub(
+                        r'\b' + re.escape(param_name) + r'\b',
+                        str(instantiations[param_idx]),
+                        evaluated_expr
+                    )
 
                 # Evaluate simple arithmetic
                 try:
@@ -729,36 +728,22 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
                     raise NotImplementedError(
                         "Integer parameters in axioms are not supported!"
                     )
-
+            params = OrderedDict((p.name, p.type) for p in axiom.parameters)
             # Clone and transform
-            new_axiom = axiom.clone()
-            new_axiom.name = get_fresh_name(new_problem, new_axiom.name)
-            new_axiom.clear_preconditions()
-            new_axiom.clear_effects()
-            skip_axiom = False
-            for precondition in axiom.preconditions:
-                new_precondition = self._transform_expression(problem, new_problem, precondition)
+            new_axiom_name = get_fresh_name(new_problem, axiom.name)
+            new_axiom = Axiom(new_axiom_name, params, axiom.environment)
 
-                if new_precondition is None:
+            skip_axiom = False
+            new_axiom.set_head(axiom.head.fluent)
+            for body in axiom.body:
+                new_body = self._transform_expression(problem, new_problem, body)
+                if new_body is None:
                     skip_axiom = True
                     break
                 else:
-                    new_axiom.add_precondition(new_precondition)
+                    new_axiom.add_body_condition(new_body)
             if skip_axiom:
                 continue
-            for effect in axiom.effects:
-                new_fluent = self._transform_expression(problem, new_problem, effect.fluent)
-                new_value = self._transform_expression(problem, new_problem, effect.value)
-                new_condition = self._transform_expression(problem, new_problem, effect.condition)
-
-                if not new_condition.is_false() and new_fluent is not None:
-                    if effect.is_increase():
-                        new_axiom.add_increase_effect(new_fluent, new_value, new_condition, effect.forall)
-                    elif effect.is_decrease():
-                        new_axiom.add_decrease_effect(new_fluent, new_value, new_condition, effect.forall)
-                    else:
-                        new_axiom.add_effect(new_fluent, new_value, new_condition, effect.forall)
-
             new_problem.add_axiom(new_axiom)
             new_to_old[new_axiom] = axiom
 
@@ -784,7 +769,7 @@ class IntParameterActionsRemover(engines.engine.Engine, CompilerMixin):
             self,
             qm: MinimizeActionCosts,
             new_to_old: Dict[Action, Tuple[Action, Tuple[int, ...]]]
-    ) -> Dict[Action, "up.model.Expression"]:
+    ) -> Dict[Action, Expression]:
         """Transform action costs, substituting integer parameters."""
         new_costs = {}
         for new_action, (old_action, instantiation) in new_to_old.items():
