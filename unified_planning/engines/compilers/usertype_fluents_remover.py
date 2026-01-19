@@ -47,7 +47,7 @@ from unified_planning.model import (
 from unified_planning.model.problem_kind_versioning import LATEST_PROBLEM_KIND_VERSION
 from unified_planning.model.walkers import UsertypeFluentsWalker
 from unified_planning.model.types import _UserType
-from unified_planning.engines.compilers.utils import replace_action
+from unified_planning.engines.compilers.utils import replace_action, get_fresh_name
 from unified_planning.model.fluent import get_all_fluent_exp
 from typing import Iterator, Dict, List, OrderedDict, Set, Tuple, Optional, Union, cast
 from functools import partial
@@ -263,23 +263,28 @@ class UsertypeFluentsRemover(engines.engine.Engine, CompilerMixin):
             new_to_old[new_action] = old_action
 
         for old_axiom in problem.axioms:
-            params = OrderedDict(((p.name, p.type) for p in old_axiom.parameters))
-            new_axiom = Axiom(old_axiom.name, _parameters=params, _env=env)
-            for p in old_axiom.preconditions:
-                new_axiom.add_precondition(
-                    utf_remover.remove_usertype_fluents_from_condition(p)
-                )
-            for e in old_axiom.effects:
-                for ne in self._convert_effect(
-                        e, problem, fluents_map, em, utf_remover
-                ):
-                    new_axiom._add_effect_instance(ne)
-            if old_axiom.simulated_effect is not None:
-                new_axiom.set_simulated_effect(
-                    self._convert_simulated_effect(
-                        old_axiom.simulated_effect, fluents_map, em, problem
+            # Check for integer parameters
+            for param in old_axiom.parameters:
+                if param.type.is_int_type():
+                    raise NotImplementedError(
+                        "Integer parameters in axioms are not supported!"
                     )
-                )
+            params = OrderedDict((p.name, p.type) for p in old_axiom.parameters)
+            # Clone and transform
+            new_axiom_name = get_fresh_name(new_problem, old_axiom.name)
+            new_axiom = Axiom(new_axiom_name, params, old_axiom.environment)
+
+            skip_axiom = False
+            new_axiom.set_head(old_axiom.head.fluent)
+            for body in old_axiom.body:
+                new_body = utf_remover.remove_usertype_fluents_from_condition(body)
+                if new_body is None:
+                    skip_axiom = True
+                    break
+                else:
+                    new_axiom.add_body_condition(new_body)
+            if skip_axiom:
+                continue
             new_problem.add_axiom(new_axiom)
             new_to_old[new_axiom] = old_axiom
 
