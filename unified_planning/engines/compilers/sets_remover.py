@@ -284,6 +284,28 @@ class SetsRemover(engines.engine.Engine, CompilerMixin):
                 or_expr.append(Equals(element, element_set))
             return Or(*or_expr)
 
+    def _transform_subseteq(self, node: FNode) -> FNode:
+        """
+        Transform: set in set_fluent(params)
+        Into: set_fluent(element, params)
+        """
+        set_expr_1 = node.args[0]
+        set_expr_2 = node.args[1]
+        assert set_expr_1.type.is_set_type() and set_expr_2.type.is_set_type(), "Args must be sets"
+        assert set_expr_1.is_fluent_exp() or set_expr_1.is_constant(), "First set expression must be a fluent or a constant"
+        assert set_expr_2.is_fluent_exp() or set_expr_2.is_constant(), "Second set expression must be a fluent or a constant"
+
+        if set_expr_2.is_fluent_exp():
+            new_fluent = self._fluent_mapping[set_expr_2.fluent().name]
+            if set_expr_1.constant_value():
+                set_elements = set_expr_1.constant_value()
+                and_expr = []
+                for e in set_elements:
+                    new_args = [e] + list(set_expr_2.args)
+                    and_expr.append(new_fluent(*new_args))
+                return And(*and_expr)
+        raise NotImplementedError(f"Case of Subseteq not implemented yet")
+
     def _transform_disjoint(self, new_problem: Problem, node: FNode) -> FNode:
         """
         Transform: set_1 ∩ set_2 == ∅
@@ -571,6 +593,8 @@ class SetsRemover(engines.engine.Engine, CompilerMixin):
             return node
         elif node.is_set_member():
             return self._transform_member(node)
+        elif node.is_set_subseteq():
+            return self._transform_subseteq(node)
         elif node.is_set_disjoint():
             return self._transform_disjoint(new_problem, node)
         elif node.is_set_cardinality():
@@ -599,6 +623,7 @@ class SetsRemover(engines.engine.Engine, CompilerMixin):
         effect: Effect
     ) -> Union[Effect, List[Effect], None]:
         """Transform a single effect based on its type."""
+        # missing effect is fluent ?
         if effect.value.is_set_add() or effect.value.is_set_remove():
             return self._transform_add_remove_effect(old_problem, new_problem, effect)
         elif effect.value.is_set_union():
@@ -609,6 +634,7 @@ class SetsRemover(engines.engine.Engine, CompilerMixin):
             return self._transform_difference_effect(new_problem, effect)
         elif effect.value.is_set_constant():
             return self._transform_set_constant_effect(new_problem, effect)
+        # consultors de sets es suporten ??
         else:
             # effect without sets
             new_fluent = self._transform_expression(old_problem, new_problem, effect.fluent)
