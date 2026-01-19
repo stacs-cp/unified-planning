@@ -205,9 +205,7 @@ class ArraysLogarithmicRemover(engines.engine.Engine, CompilerMixin):
         operation = operation_map.get(node.node_type)
         # de mom suporta equals i lt
         if operation is not None:
-            fluent = node.arg(0)
-            value = node.arg(1)
-
+            fluent, value = (node.arg(0), node.arg(1)) if node.arg(0).is_fluent_exp() else (node.arg(1), node.arg(0))
             if fluent.type.is_int_type():
                 new_fluents, new_values = self._convert_fluent_and_value(new_problem, fluent, value)
                 if operation == 'equals':
@@ -265,7 +263,6 @@ class ArraysLogarithmicRemover(engines.engine.Engine, CompilerMixin):
                         iff_node = []
                         for f, v in zip(new_fluents, new_values):
                             new_and_node = And(Not(f), v)
-
                             or_node.append(And(iff_node, new_and_node))
                             iff_node.append(Iff(f, v))
                         lt_node = Or(or_node)
@@ -299,7 +296,6 @@ class ArraysLogarithmicRemover(engines.engine.Engine, CompilerMixin):
                 #elif operation == 'minus':
                 #elif operation == 'div':
                 #elif operation == 'mult':
-
             elif fluent.type.is_array_type() and operation == 'equals':
                 new_fluents, new_values = self._convert_fluent_and_value(new_problem, fluent, value)
                 and_node = []
@@ -310,6 +306,15 @@ class ArraysLogarithmicRemover(engines.engine.Engine, CompilerMixin):
                         else:
                             and_node.append(f if v else Not(f))
                 return And(and_node)
+        elif node.is_constant() or node.is_variable_exp() or node.is_fluent_exp() or node.is_timing_exp() or node.is_parameter_exp():
+            return node
+        elif node.args:
+            new_args = [
+                self._get_new_expression(new_problem, arg)
+                for arg in node.args
+            ]
+            em = new_problem.environment.expression_manager
+            return em.create_node(node.node_type, tuple(new_args)).simplify()
         return node
 
     def _convert_value(self, value, n_bits):
@@ -375,13 +380,15 @@ class ArraysLogarithmicRemover(engines.engine.Engine, CompilerMixin):
 
         for fluent in problem.fluents:
             # Change the integer array fluents
-            if fluent.type.is_array_type():
+            internal_type = fluent.type
+            while internal_type.is_array_type():
+                internal_type = internal_type.elements_type
+            if fluent.type.is_array_type() and internal_type.is_int_type():
                 Position = new_problem.environment.type_manager.UserType('Position')
                 #new_user_type = new_problem.environment.type_manager.UserType(fluent.name.capitalize(), Position)
                 new_parameter = up.model.Parameter('p', Position)
 
                 combination = self._get_fluent_domain(fluent, True)
-                print(combination)
                 for c in combination:
                     new_object = model.Object(f'p_{"_".join(map(str, c))}', Position)
                     if not new_problem.has_object(new_object.name):

@@ -19,7 +19,7 @@ import unified_planning.engines as engines
 from unified_planning.engines.mixins.compiler import CompilationKind, CompilerMixin
 from unified_planning.engines.results import CompilerResult
 from unified_planning.exceptions import UPProblemDefinitionError
-from unified_planning.model import Problem, Action, ProblemKind, OperatorKind, FNode, AbstractProblem, Fluent, Parameter
+from unified_planning.model import Problem, Action, ProblemKind, FNode, AbstractProblem, Fluent, Parameter, Variable
 from unified_planning.model.problem_kind_versioning import LATEST_PROBLEM_KIND_VERSION
 from unified_planning.engines.compilers.utils import replace_action, updated_minimize_action_costs
 from typing import Dict, List, Optional, Union, Set
@@ -228,8 +228,9 @@ class CountIntRemover(engines.engine.Engine, CompilerMixin):
                     fluent_name = f'count_{len(self._count_registry)}'
                     self._count_registry[fluent_name] = arg
                     count_parameters = [Parameter(str(a), a.type) for a in arg.args if a.is_parameter_exp()]
+                    count_variables = [Variable(str(a), a.type) for a in arg.args if a.is_variable_exp()]
                     # Evaluate initial value
-                    if not count_parameters:
+                    if not count_parameters and not count_variables:
                         initial_eval = self._evaluate_expression(problem, arg)
                         assert initial_eval.is_bool_constant(), \
                             f"Count argument initial value must be boolean constant, got: {initial_eval}"
