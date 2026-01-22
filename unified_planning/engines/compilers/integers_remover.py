@@ -3208,7 +3208,7 @@ class IntegersRemover(engines.engine.Engine, CompilerMixin):
         new_to_old = self._transform_actions(problem, new_problem)
 
         # ========== Transform Axioms ==========
-
+        self._transform_axioms(problem, new_problem, new_to_old)
 
         # ========== Transform Goals ==========
         for goal in problem.goals:
