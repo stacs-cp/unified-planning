@@ -1,4 +1,5 @@
-# Copyright 2021-2023 AIPlan4EU project
+# Copyright 2023 AIPlan4EU project
+# Copyright 2024-2026 Unified Planning library and its maintainers
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,7 +14,10 @@
 # limitations under the License.
 #
 
-from unified_planning.interop.from_pddl import (
-    check_ai_pddl_requirements,
-    convert_problem_from_ai_pddl,
+
+from unified_planning.model.contingent.execution_environment import (
+    ExecutionEnvironment,
+    SimulatedExecutionEnvironment,
 )
+from unified_planning.model.contingent.sensing_action import SensingAction
+from unified_planning.model.contingent.contingent_problem import ContingentProblem

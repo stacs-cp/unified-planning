@@ -10,7 +10,7 @@ We currently support the following operation modes:
 OneshotPlanner
 --------------
 The simplest and more obvious operation mode is called `OneshotPlanner`. The semantics of this OM is very simple: given a problem, return a solution plan for it or declare it unsolvable. This is the usual planning query which is the object of the International Planning Competition and is arguably the expected basic functionality of any “planner”.
-The example below shows a basic usage of the OM: the `OneshotPlanner` constructor selects a planning engine suitable for the given kind of problem and the OM defines a single ``solve(p: AbstractProblem)`` method to be implemented by the engine. This method returns a `PlanGenerationResult` object containing information about the the generated plan (if any), the metrics being optimized, log messages (if any) and a status flag indicating if the problem has been solved, under which optimality guarantee or if the planner encountered errors or proved the problem unsatisfiable.
+The example below shows a basic usage of the OM: the `OneshotPlanner` constructor selects a planning engine suitable for the given kind of problem and the OM defines a single ``solve(p: AbstractProblem)`` method to be implemented by the engine. This method returns a `PlanGenerationResult` object containing information about the generated plan (if any), the metrics being optimized, log messages (if any) and a status flag indicating if the problem has been solved, under which optimality guarantee or if the planner encountered errors or proved the problem unsatisfiable.
 
 .. literalinclude:: ./code_snippets/oneshot_planner.py
     :caption: OneshotPlanner with automatic Engine selection
@@ -79,6 +79,46 @@ This OM defines an interactive simulator for exploring the planning space of a g
     :lines: 51-66
 
 Each method of the `SequentialSimulator` is stateless, meaning that it is not required to simulate a sequence of states in order, but it is possible to “jump” among different states of the same problem.
+
+ActionSelector
+--------------
+
+The ``ActionSelector`` OM defines an online decision interface for choosing the next action to execute in a closed-loop execution setting. Unlike planners, which compute a full plan in one call, an action selector returns one action at a time and updates its internal policy from execution observations.
+
+This OM is useful in at least three settings:
+
+* policy-driven online control over a planning model;
+* contingent execution loops where sensing actions reveal hidden fluents;
+* prototyping custom strategy logic (e.g., rule-based or learned selectors) that consumes observations incrementally.
+
+The API is exposed through both the engine factory and shortcuts:
+
+* ``Factory.ActionSelector(problem, name=None, params=None)``
+* ``shortcuts.ActionSelector(problem, name=None, params=None)``
+
+Custom selector engines implement ``ActionSelectorMixin`` and provide:
+
+* ``get_action()`` to return the next ``ActionInstance``;
+* ``update(observation)`` to update internal policy state from a map of observed fluent expressions to observed values.
+
+Configuration details:
+
+* Register a custom selector in a specific environment with ``env.factory.add_engine(...)``.
+* Select by ``name`` to force a specific selector implementation.
+* Omit ``name`` to let UP choose among installed selector engines that support ``problem.kind``.
+* ``params`` are forwarded to the selector constructor (engine-specific options).
+
+.. literalinclude:: ./code_snippets/action_selector_and_execution_environment.py
+    :caption: Implementing a custom ActionSelector
+    :start-after: # [action-selector-class-start]
+    :end-before: # [action-selector-class-end]
+
+.. literalinclude:: ./code_snippets/action_selector_and_execution_environment.py
+    :caption: Minimal ActionSelector flow
+    :start-after: # [action-selector-minimal-start]
+    :end-before: # [action-selector-minimal-end]
+
+For an end-to-end contingent execution loop that combines ``ActionSelector`` with a simulated execution environment, see the :doc:`Execution Environment API page <api/model/contingent/ExecutionEnvironment>` and the :doc:`ActionSelector and Contingent Execution Environment notebook <notebooks/15-action-selector-and-execution-environment>`.
 
 Compiler
 --------

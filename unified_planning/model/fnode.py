@@ -183,9 +183,13 @@ class FNode(object):
             or self.node_type == OperatorKind.OBJECT_EXP
         )
 
-    def constant_value(self) -> Union[bool, int, Fraction]:
+    def constant_value(self) -> Union[bool, int, Fraction, list, set, tuple]:
         """Returns the constant value stored in this expression."""
         assert self.is_constant()
+        if self.node_type == OperatorKind.ARRAY_CONSTANT:
+            return list(self._content.payload)
+        if self.node_type == OperatorKind.SET_CONSTANT:
+            return set(self._content.payload)
         return self._content.payload
 
     def bool_constant_value(self) -> bool:
