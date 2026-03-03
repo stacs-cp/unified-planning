@@ -64,13 +64,25 @@ class FNode(object):
             ),
             OperatorKind.INT_CONSTANT: lambda: str(self._content.payload),
             OperatorKind.REAL_CONSTANT: lambda: str(self._content.payload),
+            OperatorKind.ARRAY_CONSTANT: lambda: str(self._content.payload),
+            OperatorKind.SET_CONSTANT: lambda: str(self._content.payload),
             OperatorKind.FLUENT_EXP: lambda: (
                 self._content.payload.name
                 + self.get_nary_expression_string(", ", self.args)
             ),
             OperatorKind.DOT: lambda: f"{self._content.payload}.{self.arg(0)}",
+            OperatorKind.SET_MEMBER: lambda: f"{self.arg(0)} in {self.arg(1)}",
+            OperatorKind.SET_SUBSETEQ: lambda: f"{self.arg(0)} in {self.arg(1)}",
+            OperatorKind.SET_DISJOINT: lambda: f"{self.arg(0)} ∩ {self.arg(1)} == ∅",
+            OperatorKind.SET_CARDINALITY: lambda: f"len({self.arg(0)})",
+            OperatorKind.SET_ADD: lambda: f"{self.arg(0)} u {self.arg(1)}",
+            OperatorKind.SET_UNION: lambda: f"{self.arg(0)} u {self.arg(1)}",
+            OperatorKind.SET_INTERSECT: lambda: f"{self.arg(0)} ∩ {self.arg(1)}",
+            OperatorKind.SET_REMOVE: lambda: f"{self.arg(0)} - {self.arg(1)}",
+            OperatorKind.SET_DIFFERENCE: lambda: f"{self.arg(0)} - {self.arg(1)}",
             OperatorKind.PARAM_EXP: lambda: self._content.payload.name,
             OperatorKind.VARIABLE_EXP: lambda: self._content.payload.name,
+            OperatorKind.RANGE_VARIABLE_EXP: lambda: self._content.payload.name,
             OperatorKind.OBJECT_EXP: lambda: self._content.payload.name,
             OperatorKind.TIMING_EXP: lambda: str(self._content.payload),
             OperatorKind.AND: lambda: (
@@ -99,6 +111,7 @@ class FNode(object):
                 f"Sometime-After{self.get_nary_expression_string(', ', self.args)}"
             ),
             OperatorKind.AT_MOST_ONCE: lambda: f"At-Most-Once({self.arg(0)})",
+            OperatorKind.COUNT: lambda: f"Count({self.get_nary_expression_string(', ', self.args)})",
             OperatorKind.PLUS: lambda: (
                 self.get_nary_expression_string(" + ", self.args)
             ),
@@ -199,6 +212,11 @@ class FNode(object):
         assert self.is_array_constant()
         return list(self._content.payload)
 
+    def set_constant_value(self) -> Set:
+        """Returns the `set` constant value stored in this expression."""
+        assert self.is_set_constant()
+        return set(self._content.payload)
+
     def fluent(self) -> "unified_planning.model.fluent.Fluent":
         """Return the `Fluent` stored in this expression."""
         assert self.is_fluent_exp()
@@ -224,10 +242,10 @@ class FNode(object):
         assert self.is_range_variable_exp()
         return self._content.payload
 
-    def range_variables(self) -> "unified_planning.model.range_variable.RangeVariable":
-        """Return the variable of the RangeVariableExp."""
+    def range_variables(self) -> List["unified_planning.model.range_variable.RangeVariable"]:
+        """Return the `RangeVariables` of the `Exists` or `Forall`."""
         assert self.is_range_variable_exp()
-        return self._content.payload
+        return list(self._content.payload)
 
     def object(self) -> "unified_planning.model.object.Object":
         """Return the `Object` stored in this expression."""
@@ -364,7 +382,7 @@ class FNode(object):
         return self.node_type == OperatorKind.VARIABLE_EXP
 
     def is_range_variable_exp(self) -> bool:
-        """Test whether the node is a :class:`~unified_planning.model.Variable` Expression."""
+        """Test whether the node is a :class:`~unified_planning.model.RngeVariable` Expression."""
         return self.node_type == OperatorKind.RANGE_VARIABLE_EXP
 
     def is_object_exp(self) -> bool:
