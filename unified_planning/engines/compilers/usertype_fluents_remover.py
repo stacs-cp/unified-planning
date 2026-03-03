@@ -42,12 +42,12 @@ from unified_planning.model import (
     Object,
     Expression,
     DurationInterval,
-    UPState,
+    UPState, Axiom,
 )
 from unified_planning.model.problem_kind_versioning import LATEST_PROBLEM_KIND_VERSION
 from unified_planning.model.walkers import UsertypeFluentsWalker
 from unified_planning.model.types import _UserType
-from unified_planning.engines.compilers.utils import replace_action
+from unified_planning.engines.compilers.utils import replace_action, get_fresh_name
 from unified_planning.model.fluent import get_all_fluent_exp
 from typing import Iterator, Dict, List, OrderedDict, Set, Tuple, Optional, Union, cast
 from functools import partial
@@ -90,6 +90,7 @@ class UsertypeFluentsRemover(engines.engine.Engine, CompilerMixin):
         supported_kind.set_fluents_type("INT_FLUENTS")
         supported_kind.set_fluents_type("REAL_FLUENTS")
         supported_kind.set_fluents_type("OBJECT_FLUENTS")
+        supported_kind.set_fluents_type("DERIVED_FLUENTS")
         supported_kind.set_conditions_kind("NEGATIVE_CONDITIONS")
         supported_kind.set_conditions_kind("DISJUNCTIVE_CONDITIONS")
         supported_kind.set_conditions_kind("EQUALITIES")
@@ -195,7 +196,11 @@ class UsertypeFluentsRemover(engines.engine.Engine, CompilerMixin):
                 fluents_map[fluent] = new_fluent
                 new_problem.add_fluent(new_fluent)
             else:
-                new_problem.add_fluent(fluent)
+                default_value = problem.fluents_defaults.get(fluent, None)
+                new_problem.add_fluent(fluent, default_initial_value=default_value)
+                for f, v in problem.explicit_initial_values.items():
+                    if f.fluent() == fluent and v != default_value:
+                        new_problem.set_initial_value(fluent(*f.args), v)
 
         used_names = self._get_names_in_problem(problem)
         utf_remover = UsertypeFluentsWalker(fluents_map, used_names, env)
@@ -256,6 +261,32 @@ class UsertypeFluentsRemover(engines.engine.Engine, CompilerMixin):
                 )
             new_problem.add_action(new_action)
             new_to_old[new_action] = old_action
+
+        for old_axiom in problem.axioms:
+            # Check for integer parameters
+            for param in old_axiom.parameters:
+                if param.type.is_int_type():
+                    raise NotImplementedError(
+                        "Integer parameters in axioms are not supported!"
+                    )
+            params = OrderedDict((p.name, p.type) for p in old_axiom.parameters)
+            # Clone and transform
+            new_axiom_name = get_fresh_name(new_problem, old_axiom.name)
+            new_axiom = Axiom(new_axiom_name, params, old_axiom.environment)
+
+            skip_axiom = False
+            new_axiom.set_head(old_axiom.head.fluent)
+            for body in old_axiom.body:
+                new_body = utf_remover.remove_usertype_fluents_from_condition(body)
+                if new_body is None:
+                    skip_axiom = True
+                    break
+                else:
+                    new_axiom.add_body_condition(new_body)
+            if skip_axiom:
+                continue
+            new_problem.add_axiom(new_axiom)
+            new_to_old[new_axiom] = old_axiom
 
         for g in problem.goals:
             new_problem.add_goal(utf_remover.remove_usertype_fluents_from_condition(g))

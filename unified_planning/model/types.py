@@ -28,12 +28,24 @@ class Type(ABC):
         """Returns `True` iff is `boolean Type`."""
         return False
 
+    def is_derived_bool_type(self) -> bool:
+        """Returns `True` iff is `derived bool Type`."""
+        return False
+
     def is_user_type(self) -> bool:
         """Returns `True` iff is a `user Type`."""
         return False
 
     def is_real_type(self) -> bool:
         """Returns `True` iff is `real` `Type`."""
+        return False
+
+    def is_array_type(self) -> bool:
+        """Returns true iff is a list type."""
+        return False
+
+    def is_set_type(self) -> bool:
+        """Returns true iff is a list type."""
         return False
 
     def is_int_type(self) -> bool:
@@ -74,6 +86,15 @@ class _BoolType(Type):
         """Returns true iff is boolean type."""
         return True
 
+class _DerivedBoolType(Type):
+    """Represents the derived bool type."""
+
+    def __repr__(self) -> str:
+        return "derived bool"
+
+    def is_derived_bool_type(self) -> bool:
+        """Returns true iff is derived bool type."""
+        return True
 
 class _TimeType(Type):
     """Represent the type for an absolute Time"""
@@ -225,7 +246,50 @@ class _RealType(Type):
         return True
 
 
+class _ArrayType(Type):
+    """Represents an array composed with a number (size) of elements of a given type (elements_type)."""
+    def __init__(self, size: int, elements_type: Type):
+        Type.__init__(self)
+        self._size = size
+        self._elements_type = elements_type
+
+    def __repr__(self) -> str:
+        return f"array[{self._size}, {self._elements_type}]"
+
+    def is_array_type(self) -> bool:
+        """Returns true iff is a list type."""
+        return True
+
+    @property
+    def elements_type(self) -> Type:
+        """Returns the type of elements in this list."""
+        return self._elements_type
+
+    @property
+    def size(self) -> int:
+        """Returns the type of elements in this list."""
+        return self._size
+
+class _SetType(Type):
+    """Represents a set composed with a given type (elements_type)."""
+    def __init__(self, elements_type: Type):
+        Type.__init__(self)
+        self._elements_type = elements_type
+
+    def __repr__(self) -> str:
+        return f"set{{{self._elements_type if self._elements_type is not None else ''}}}"
+
+    def is_set_type(self) -> bool:
+        """Returns true iff is a set type."""
+        return True
+
+    @property
+    def elements_type(self) -> Type:
+        """Returns the type of elements in this set."""
+        return self._elements_type
+
 BOOL = _BoolType()
+DERIVED_BOOL = _DerivedBoolType()
 TIME = _TimeType()
 
 
@@ -242,6 +306,8 @@ def domain_size(
     :return: The number of values that the given `Type` can have in the given `Problem`.
     """
     if typename.is_bool_type():
+        return 2
+    elif typename.is_derived_bool_type():
         return 2
     elif typename.is_user_type():
         return len(list(objects_set.objects(typename)))
@@ -299,10 +365,30 @@ def is_compatible_type(
     """
     if t_left == t_right:
         return True
+    if (t_left.is_derived_bool_type() and t_right.is_bool_type()) or (
+            t_left.is_bool_type() and t_right.is_derived_bool_type()):
+        return True
     if t_left.is_user_type() and t_right.is_user_type():
         assert isinstance(t_left, _UserType) and isinstance(t_right, _UserType)
         # compatible if t_right is a subclass of t_left
         return t_left in t_right.ancestors
+    if t_left.is_array_type() or t_right.is_array_type():
+        if t_left.is_array_type() and t_right.is_array_type():
+            assert isinstance(t_left, _ArrayType) and isinstance(t_right, _ArrayType)
+            assert t_left.size == t_right.size
+            return is_compatible_type(t_left.elements_type, t_right.elements_type)
+        else:
+            return False
+    if t_left.is_set_type() or t_right.is_set_type():
+        if t_right.is_set_type() and t_right.is_set_type():
+            assert (isinstance(t_left, _SetType) and
+                    isinstance(t_right, _SetType))
+            if t_left.elements_type is None or t_right.elements_type is None:
+                return True
+            else:
+                return is_compatible_type(t_left.elements_type, t_right.elements_type)
+        else:
+            return False
     if not (
         (t_left.is_int_type() and t_right.is_int_type())
         or (t_left.is_real_type() and t_right.is_real_type())

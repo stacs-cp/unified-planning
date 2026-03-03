@@ -23,6 +23,7 @@ import unified_planning.model.types
 import unified_planning.model.multi_agent
 from unified_planning.environment import get_environment
 from unified_planning.model import *
+from unified_planning.model.expression import SetExpression
 from unified_planning.model.tamp import *
 from unified_planning.model.problem_kind_versioning import LATEST_PROBLEM_KIND_VERSION
 from unified_planning.engines import (
@@ -35,6 +36,22 @@ from unified_planning.engines import (
 from unified_planning.plans import PlanKind
 from typing import IO, Any, Iterable, Union, Dict, Optional, Sequence, List
 from fractions import Fraction
+
+def Count(*args: Union[Expression, Iterable[Expression]]) -> FNode:
+    """
+    | Creates an expression of the form:
+
+        * ``Count(a,b,c)``
+        * ``Count([a,b,c])``
+
+    | This function has polymorphic n-arguments.
+    | Restriction: Arguments must be ``boolean``.
+
+    :param \\*args: Either an ``Iterable`` of ``boolean expressions``, like ``[a, b, c]``, or an unpacked version
+        of it, like ``a, b, c``.
+    :return: The ``COUNT`` expression created.
+    """
+    return get_environment().expression_manager.Count(*args)
 
 
 def And(*args: Union[BoolExpression, Iterable[BoolExpression]]) -> FNode:
@@ -131,7 +148,7 @@ def Iff(left: BoolExpression, right: BoolExpression) -> FNode:
 
 
 def Exists(
-    expression: BoolExpression, *vars: "unified_planning.model.Variable"
+    expression: BoolExpression, *vars: Union["unified_planning.model.Variable", "unified_planning.model.range_variable.RangeVariable"]
 ) -> FNode:
     """
     Creates an expression of the form:
@@ -149,7 +166,7 @@ def Exists(
 
 
 def Forall(
-    expression: BoolExpression, *vars: "unified_planning.model.Variable"
+    expression: BoolExpression, *vars: Union["unified_planning.model.Variable", "unified_planning.model.RangeVariable"]
 ) -> FNode:
     """Creates an expression of the form:
         ``Forall (var[0]... var[n]) | expression``
@@ -264,6 +281,15 @@ def VariableExp(var: "unified_planning.model.Variable") -> FNode:
     """
     return get_environment().expression_manager.VariableExp(var)
 
+def RangeVariableExp(var: "unified_planning.model.RangeVariable") -> FNode:
+    """
+    Returns an expression for the given ``RangeVariable``.
+
+    :param var: The ``RangeVariable`` that must be promoted to ``FNode``.
+    :return: The ``FNode`` containing the given ``range_variable`` as his payload.
+    """
+    return get_environment().expression_manager.RangeVariableExp(var)
+
 
 def ObjectExp(obj: "unified_planning.model.Object") -> FNode:
     """
@@ -294,6 +320,9 @@ def FALSE() -> FNode:
     """Return the boolean constant ``False``."""
     return get_environment().expression_manager.FALSE()
 
+def EMPTY_SET() -> FNode:
+    """Return the boolean constant ``False``."""
+    return get_environment().expression_manager.EMPTY_SET()
 
 def Bool(value: bool) -> FNode:
     """
@@ -462,10 +491,110 @@ def Dot(
     """
     return get_environment().expression_manager.Dot(agent, fluent_exp)
 
+def SetMember(element: Expression, set_expr: SetExpression) -> FNode:
+    """
+    Creates an expression of the form:
+        ``element in set_expr``.
+
+    :param element: The element to check if it is a member of ``set_expr``.
+    :param set_expr: The set expression (can be a fluent returning a set or a set constant).
+    :return: The created ``SetMember`` expression.
+    """
+    return get_environment().expression_manager.SetMember(element, set_expr)
+
+def SetSubseteq(set_expr1: SetExpression, set_expr2: SetExpression) -> FNode:
+    """
+    Creates an expression of the form:
+        ``set_expr1 in set_expr2``.
+
+    :param set_expr1: The set expression to check if it is a subseteq of ``set_expr2``.
+    :param set_expr2: The set expression (can be a fluent returning a set or a set constant).
+    :return: The created ``SetMember`` expression.
+    """
+    return get_environment().expression_manager.SetSubseteq(set_expr1, set_expr2)
+
+
+def SetDisjoint(set_expr1: SetExpression, set_expr2: SetExpression) -> FNode:
+    """
+    Creates an expression of the form:
+        ``set_expr1.disjoint(set_expr2)``.
+
+    :param set_expr1: The set expression (can be a fluent returning a set or a set constant).
+    :param set_expr2: The set expression (can be a fluent returning a set or a set constant).
+    :return: The created ``SetDisjoint`` expression.
+    """
+    return get_environment().expression_manager.SetDisjoint(set_expr1, set_expr2)
+
+def SetCardinality(set_expr: SetExpression) -> FNode:
+    """
+    Creates an expression of the form:
+        ``len(set_expr)``.
+
+    :param set_expr: The set expression (can be a fluent returning a set or a set constant).
+    :return: The created ``SetCardinality`` expression.
+    """
+    return get_environment().expression_manager.SetCardinality(set_expr)
+
+def SetAdd(element: Expression, set_expr: SetExpression) -> FNode:
+    """
+    Creates an expression of the form:
+        ``set_expr.add(element)``.
+
+    :param set_expr: The set expression (can be a fluent returning a set or a set constant).
+    :return: The created ``SetAdd`` expression.
+    """
+    return get_environment().expression_manager.SetAdd(element, set_expr)
+
+def SetRemove(element: Expression, set_expr: SetExpression) -> FNode:
+    """
+    Creates an expression of the form:
+        ``set_expr.remove(element)``.
+
+    :param set_expr: The set expression (can be a fluent returning a set or a set constant).
+    :return: The created ``SetRemove`` expression.
+    """
+    return get_environment().expression_manager.SetRemove(element, set_expr)
+
+def SetUnion(set_expr1: SetExpression, set_expr2: SetExpression) -> FNode:
+    """
+    Creates an expression of the form:
+        ``set_expr1.union(set_expr2)``.
+
+    :param set_expr1: The set expression (can be a fluent returning a set or a set constant).
+    :param set_expr2: The set expression (can be a fluent returning a set or a set constant).
+    :return: The created ``SetUnion`` expression.
+    """
+    return get_environment().expression_manager.SetUnion(set_expr1, set_expr2)
+
+def SetIntersection(set_expr1: SetExpression, set_expr2: SetExpression) -> FNode:
+    """
+    Creates an expression of the form:
+        ``set_expr1.intersection(set_expr2)``.
+
+    :param set_expr1: The set expression (can be a fluent returning a set or a set constant).
+    :param set_expr2: The set expression (can be a fluent returning a set or a set constant).
+    :return: The created ``SetIntersection`` expression.
+    """
+    return get_environment().expression_manager.SetIntersection(set_expr1, set_expr2)
+
+def SetDifference(set_expr1: SetExpression, set_expr2: SetExpression) -> FNode:
+    """
+    Creates an expression of the form:
+        ``set_expr1.difference(set_expr2)``.
+
+    :param set_expr1: The set expression (can be a fluent returning a set or a set constant).
+    :param set_expr2: The set expression (can be a fluent returning a set or a set constant).
+    :return: The created ``SetDifference`` expression.
+    """
+    return get_environment().expression_manager.SetDifference(set_expr1, set_expr2)
 
 def BoolType() -> unified_planning.model.types.Type:
     """Returns the global environment's boolean type."""
     return get_environment().type_manager.BoolType()
+
+def DerivedBoolType() -> unified_planning.model.types.Type:
+    """Returns the global environment's boolean type."""
+    return get_environment().type_manager.DerivedBoolType()
 
 
 def IntType(
@@ -496,6 +625,15 @@ def RealType(
     """
     return get_environment().type_manager.RealType(lower_bound, upper_bound)
 
+def ArrayType(
+        size: int, elements_type: Type = None
+) -> unified_planning.model.types.Type:
+    return get_environment().type_manager.ArrayType(size, elements_type)
+
+def SetType(
+        elements_type: Type = None
+) -> unified_planning.model.types.Type:
+    return get_environment().type_manager.SetType(elements_type)
 
 def UserType(
     name: str, father: Optional[Type] = None

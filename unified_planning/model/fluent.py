@@ -22,13 +22,13 @@ import unified_planning as up
 from unified_planning.model.types import domain_size, domain_item, _IntType
 from unified_planning.environment import get_environment, Environment
 from unified_planning.exceptions import UPTypeError
-from typing import List, OrderedDict, Optional, Union, Iterator, cast
+from typing import List, OrderedDict, Optional, Union, Iterator, cast, Tuple
 
 
 class Fluent:
     """Represents a fluent."""
 
-    def __init__(
+    def     __init__(
         self,
         name: str,
         typename: Optional["up.model.types.Type"] = None,
@@ -39,6 +39,7 @@ class Fluent:
             ]
         ] = None,
         environment: Optional[Environment] = None,
+        undefined_positions: Optional[List[Tuple[int]]] = None,
         **kwargs: "up.model.types.Type",
     ):
         self._env = get_environment(environment)
@@ -50,6 +51,17 @@ class Fluent:
                 typename
             ), "type of parameter does not belong to the same environment of the fluent"
             self._typename = typename
+        sizes = None
+        if undefined_positions is not None:
+            assert typename.is_array_type(), "'undefined_positions' parameter is only allowed with ArrayType Fluents."
+            for position in undefined_positions:
+                assert type(position) == tuple, f"Position {position} not in the correct format: tuple"
+        self._undefined_positions = undefined_positions
+        if self._typename.is_array_type():
+            sizes = typename.size
+            if typename.elements_type.is_array_type():
+                sizes = (sizes, typename.elements_type.size)
+        self._sizes: Optional[Tuple[int]] = sizes
         self._signature: List["up.model.parameter.Parameter"] = []
         if _signature is not None:
             assert len(kwargs) == 0
@@ -88,7 +100,9 @@ class Fluent:
         if self.arity > 0:
             sign_items = [f"{p.name}={str(p.type)}" for p in self.signature]
             sign = f'[{", ".join(sign_items)}]'
-        return f"{str(self.type)} {self.name}{sign}"
+        return f"{str(self.type)} {self.name}{sign} - excluding: {self.undefined_positions}" \
+            if self.undefined_positions is not None \
+            else f"{str(self.type)} {self.name}{sign}"
 
     def __eq__(self, oth: object) -> bool:
         if isinstance(oth, Fluent):
@@ -107,6 +121,40 @@ class Fluent:
             res += hash(p)
         return res ^ hash(self._name)
 
+    def __getitem__(self, index: Union["up.model.parameter.Parameter", "up.model.fnode.FNode", "up.model.range_variable.RangeVariable", int]):
+        assert self.type.is_array_type(), "The Fluent has no array type"
+        if isinstance(index, up.model.fnode.FNode):
+            return Fluent(self.name+'['+str(index)+']', self.type.elements_type, self.signature, self.environment)
+        if type(index) is int:
+            index = up.model.parameter.Parameter(str(index), self._env.type_manager.IntType(index,index), self.environment)
+        assert index.type.is_int_type() or index is up.model.range_variable.RangeVariable, "The parameter has no integer type "
+        return Fluent(self.name+'['+str(index.name)+']', self.type.elements_type, self.signature, self.environment)
+
+    def add(self, element):
+        """ Adds `element` to `Fluent` that has a Set Type """
+        assert self.type.is_set_type(), "The Fluent must be a set type to use add()"
+        return self._env.expression_manager.SetAdd(element, self)
+
+    def remove(self, element):
+        """ Removes `element` from `Fluent` that has a Set Type """
+        assert self.type.is_set_type(), "The Fluent must be a set type to use remove()"
+        return self._env.expression_manager.SetRemove(element, self)
+
+    def union(self, other):
+        """ Returns a new set with all items from both sets. """
+        assert self.type.is_set_type(), "The Fluent must be a set type to use union()"
+        return self._env.expression_manager.SetUnion(self, other)
+
+    def intersection(self, other):
+        """ Return a set that contains the items that exist in both sets. """
+        assert self.type.is_set_type(), "The Fluent must be a set type to use intersection()"
+        return self._env.expression_manager.SetIntersection(self, other)
+
+    def difference(self, other):
+        """ Return a set that contains the items that only exist in the set, and not in `other`. """
+        assert self.type.is_set_type(), "The Fluent must be a set type to use difference()"
+        return self._env.expression_manager.SetDifference(self, other)
+
     @property
     def name(self) -> str:
         """Returns the `Fluent` `name`."""
@@ -116,6 +164,16 @@ class Fluent:
     def type(self) -> "up.model.types.Type":
         """Returns the `Fluent` `Type`."""
         return self._typename
+
+    @property
+    def undefined_positions(self) -> Optional[List[Tuple[int]]]:
+        """Returns the `Fluent` `Type`."""
+        return self._undefined_positions
+
+    @property
+    def sizes(self) -> Optional[Tuple[int]]:
+        """Returns the `Fluent` `Type`."""
+        return self._sizes
 
     @property
     def signature(self) -> List["up.model.parameter.Parameter"]:

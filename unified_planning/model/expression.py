@@ -28,13 +28,14 @@ from unified_planning.exceptions import (
     UPValueError,
 )
 from fractions import Fraction
-from typing import Optional, Iterable, List, Union, Dict, Tuple, Iterator, Sequence
+from typing import Optional, Iterable, List, Union, Dict, Tuple, Iterator, Sequence, Set
 
 BoolExpression = Union[
     "up.model.fnode.FNode",
     "up.model.fluent.Fluent",
     "up.model.parameter.Parameter",
     "up.model.variable.Variable",
+    "up.model.range_variable.RangeVariable",
     bool,
 ]
 NumericConstant = Union[int, float, Fraction, str]
@@ -51,10 +52,20 @@ TimeExpression = Union[
     float,
     Fraction,
 ]
+ListExpression = Union[
+    list,
+    List["Expression"],
+]
+SetExpression = Union[
+    set,
+    Set["Expression"],
+]
 Expression = Union[
     TimeExpression,
     BoolExpression,
     ConstantExpression,
+    ListExpression,
+    SetExpression,
 ]
 
 
@@ -91,6 +102,10 @@ class ExpressionManager(object):
         self.false_expression = self.create_node(
             node_type=OperatorKind.BOOL_CONSTANT, args=tuple(), payload=False
         )
+        # empty set as a constant
+        self.empty_set_expression = self.create_node(
+            node_type=OperatorKind.SET_CONSTANT, args=tuple(), payload=tuple()
+        )
         return
 
     def _polymorph_args_to_iterator(
@@ -104,7 +119,9 @@ class ExpressionManager(object):
         are both valid, and they are converted into (a,b,c)
         """
         for a in args:
-            if isinstance(a, Iterable) and not isinstance(a, str):
+            if isinstance(a, (Set, set)):
+                yield a
+            elif isinstance(a, Iterable) and not isinstance(a, str):
                 for p in a:
                     yield p
             else:
@@ -137,6 +154,11 @@ class ExpressionManager(object):
                     e.environment == self.environment
                 ), "Variable has a different environment of the expression manager"
                 res.append(self.VariableExp(e))
+            elif isinstance(e, up.model.range_variable.RangeVariable):
+                assert (
+                    e.environment == self.environment
+                ), "RangeVariable has a different environment of the expression manager"
+                res.append(self.RangeVariableExp(e))
             elif isinstance(e, up.model.object.Object):
                 assert (
                     e.environment == self.environment
@@ -160,6 +182,10 @@ class ExpressionManager(object):
                 else:
                     assert isinstance(number, Fraction)
                     res.append(self.Real(number))
+            elif isinstance(e, List):
+                res.append(self.Array(e))
+            elif isinstance(e, Set):
+                res.append(self.Set(e))
             else:
                 assert (
                     e.environment == self.environment
@@ -177,12 +203,16 @@ class ExpressionManager(object):
                 "up.model.object.Object",
                 "up.model.parameter.Parameter",
                 "up.model.variable.Variable",
+                "up.model.range_variable.RangeVariable",
                 "up.model.timing.Timing",
                 str,
                 bool,
                 int,
                 Fraction,
-                Tuple["up.model.variable.Variable", ...],
+                list,
+                tuple,
+                set,
+                Tuple[Union["up.model.variable.Variable", "up.model.range_variable.RangeVariable"], ...],
             ]
         ] = None,
     ) -> "up.model.fnode.FNode":
@@ -209,6 +239,208 @@ class ExpressionManager(object):
             self.expressions[content] = n
             self.environment.type_checker.get_type(n)
             return n
+
+    def Count(
+        self, *args: Union[BoolExpression, Iterable[BoolExpression]]
+    ) -> "up.model.fnode.FNode":
+        """
+        | Creates an expression of the form:
+
+            * ``Count(a,b,c)``
+            * ``Count([a,b,c])``
+
+        | This function has polymorphic n-arguments.
+        | Restriction: Arguments must be ``boolean``.
+
+        :param \\*args: Either an ``Iterable`` of ``boolean expressions``, like ``[a, b, c]``, or an unpacked version
+            of it, like ``a, b, c``.
+        :return: The ``COUNT`` expression created.
+        """
+        tuple_args = tuple(self.auto_promote(*args))
+
+        if len(tuple_args) == 0:
+            return self.Int(0)
+        else:
+            return self.create_node(node_type=OperatorKind.COUNT, args=tuple_args)
+
+    def ArrayIndex(
+            self, array_expr: Expression, index: Expression
+    ) -> "up.model.fnode.FNode":
+        """
+        | Creates an expression of the form:
+
+            * ``array_expr[index]``
+
+        | Restriction: ``array_expr`` must be of ``array type`` and ``index`` must be an integer expression.
+
+        :param array_expr: The array expression (can be a fluent returning an array or a constant array).
+        :param index: The index expression.
+        :return: The ``ARRAY_INDEX`` expression created.
+        """
+        array_expr, index = self.auto_promote(array_expr, index)
+        return self.create_node(node_type=OperatorKind.ARRAY_INDEX, args=(array_expr, index))
+
+    def SetMember(
+        self, element: Expression, set_expr: SetExpression
+    ) -> "up.model.fnode.FNode":
+        """
+        | Creates an expression of the form:
+
+            * ``SetMember(element,set_expr)``
+
+        | Restriction: ``set_expr`` must be of ``set type`` and ``element`` must be of the same type as the elements
+        of the set.
+
+        :param element: The element to check if it is a member of ``set_expr``.
+        :param set_expr: The set expression (can be a fluent returning a set or a set constant).
+        :return: The ``MEMBER`` expression created.
+        """
+        element, set_expr = self.auto_promote(element, set_expr)
+        return self.create_node(node_type=OperatorKind.SET_MEMBER, args=(element, set_expr))
+
+    def SetSubseteq(
+        self, set_expr1: SetExpression, set_expr2: SetExpression
+    ) -> "up.model.fnode.FNode":
+        """
+        | Creates an expression of the form:
+
+            * ``SetSubseteq(set_expr1,set_expr2)``
+
+        | Restriction: ``set_expr1`` and ``set_expr1`` must be of ``set type`` and the elements have to be of the same type.
+
+        :param set_expr1: The set expression to check if it is a subseteq of ``set_expr2``.
+        :param set_expr2: The set expression (can be a fluent returning a set or a set constant).
+        :return: The ``SUBSETEQ`` expression created.
+        """
+        set_expr1, set_expr2 = self.auto_promote(set_expr1, set_expr2)
+        return self.create_node(node_type=OperatorKind.SET_SUBSETEQ, args=(set_expr1, set_expr2))
+
+    def SetDisjoint(
+        self, set_expr1: SetExpression, set_expr2: SetExpression
+    ) -> "up.model.fnode.FNode":
+        """
+        | Creates an expression of the form:
+
+            * ``disjoint(set_expr1,set_expr2)``
+
+        | Restriction: ``set_expr1`` and ``set_expr1`` must be of ``set type`` and the elements have to be of the same type.
+
+        :param set_expr1: The element to check if it is a member of ``set_expr``.
+        :param set_expr2: The set expression (can be a fluent returning a set or a set constant).
+        :return: The ``DISJOINT`` expression created.
+        """
+        set_expr1, set_expr2 = self.auto_promote(set_expr1, set_expr2)
+        return self.create_node(node_type=OperatorKind.SET_DISJOINT, args=(set_expr1, set_expr2))
+
+    def SetCardinality(self, set_expr: SetExpression) -> "up.model.fnode.FNode":
+        """
+        | Creates an expression of the form:
+
+            * ``Cardinality(set_expr)``
+
+        | Returns the number of elements in the set.
+
+        :param set_expr: A set expression (fluent or constant).
+        :return: The ``CARDINALITY`` expression created (returns an integer).
+        """
+        (set_expr,) = self.auto_promote(set_expr)
+
+        if set_expr.is_set_constant():
+            return self.Int(len(set_expr.constant_value()))
+        return self.create_node(node_type=OperatorKind.SET_CARDINALITY, args=(set_expr,))
+
+    def SetAdd(
+            self, element: Expression, set_expr: SetExpression
+    ) -> "up.model.fnode.FNode":
+        """
+        | Creates an expression that adds an element to a set:
+
+            * ``SetAdd(set_expr, element)`` equivalent to ``set_expr u {element}``
+
+        | Restriction: ``set_expr`` must be of ``set type`` and ``element`` must be
+          of the same type as the elements of the set.
+
+        :param set_expr: The set expression.
+        :param element: The element to add to the set.
+        :return: The ``SET_ADD`` expression created (returns a new set).
+        """
+        set_expr, element = self.auto_promote(set_expr, element)
+        if set_expr == self.EMPTY_SET():
+            return self.Set({element})
+        return self.create_node(node_type=OperatorKind.SET_ADD, args=(element, set_expr))
+
+    def SetRemove(
+            self, element: Expression, set_expr: SetExpression
+    ) -> "up.model.fnode.FNode":
+        """
+        | Creates an expression that removes an element from a set:
+
+            * ``SetRemove(set_expr, element)`` equivalent to ``set_expr \ {element}``
+
+        | Restriction: ``set_expr`` must be of ``set type`` and ``element`` must be
+          of the same type as the elements of the set.
+
+        :param set_expr: The set expression.
+        :param element: The element to remove from the set.
+        :return: The ``SET_REMOVE`` expression created (returns a new set).
+        """
+        set_expr, element = self.auto_promote(set_expr, element)
+        if set_expr == self.EMPTY_SET():
+            return self.EMPTY_SET()
+        return self.create_node(node_type=OperatorKind.SET_REMOVE, args=(element, set_expr))
+
+    def SetUnion(
+            self, set_expr1: SetExpression, set_expr2: SetExpression
+    ) -> "up.model.fnode.FNode":
+        """
+        | Creates a union of sets:
+
+            * ``SetUnion(set1, set2)`` equivalent to ``set1 ∪ set2`` FOR THE MOMENT ONLY 2
+
+        | This function has polymorphic n-arguments.
+        | Restriction: All arguments must be of ``set type`` with the same element type.
+
+        :param \\*args: Either an ``Iterable`` of set expressions, like ``[s1, s2]``,
+                        or an unpacked version of it, like ``s1, s2, s3``.
+        :return: The ``SET_UNION`` expression created.
+        """
+        set_expr1, set_expr2 = tuple(self.auto_promote(set_expr1, set_expr2))
+        return self.create_node(node_type=OperatorKind.SET_UNION, args=(set_expr1, set_expr2))
+
+    def SetIntersection(
+            self, set_expr1: SetExpression, set_expr2: SetExpression
+    ) -> "up.model.fnode.FNode":
+        """
+        | Creates an intersection of sets:
+
+            * ``SetIntersection(set_expr1, set_expr2)`` equivalent to ``set_expr1 ∩ set_expr2``
+
+        | This function has polymorphic n-arguments.
+        | Restriction: All arguments must be of ``set type`` with the same element type.
+
+        :param set_expr1: The set to subtract from.
+        :param set_expr2: The set to subtract.
+        :return: The ``SET_INTERSECTION`` expression created.
+        """
+        set_expr1, set_expr2 = tuple(self.auto_promote(set_expr1, set_expr2))
+        return self.create_node(node_type=OperatorKind.SET_INTERSECT, args=(set_expr1, set_expr2))
+
+    def SetDifference(
+            self, set_expr1: SetExpression, set_expr2: SetExpression
+    ) -> "up.model.fnode.FNode":
+        """
+        | Creates a set difference:
+
+            * ``SetDifference(set_expr1, set_expr2)`` equivalent to ``set_expr1 \ set_expr2``
+
+        | Restriction: Both arguments must be of ``set type`` with the same element type.
+
+        :param set_expr1: The set to subtract from.
+        :param set_expr2: The set to subtract.
+        :return: The ``SET_DIFFERENCE`` expression created.
+        """
+        set_expr1, set_expr2 = self.auto_promote(set_expr1, set_expr2)
+        return self.create_node(node_type=OperatorKind.SET_DIFFERENCE, args=(set_expr1, set_expr2))
 
     def And(
         self, *args: Union[BoolExpression, Iterable[BoolExpression]]
@@ -335,11 +567,15 @@ class ExpressionManager(object):
         :param right: The ``right`` member of the ``Iff expression``.
         :return: The created ``Iff`` expression.
         """
+        if type(left) is list:
+            left = [left]
+        if type(right) is list:
+            right = [right]
         left, right = self.auto_promote(left, right)
         return self.create_node(node_type=OperatorKind.IFF, args=(left, right))
 
     def Exists(
-        self, expression: BoolExpression, *vars: "up.model.variable.Variable"
+        self, expression: BoolExpression, *vars: Union["unified_planning.model.Variable", "unified_planning.model.range_variable.RangeVariable"]
     ) -> "up.model.fnode.FNode":
         """
         Creates an expression of the form:
@@ -359,14 +595,14 @@ class ExpressionManager(object):
                 f"Exists of expression: {str(expression)} must be created with at least one variable, otherwise it is not needed."
             )
         for v in vars:
-            if not isinstance(v, up.model.variable.Variable):
-                raise UPTypeError("Expecting 'up.Variable', got %s", type(v))
+            if not (isinstance(v, up.model.variable.Variable) or isinstance(v, unified_planning.model.range_variable.RangeVariable)):
+                raise UPTypeError("Expecting 'up.Variable' or 'up.RangeVariable, got %s", type(v))
         return self.create_node(
             node_type=OperatorKind.EXISTS, args=expressions, payload=vars
         )
 
     def Forall(
-        self, expression: BoolExpression, *vars: "up.model.variable.Variable"
+        self, expression: BoolExpression, *vars: Union["unified_planning.model.Variable", "unified_planning.model.RangeVariable"]
     ) -> "up.model.fnode.FNode":
         """Creates an expression of the form:
             ``Forall (var[0]... var[n]) | expression``
@@ -385,8 +621,8 @@ class ExpressionManager(object):
                 f"Forall of expression: {str(expression)} must be created with at least one variable, otherwise it is not needed."
             )
         for v in vars:
-            if not isinstance(v, up.model.variable.Variable):
-                raise UPTypeError("Expecting 'up.Variable', got %s", type(v))
+            if not (isinstance(v, up.model.variable.Variable) or isinstance(v, unified_planning.model.range_variable.RangeVariable)):
+                raise UPTypeError("Expecting 'up.Variable' or 'up.RangeVariable, got %s", type(v))
         return self.create_node(
             node_type=OperatorKind.FORALL, args=expressions, payload=vars
         )
@@ -534,6 +770,18 @@ class ExpressionManager(object):
             node_type=OperatorKind.VARIABLE_EXP, args=tuple(), payload=var
         )
 
+    def RangeVariableExp(self, var: "up.model.range_variable.RangeVariable") -> "up.model.fnode.FNode":
+        """
+        Returns an expression for the given ``RangeVariable``.
+
+        :param var: The ``Variable`` that must be promoted to ``FNode``.
+        :return: The ``FNode`` containing the given ``variable`` as his payload.
+        """
+        assert var.environment == self.environment
+        return self.create_node(
+            node_type=OperatorKind.RANGE_VARIABLE_EXP, args=tuple(), payload=var
+        )
+
     def ObjectExp(self, obj: "up.model.object.Object") -> "up.model.fnode.FNode":
         """
         Returns an expression for the given object.
@@ -564,6 +812,10 @@ class ExpressionManager(object):
     def FALSE(self) -> "up.model.fnode.FNode":
         """Return the boolean constant ``False``."""
         return self.false_expression
+
+    def EMPTY_SET(self) -> "up.model.fnode.FNode":
+        """Return the boolean constant ``False``."""
+        return self.empty_set_expression
 
     def Bool(self, value: bool) -> "up.model.fnode.FNode":
         """
@@ -604,6 +856,44 @@ class ExpressionManager(object):
             raise UPTypeError("Expecting Fraction, got %s" % type(value))
         return self.create_node(
             node_type=OperatorKind.REAL_CONSTANT, args=tuple(), payload=value
+        )
+
+    def Array(self, value: List) -> "up.model.fnode.FNode":
+        """
+        Return an ``list`` constant.
+        :param value: The list that must be promoted to ``FNode``.
+        :return: The ``FNode`` containing the given ``list`` as his payload.
+        """
+        # convert the list to tuple to resolve the hash problem
+        adapted_value = tuple(self.auto_promote(value))
+        if not isinstance(value, List):
+            raise UPTypeError("Expecting List, got %s" % type(value))
+        return self.create_node(
+            node_type=OperatorKind.ARRAY_CONSTANT, args=tuple(), payload=adapted_value
+        )
+
+    def Set(self, value: Set) -> "up.model.fnode.FNode":
+        """
+        Return an ``set`` constant.
+        :param value: The set that must be promoted to ``FNode``.
+        :return: The ``FNode`` containing the given ``set`` as his payload.
+        """
+        # convert the list to tuple to resolve the hash problem
+        if isinstance(value, set):
+            if len(value) == 0:
+                return self.empty_set_expression
+            else:
+                promoted_elements = []
+                for elem in value:
+                    # auto_promote retorna una llista, agafem el primer element
+                    promoted = self.auto_promote(elem)
+                    promoted_elements.extend(promoted)
+                adapted_value = tuple(promoted_elements)
+        else:
+            adapted_value = tuple(self.auto_promote(value))
+
+        return self.create_node(
+            node_type=OperatorKind.SET_CONSTANT, args=tuple(), payload=adapted_value
         )
 
     def Plus(
@@ -728,6 +1018,10 @@ class ExpressionManager(object):
         :param right: The right side of the ``==``.
         :return: The created ``Equals`` expression.
         """
+        if type(left) is list:
+            left = [left]
+        if type(right) is list:
+            right = [right]
         left, right = self.auto_promote(left, right)
         return self.create_node(node_type=OperatorKind.EQUALS, args=(left, right))
 

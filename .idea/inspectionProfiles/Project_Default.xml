@@ -1,0 +1,17 @@
+<component name="InspectionProjectProfileManager">
+  <profile version="1.0">
+    <option name="myName" value="Project Default" />
+    <inspection_tool class="Eslint" enabled="true" level="WARNING" enabled_by_default="true" />
+    <inspection_tool class="PyUnresolvedReferencesInspection" enabled="true" level="WARNING" enabled_by_default="true">
+      <option name="ignoredIdentifiers">
+        <list>
+          <option value="unified_planning.model.types.Type.__getitem__" />
+          <option value="unified_planning.model.fnode.FNode.__getitem__" />
+          <option value="list.is_array_type" />
+          <option value="list.__getitem__" />
+          <option value="unified_planning.model.fluent.Fluent.__getitem__" />
+        </list>
+      </option>
+    </inspection_tool>
+  </profile>
+</component>

@@ -240,6 +240,14 @@ class TarskiFormulaConverter(walkers.DagWalker):
         assert len(args) == 0
         return tarski.syntax.Constant(expression.real_constant_value(), self.lang.Real)
 
+    def walk_list_constant(
+        self,
+        expression: "unified_planning.model.FNode",
+        args: List["tarski.syntax.formulas.Formula"],
+    ) -> "tarski.syntax.formulas.Formula":
+        assert len(args) == 0
+        return tarski.syntax.Constant(expression.list_constant_value(), self.lang.List)
+
     def walk_param_exp(
         self,
         expression: "unified_planning.model.FNode",

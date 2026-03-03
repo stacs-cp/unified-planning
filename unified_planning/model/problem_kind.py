@@ -66,6 +66,9 @@ FEATURES = {
         "EQUALITIES",
         "EXISTENTIAL_CONDITIONS",
         "UNIVERSAL_CONDITIONS",
+        "COUNTING",
+        "RANGE_VARIABLES",
+        "MEMBERING"
     ],
     "EFFECTS_KIND": [
         "CONDITIONAL_EFFECTS",
@@ -94,8 +97,11 @@ FEATURES = {
     "FLUENTS_TYPE": [
         "INT_FLUENTS",
         "REAL_FLUENTS",
+        "ARRAY_FLUENTS",
+        "SET_FLUENTS",
         "OBJECT_FLUENTS",
         "NUMERIC_FLUENTS",  # deprecated
+        "DERIVED_FLUENTS",
     ],
     "QUALITY_METRICS": [
         "ACTIONS_COST",
@@ -347,6 +353,7 @@ full_classical_kind.set_conditions_kind("EQUALITIES")
 full_classical_kind.set_conditions_kind("EXISTENTIAL_CONDITIONS")
 full_classical_kind.set_conditions_kind("UNIVERSAL_CONDITIONS")
 full_classical_kind.set_effects_kind("CONDITIONAL_EFFECTS")
+full_classical_kind.set_fluents_type("DERIVED_FLUENTS")
 
 object_fluent_kind = ProblemKind(version=LATEST_PROBLEM_KIND_VERSION)
 object_fluent_kind.set_fluents_type("OBJECT_FLUENTS")

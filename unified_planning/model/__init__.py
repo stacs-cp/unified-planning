@@ -29,6 +29,7 @@ from unified_planning.model.natural_transition import (
 from unified_planning.model.transition import (
     Transition,
 )
+from unified_planning.model.axiom import Axiom
 from unified_planning.model.effect import Effect, SimulatedEffect, EffectKind
 from unified_planning.model.expression import (
     BoolExpression,
@@ -74,6 +75,7 @@ from unified_planning.model.timing import (
 )
 from unified_planning.model.types import Type
 from unified_planning.model.variable import Variable, FreeVarsOracle
+from unified_planning.model.range_variable import RangeVariable
 from unified_planning.model.metrics import (
     PlanQualityMetric,
     MinimizeActionCosts,
@@ -135,6 +137,7 @@ __all__ = [
     "Type",
     "Variable",
     "FreeVarsOracle",
+    "RangeVariable",
     "PlanQualityMetric",
     "MinimizeActionCosts",
     "MinimizeSequentialPlanLength",
@@ -144,4 +147,5 @@ __all__ = [
     "Oversubscription",
     "TemporalOversubscription",
     "DeltaSimpleTemporalNetwork",
+    "Axiom",
 ]

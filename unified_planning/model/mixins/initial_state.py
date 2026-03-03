@@ -57,11 +57,21 @@ class InitialStateMixin:
         :param fluent: The grounded `Fluent` of which the initial value must be set.
         :param value: The `value` assigned in the initial state to the given `fluent`.
         """
+        if fluent.type.is_array_type() and type(value) is list:
+            value = [value]
         fluent_exp, value_exp = self._env.expression_manager.auto_promote(fluent, value)
         assert fluent_exp.is_fluent_exp(), "fluent field must be a fluent"
+        if fluent.type.is_derived_bool_type():
+            raise UPTypeError("You cannot set the initial value of a derived fluent!")
         if not fluent_exp.type.is_compatible(value_exp.type):
             raise UPTypeError("Initial value assignment has not compatible types!")
         self._initial_value[fluent_exp] = value_exp
+
+    def create_multidimensional_array(self, dimensions, elements_default):
+        # Crear un array multidimensional usando recursión
+        if len(dimensions) == 1:
+            return [elements_default] * dimensions[0]
+        return [self.create_multidimensional_array(dimensions[1:], elements_default) for _ in range(dimensions[0])]
 
     def initial_value(
         self, fluent: Union["up.model.fnode.FNode", "up.model.fluent.Fluent"]
@@ -81,7 +91,20 @@ class InitialStateMixin:
         if fluent_exp in self._initial_value:
             return self._initial_value[fluent_exp]
         elif fluent_exp.fluent() in self._fluent_set.fluents_defaults:
-            return self._fluent_set.fluents_defaults[fluent_exp.fluent()]
+            if fluent.type.is_array_type():
+                elements_default = self._fluent_set.fluents_defaults[fluent_exp.fluent()]
+                this_fluent = fluent.type
+                dimensions = []
+                while this_fluent.is_array_type():
+                    dimensions.append(this_fluent.size)
+                    this_fluent = this_fluent.elements_type
+                new_default = self.create_multidimensional_array(dimensions, elements_default)
+                (new_expression,) = self._env.expression_manager.auto_promote([new_default])
+                return new_expression
+            else:
+                return self._fluent_set.fluents_defaults[fluent_exp.fluent()]
+        elif fluent_exp.fluent().type.is_derived_bool_type():
+            return self._env.expression_manager.FALSE()
         else:
             return None
 
@@ -97,7 +120,7 @@ class InitialStateMixin:
         for f in self._fluent_set.fluents:
             for f_exp in get_all_fluent_exp(self._object_set, f):
                 value = self.initial_value(f_exp)
-                if value is not None:
+                if value is not None and not f.type.is_derived_bool_type():
                     res[f_exp] = value
         return res
 

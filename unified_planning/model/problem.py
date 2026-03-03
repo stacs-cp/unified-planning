@@ -23,6 +23,7 @@ from unified_planning.model import Fluent
 from unified_planning.model.abstract_problem import AbstractProblem
 from unified_planning.model.mixins import (
     ActionsSetMixin,
+    AxiomsSetMixin,
     NaturalTransitionsSetMixin,
     TimeModelMixin,
     FluentsSetMixin,
@@ -54,6 +55,7 @@ class Problem(  # type: ignore[misc]
     TimeModelMixin,
     FluentsSetMixin,
     ActionsSetMixin,
+    AxiomsSetMixin,
     NaturalTransitionsSetMixin,
     ObjectsSetMixin,
     InitialStateMixin,
@@ -83,6 +85,7 @@ class Problem(  # type: ignore[misc]
         ActionsSetMixin.__init__(
             self, self.environment, self._add_user_type, self.has_name
         )
+        AxiomsSetMixin.__init__(self, self.environment)
         NaturalTransitionsSetMixin.__init__(
             self, self.environment, self._add_user_type, self.has_name
         )
@@ -120,6 +123,10 @@ class Problem(  # type: ignore[misc]
         s.append("fluents = [\n")
         s.extend(map(custom_str, self.fluents))
         s.append("]\n\n")
+        if len(self.axioms) > 0:
+            s.append("axioms = [\n")
+            s.extend(map(custom_str, self.axioms))
+            s.append("]\n\n")
         s.append("actions = [\n")
         s.extend(map(custom_str, self.actions))
         s.append("]\n\n")
@@ -194,6 +201,8 @@ class Problem(  # type: ignore[misc]
             return False
         if set(self._actions) != set(oth._actions):
             return False
+        if set(self._axioms) != set(oth._axioms):
+            return False
         if set(self._trajectory_constraints) != set(oth._trajectory_constraints):
             return False
 
@@ -226,6 +235,8 @@ class Problem(  # type: ignore[misc]
 
         for a in self._actions:
             res += hash(a)
+        for a in self._axioms:
+            res += hash(a)
         for c in self._trajectory_constraints:
             res += hash(c)
         for t, el in self._timed_effects.items():
@@ -249,6 +260,7 @@ class Problem(  # type: ignore[misc]
         TimeModelMixin._clone_to(self, new_p)
 
         new_p._actions = [a.clone() for a in self._actions]
+        new_p._axioms = [a.clone() for a in self._axioms]
         new_p._events = [a.clone() for a in self._events]
         new_p._processes = [a.clone() for a in self._processes]
         new_p._timed_effects = {
@@ -614,7 +626,10 @@ class Problem(  # type: ignore[misc]
             isinstance(goal, bool) or goal.environment == self._env
         ), "goal does not have the same environment of the problem"
         (goal_exp,) = self._env.expression_manager.auto_promote(goal)
-        assert self._env.type_checker.get_type(goal_exp).is_bool_type()
+        assert (
+                self._env.type_checker.get_type(goal_exp).is_bool_type()
+                or self._env.type_checker.get_type(goal_exp).is_derived_bool_type()
+        )
         if goal_exp != self._env.expression_manager.TRUE():
             self._goals.append(goal_exp)
 
@@ -696,6 +711,8 @@ class Problem(  # type: ignore[misc]
 
         for action in self._actions:
             factory.update_problem_kind_action(action)
+        if len(self.axioms) > 0:
+            factory.kind.set_fluents_type("DERIVED_FLUENTS")
         if len(self._timed_effects) > 0:
             factory.kind.set_time("CONTINUOUS_TIME")
             factory.kind.set_time("TIMED_EFFECTS")
@@ -822,6 +839,8 @@ class _KindFactory:
             if t.is_int_type() or t.is_real_type():
                 self.kind.unset_problem_type("SIMPLE_NUMERIC_PLANNING")
         if e.is_forall():
+            if any(isinstance(f, up.model.range_variable.RangeVariable) for f in e.forall):
+                self.kind.set_conditions_kind("RANGE_VARIABLES")
             self.kind.set_effects_kind("FORALL_EFFECTS")
         if e.is_increase():
             self.kind.set_effects_kind("INCREASE_EFFECTS")
@@ -898,6 +917,16 @@ class _KindFactory:
         elif e.is_continuous_decrease():
             self.kind.unset_problem_type("SIMPLE_NUMERIC_PLANNING")
 
+    def _has_range_vars(self, exp: "up.model.fnode.FNode"):
+        if exp.is_forall() or exp.is_exists():
+            if any(isinstance(f, up.model.range_variable.RangeVariable) for f in exp.variables()):
+                return True
+        else:
+            for a in exp.args:
+                if self._has_range_vars(a):
+                    return True
+        return False
+
     def update_problem_kind_expression(
         self,
         exp: "up.model.fnode.FNode",
@@ -912,7 +941,13 @@ class _KindFactory:
         if OperatorKind.EXISTS in ops:
             self.kind.set_conditions_kind("EXISTENTIAL_CONDITIONS")
         if OperatorKind.FORALL in ops:
+            if self._has_range_vars(exp):
+                self.kind.set_conditions_kind("RANGE_VARIABLES")
             self.kind.set_conditions_kind("UNIVERSAL_CONDITIONS")
+        if OperatorKind.COUNT in ops:
+            self.kind.set_conditions_kind("COUNTING")
+        if OperatorKind.SET_MEMBER in ops:
+            self.kind.set_conditions_kind("MEMBERING")
         is_linear, _, _ = self.linear_checker.get_fluents(exp)
         if not is_linear:
             self.kind.unset_problem_type("SIMPLE_NUMERIC_PLANNING")
@@ -944,6 +979,10 @@ class _KindFactory:
                     self.kind.set_fluents_type("REAL_FLUENTS")
         elif type.is_user_type():
             self.kind.set_fluents_type("OBJECT_FLUENTS")
+        elif type.is_array_type():
+            self.kind.set_fluents_type("ARRAY_FLUENTS")
+        elif type.is_set_type():
+            self.kind.set_fluents_type("SET_FLUENTS")
         for param in fluent.signature:
             pt = param.type
             self.update_problem_kind_type(pt)

@@ -165,12 +165,18 @@ class FNode(object):
             self.node_type == OperatorKind.BOOL_CONSTANT
             or self.node_type == OperatorKind.INT_CONSTANT
             or self.node_type == OperatorKind.REAL_CONSTANT
+            or self.node_type == OperatorKind.ARRAY_CONSTANT
+            or self.node_type == OperatorKind.SET_CONSTANT
             or self.node_type == OperatorKind.OBJECT_EXP
         )
 
-    def constant_value(self) -> Union[bool, int, Fraction]:
+    def constant_value(self) -> Union[bool, int, Fraction, list, set, tuple]:
         """Returns the constant value stored in this expression."""
         assert self.is_constant()
+        if self.node_type == OperatorKind.ARRAY_CONSTANT:
+            return list(self._content.payload)
+        if self.node_type == OperatorKind.SET_CONSTANT:
+            return set(self._content.payload)
         return self._content.payload
 
     def bool_constant_value(self) -> bool:
@@ -187,6 +193,11 @@ class FNode(object):
         """Return constant `real` value stored in this expression."""
         assert self.is_real_constant()
         return self._content.payload
+
+    def array_constant_value(self) -> List:
+        """Returns the `array` constant value stored in this expression."""
+        assert self.is_array_constant()
+        return list(self._content.payload)
 
     def fluent(self) -> "unified_planning.model.fluent.Fluent":
         """Return the `Fluent` stored in this expression."""
@@ -207,6 +218,16 @@ class FNode(object):
         """Return the `Variables` of the `Exists` or `Forall`."""
         assert self.is_exists() or self.is_forall()
         return list(self._content.payload)
+
+    def range_variable(self) -> "unified_planning.model.range_variable.RangeVariable":
+        """Return the variable of the RangeVariableExp."""
+        assert self.is_range_variable_exp()
+        return self._content.payload
+
+    def range_variables(self) -> "unified_planning.model.range_variable.RangeVariable":
+        """Return the variable of the RangeVariableExp."""
+        assert self.is_range_variable_exp()
+        return self._content.payload
 
     def object(self) -> "unified_planning.model.object.Object":
         """Return the `Object` stored in this expression."""
@@ -262,6 +283,14 @@ class FNode(object):
         """Test whether the expression is a `real` constant."""
         return self.node_type == OperatorKind.REAL_CONSTANT
 
+    def is_array_constant(self) -> bool:
+        """Test whether the expression is a `real` constant."""
+        return self.node_type == OperatorKind.ARRAY_CONSTANT
+
+    def is_set_constant(self) -> bool:
+        """Test whether the expression is a `real` constant."""
+        return self.node_type == OperatorKind.SET_CONSTANT
+
     def is_true(self) -> bool:
         """Test whether the expression is the `True` Boolean constant."""
         return self.is_bool_constant() and self.bool_constant_value() == True
@@ -269,6 +298,10 @@ class FNode(object):
     def is_false(self) -> bool:
         """Test whether the expression is the `False` Boolean constant."""
         return self.is_bool_constant() and self.bool_constant_value() == False
+
+    def is_count(self) -> bool:
+        """Test whether the node is the `Count` operator."""
+        return self.node_type == OperatorKind.COUNT
 
     def is_and(self) -> bool:
         """Test whether the node is the `And` operator."""
@@ -330,6 +363,10 @@ class FNode(object):
         """Test whether the node is a :class:`~unified_planning.model.Variable` Expression."""
         return self.node_type == OperatorKind.VARIABLE_EXP
 
+    def is_range_variable_exp(self) -> bool:
+        """Test whether the node is a :class:`~unified_planning.model.Variable` Expression."""
+        return self.node_type == OperatorKind.RANGE_VARIABLE_EXP
+
     def is_object_exp(self) -> bool:
         """Test whether the node is an :class:`~unified_planning.model.Object` Expression."""
         return self.node_type == OperatorKind.OBJECT_EXP
@@ -369,6 +406,42 @@ class FNode(object):
     def is_dot(self) -> bool:
         """Test whether the node is the `DOT` operator."""
         return self.node_type == OperatorKind.DOT
+
+    def is_set_member(self) -> bool:
+        """Test whether the node is the `MEMBER` operator."""
+        return self.node_type == OperatorKind.SET_MEMBER
+
+    def is_set_subseteq(self) -> bool:
+        """Test whether the node is the `SUBSETEQ` operator."""
+        return self.node_type == OperatorKind.SET_SUBSETEQ
+
+    def is_set_disjoint(self) -> bool:
+        """Test whether the node is the `DISJOINT` operator."""
+        return self.node_type == OperatorKind.SET_DISJOINT
+
+    def is_set_cardinality(self) -> bool:
+        """Test whether the node is the `CARDINALITY` operator."""
+        return self.node_type == OperatorKind.SET_CARDINALITY
+
+    def is_set_add(self) -> bool:
+        """Test whether the node is the `SET_ADD` operator."""
+        return self.node_type == OperatorKind.SET_ADD
+
+    def is_set_remove(self) -> bool:
+        """Test whether the node is the `SET_REMOVE` operator."""
+        return self.node_type == OperatorKind.SET_REMOVE
+
+    def is_set_union(self) -> bool:
+        """Test whether the node is the `SET_UNION` operator."""
+        return self.node_type == OperatorKind.SET_UNION
+
+    def is_set_intersect(self) -> bool:
+        """Test whether the node is the `SET_UNION` operator."""
+        return self.node_type == OperatorKind.SET_INTERSECT
+
+    def is_set_difference(self) -> bool:
+        """Test whether the node is the `SET_UNION` operator."""
+        return self.node_type == OperatorKind.SET_DIFFERENCE
 
     #
     # Infix operators
@@ -428,6 +501,9 @@ class FNode(object):
     def And(self, *other):
         return self._env.expression_manager.And(self, *other)
 
+    def Count(self, *other):
+        return self._env.expression_manager.Count(self, *other)
+
     def __and__(self, *other):
         return self._env.expression_manager.And(self, *other)
 
@@ -466,3 +542,18 @@ class FNode(object):
 
     def Iff(self, right):
         return self._env.expression_manager.Iff(self, right)
+
+    def SetMember(self, element):
+        return self._env.expression_manager.SetMember(element, self)
+
+    def SetSubseteq(self, element):
+        return self._env.expression_manager.SetSubseteq(element, self)
+
+    def SetCardinality(self):
+        return self._env.expression_manager.SetCardinality(self)
+
+    def SetAdd(self, element):
+        return self._env.expression_manager.SetAdd(element, self)
+
+    def SetRemove(self, element):
+        return self._env.expression_manager.SetRemove(element, self)

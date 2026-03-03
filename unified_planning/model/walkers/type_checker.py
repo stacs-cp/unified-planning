@@ -18,13 +18,57 @@ from fractions import Fraction
 import unified_planning.model.types
 import unified_planning.environment
 import unified_planning.model.walkers as walkers
-from unified_planning.model.types import BOOL, TIME, _UserType
+from unified_planning.model import Fluent
+from unified_planning.model.types import BOOL, DERIVED_BOOL, TIME, _UserType, _IntType, _ArrayType
 from unified_planning.model.fnode import FNode
 from unified_planning.model.operators import OperatorKind
 from unified_planning.exceptions import UPTypeError
 from typing import List, Optional, cast
 import math
 
+
+def combine_types(types: List["unified_planning.model.types.Type"]) -> "unified_planning.model.types.Type":
+    x = types[0]
+    if x.is_int_type():
+        min_int = None
+        max_int = None
+        for t in types:
+            assert t.is_int_type()
+            max_int = t.upper_bound if max_int is None or t.upper_bound > max_int else max_int
+            min_int = t.lower_bound if min_int is None or t.lower_bound < min_int else min_int
+        return _IntType(min_int, max_int)
+    elif x.is_array_type():
+        all_types = []
+        size = x.size
+        for t in types:
+            assert t.is_array_type()
+            assert t.size == size
+            all_types.append(t.elements_type)
+        return _ArrayType(size, combine_types(all_types))
+    elif x.is_user_type():
+        global_user_type = x
+        for t in types:
+            assert t.is_user_type()
+            if t == global_user_type or global_user_type.is_compatible(t):
+                pass
+            elif t.is_compatible(global_user_type):
+                global_user_type = t
+            else:
+                t = cast(_UserType, t)
+                g = cast(_UserType, global_user_type)
+                g_ancestors = set(g.ancestors)
+                t_ancestors = set(t.ancestors)
+                common_types = list(g_ancestors.intersection(t_ancestors))
+                assert len(common_types) > 0
+                global_user_type = common_types[0]
+                for ct in common_types:
+                    if len(str(ct)) > len(str(global_user_type)):
+                        global_user_type = ct
+        return global_user_type
+    elif x.is_bool_type():
+        for t in types:
+            assert t.is_bool_type()
+        return BOOL
 
 class TypeChecker(walkers.dag.DagWalker):
     """Walker used to retrieve the `Type` of an expression."""
@@ -62,9 +106,30 @@ class TypeChecker(walkers.dag.DagWalker):
     ) -> Optional["unified_planning.model.types.Type"]:
         assert expression is not None
         for x in args:
-            if x is None or x != BOOL:
+            if x is None or x not in (BOOL, DERIVED_BOOL):
                 return None
         return BOOL
+
+    @walkers.handles(
+        OperatorKind.COUNT
+    )
+    def walk_bool_to_int(
+        self, expression: FNode, args: List["unified_planning.model.types.Type"]
+    ) -> Optional["unified_planning.model.types.Type"]:
+        assert expression is not None
+        lower = 0
+        upper = 0
+        for x in args:
+            if x is None or x != BOOL:
+                return None
+            if x is True:
+                upper += 1
+                lower += 1
+            elif x is False:
+                continue
+            else:
+                upper += 1
+        return self.environment.type_manager.IntType(lower, upper)
 
     def walk_fluent_exp(
         self, expression: FNode, args: List["unified_planning.model.types.Type"]
@@ -157,6 +222,13 @@ class TypeChecker(walkers.dag.DagWalker):
         assert len(args) == 0
         return expression.variable().type
 
+    def walk_range_variable_exp(
+        self, expression: FNode, args: List["unified_planning.model.types.Type"]
+    ) -> "unified_planning.model.types.Type":
+        assert expression is not None
+        assert len(args) == 0
+        return expression.range_variable().type
+
     def walk_object_exp(
         self, expression: FNode, args: List["unified_planning.model.types.Type"]
     ) -> "unified_planning.model.types.Type":
@@ -185,6 +257,35 @@ class TypeChecker(walkers.dag.DagWalker):
         assert len(args) == 0
         return self.environment.type_manager.RealType(
             expression.constant_value(), expression.constant_value()
+        )
+
+    @walkers.handles(OperatorKind.ARRAY_CONSTANT)
+    def walk_identity_list(self, expression, args):
+        assert expression is not None
+        assert len(args) == 0
+        size = len(expression.constant_value())
+        all_types = []
+        for e in expression.constant_value():
+            all_types.append(e.type)
+        elements_type = combine_types(all_types)
+        return self.environment.type_manager.ArrayType(
+            size, elements_type
+        )
+
+    @walkers.handles(OperatorKind.SET_CONSTANT)
+    def walk_identity_set(self, expression, args):
+        assert expression is not None
+        assert len(args) == 0
+        all_types = []
+        for e in expression.constant_value():
+            all_types.append(self.get_type(e))
+
+        if len(all_types) == 0:
+            return self.environment.type_manager.SetType(None)
+
+        elements_type = combine_types(all_types)
+        return self.environment.type_manager.SetType(
+            elements_type
         )
 
     @walkers.handles(OperatorKind.INT_CONSTANT)
@@ -378,6 +479,11 @@ class TypeChecker(walkers.dag.DagWalker):
                 x.is_int_type() or x.is_real_type()
             ):
                 return None
+            elif t.is_array_type():
+                if not x.is_array_type() or x.elements_type.is_bool_type():
+                    return None
+                if not t.is_compatible(x) and not x.is_compatible(t):
+                    return self.walk_equals(expression, args=[t.elements_type, x.elements_type])
         return BOOL
 
     @walkers.handles(OperatorKind.DOT)
@@ -391,3 +497,64 @@ class TypeChecker(walkers.dag.DagWalker):
         if not t.is_fluent_exp():
             return None
         return args[0]
+
+    @walkers.handles(OperatorKind.SET_MEMBER)
+    def walk_member(
+        self, expression: FNode, args: List["unified_planning.model.types.Type"]
+    ) -> Optional["unified_planning.model.types.Type"]:
+        assert expression is not None
+        assert expression.is_set_member()
+        element_type = args[0]
+        set_type = args[1]
+        if element_type is None:
+            return None
+        if element_type != set_type.elements_type:
+            return None
+        return BOOL
+
+    @walkers.handles(OperatorKind.SET_SUBSETEQ)
+    def walk_subseteq(
+            self, expression: FNode, args: List["unified_planning.model.types.Type"]
+    ) -> Optional["unified_planning.model.types.Type"]:
+        assert expression is not None
+        assert expression.is_set_subseteq()
+        set1 = args[0]
+        set2 = args[1]
+        if set1.elements_type != set2.elements_type:
+            return None
+        return BOOL
+
+    @walkers.handles(OperatorKind.SET_DISJOINT)
+    def walk_disjoint(
+        self, expression: FNode, args: List["unified_planning.model.types.Type"]
+    ) -> Optional["unified_planning.model.types.Type"]:
+        assert expression is not None
+        assert expression.is_set_disjoint()
+        set1 = args[0]
+        set2 = args[1]
+        if set1.elements_type != set2.elements_type:
+            return None
+        # fer alguna altra comprovacio?
+        return BOOL
+
+    @walkers.handles(OperatorKind.SET_CARDINALITY)
+    def walk_cardinality(
+        self, expression: FNode, args: List["unified_planning.model.types.Type"]
+    ) -> Optional["unified_planning.model.types.Type"]:
+        assert expression is not None
+        assert expression.is_set_cardinality()
+        # seria bo tornar un bounded integer del numero d'objectes que te un tipus
+        return self.environment.type_manager.IntType(0, None)
+
+    @walkers.handles(
+        OperatorKind.SET_ADD,
+        OperatorKind.SET_REMOVE,
+        OperatorKind.SET_UNION,
+        OperatorKind.SET_INTERSECT,
+        OperatorKind.SET_DIFFERENCE
+    )
+    def walk_set_to_set(
+        self, expression: FNode, args: List["unified_planning.model.types.Type"]
+    ) -> Optional["unified_planning.model.types.Type"]:
+        assert expression is not None
+        return self.environment.type_manager.SetType(args[1].elements_type)
