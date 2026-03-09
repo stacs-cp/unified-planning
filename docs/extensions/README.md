@@ -1,81 +1,170 @@
 # Unified Planning Extensions
 
-This folder illustrates the main extensions to the Unified Planning framework:
+This directory contains examples and resources for working with extended features of the Unified Planning framework.
 
-- **Arrays**: define multi-dimensional fluents
-- **Sets**: fluents representing sets of objects  
-- **Integer parameters in actions**: parameters that take integer values in a given range  
-- **Range variables**: variables that allow iterating over a range of integers in preconditions/effects  
-- **Count**: using counting expressions
+## Table of Contents
 
-This folder contains:
-- `simple_tutorial.py`: a minimal didactic example demonstrating the extensions (not meant to be solved).
-- `15-puzzle.py`: a real problem illustrating compilation strategies and solving.
-
----
-
-## Compilation and Solving
-
-To make models compatible with standard planners, we use compilation pipelines, which transform high-level constructs into low-level, planner-compatible ones.
-We apply multiple compilation strategies to each domain model (when applicable), allowing us to generate several compiled versions.
-
-Each domain defines the compilation mode it wants to use, which:
-1. Applies the selected compilation pipeline
-2. Solves the resulting problem with the selected planner
-
-### Compiler abbreviations:
-- `IPAR`: INT_PARAMETER_ACTIONS_REMOVING
-- `AR`: ARRAYS_REMOVING
-- `ALR`: ARRAYS_LOGARITHMIC_REMOVING
-- `IR`: INTEGERS_REMOVING
-- `UFR`: USERTYPE_FLUENTS_REMOVING
-- `CR`: COUNT_REMOVING
-- `CIR`: COUNT_INT_REMOVING
-
-| Compilation Strategies | Compilers Sequence       |
-|-----------------|--------------------------|
-| `up`            | `IPAR, AR, UFR`          |
-| `logarithmic`   | `IPAR, ALR`              |
-| `ut-integers`   | `IPAR, AR, IR, UFR`      |
-| `count`         | `IPAR, AR, CR, UFR`      |
-| `count-int`     | `IPAR, AR, CIR, IR, UFR` |
-| `count-int-num` | `IPAR, AR, CIR, UFR`     |
-| `integers`      | `IPAR, AR`               |
-
----
-
-## Running a real example: 15-puzzle
-
-To run a domain-specific model:
-
-```bash
-python docs/extensions/15-puzzle.py --compilation ut-integers --solving fast-downward
-```
-`--compilation:` choose a compilation pipeline (ut-integers, integers, etc.)
-`--solving:` select the planner (fast-downward, enhsp, etc.)
-
-The script will:
-- Compile the 15-puzzle problem according to the chosen pipeline
-- Solve it with the selected planner
-- Print the plan and statistics (problem, actions)
+- [Installation](#installation)
+- [Extensions](#extensions)
+- [Folder Structure](#folder-structure)
+- [Getting Started with Examples](#getting-started-with-examples)
+- [Understanding Compilation Strategies](#understanding-compilation-strategies)
+- [Running Examples](#running-examples)
 
 ---
 
 ## Installation
 
-Make sure you're inside the project root folder (e.g. `unified-planning/`).
-Also, add the project folder to your `PYTHONPATH` so that Python can find the package:
+Follow these steps to get started:
+
+### Prerequisites
+
+- **Python 3.10+**
+
+- To ensure Python can find the package:
 
 ```bash
 export PYTHONPATH=/path/to/unified-planning:$PYTHONPATH
 ```
 
-To install the framework and make it available as a Python package, run:
+Add this to your `.bashrc` or `.zshrc` to make it permanent.
+
+
+### 1. Navigate to the Project root
+
 ```bash
-pip install -e .
+cd unified-planning
 ```
 
-To install the required Python dependencies, run:
+### 2. Install the Framework
+
+Install the Unified Planning framework and its dependencies:
+
 ```bash
+pip install -e .
 pip install -r requirements.txt
+```
+
+### 3. Run a simple tutorial
+
+Try running a simple tutorial:
+
+```bash
+cd docs/extensions
+python simple_tutorial.py
+```
+
+---
+
+## Extensions
+
+The Unified Planning framework provides advanced features for modelling complex planning problems:
+
+- **Arrays**: Define multi-dimensional fluents (e.g., grids, matrices)
+- **Sets**: Fluents representing sets of objects
+- **Integer Parameters in Actions**: Parameters that take bounded integer values within a specified range
+- **Range Variables**: Variables that allow iterating over ranges of integers in preconditions/effects
+- **Count**: Using counting expressions to query set sizes
+
+These extensions allow you to write more expressive and concise planning problems compared to standard PDDL.
+
+---
+
+## Folder Structure
+
+```
+extensions/
+├── README.md                    # This file
+├── tutorial.py                  # Demonstrating example (not solvable)
+└── domains/                     # Collection of planning problems
+    ├── README.md
+    ├── compilation_solving.py   # Compilation & solving script
+    ├── 15-puzzle/               # 15-Puzzle domain
+    ├── sokoban/                 # Sokoban domain
+    ├── counters/                # Counters domain
+    ├── dump-trucks/             # Dump-Trucks domain
+    ├── labyrinth/               # Labyrinth domain
+    ├── pancake-sorting/         # Pancake-Sorting domain
+    └── ... (other domains)
+```
+
+### File Descriptions
+
+| File | Purpose |
+|------|---------|
+| `tutorial.py` | A minimal, didactic example demonstrating extensions (not designed to be solved) |
+| `domains/` | Comprehensive collection of planning problems with multiple domains |
+| `domains/compilation_solving.py` | Core script for applying compilation strategies and solving |
+
+---
+
+## Getting Started with Examples
+
+## Compilation Pipelines
+
+To make high-level models compatible with standard planners, we use **compilation pipelines** that transform advanced constructs into low-level, planner-compatible representations.
+
+### What is Compilation?
+
+Compilation transforms a planning problem with extensions into an equivalent problem that standard planners can solve. For example:
+- Arrays might be transformed into multiple fluents
+- Integer parameters might be unrolled into separate actions
+
+### Available Compilation Pipelines
+
+#### Compiler Abbreviations
+
+| Abbreviation | Full Name | What it Removes                                   | What it Transforms Into                                                            |
+|---|---|---------------------------------------------------|------------------------------------------------------------------------------------|
+| `IPAR` | INT_PARAMETER_ACTIONS_REMOVING | Integer parameters in actions and Range Variables | Expanded actions for each parameter value                                          |
+| `AR` | ARRAYS_REMOVING | (Multi)Array fluents of an *element_type*         | An *element_type* fluent + (multi)position objects (p0, p1, p2, ...) as parameters |
+| `ALR` | ARRAYS_LOGARITHMIC_REMOVING | Bounded integer array fluents                     | Boolean fluents representing integer bits (logarithmic encoding)                   |
+| `IR` | INTEGERS_REMOVING | Bounded integer fluents                           | Boolean fluents + number objects (n0, n1, n2, ...) as parameters                   |
+| `CR` | COUNT_REMOVING | Count expressions                                 | Expanded boolean formulas (e.g., Count >= 2 becomes disjunctions)                  |
+| `CIR` | COUNT_INT_REMOVING | Count expressions                                 | Integer fluents + sum expressions (each condition becomes a 0/1 fluent)            |
+| `SR` | SETS_REMOVING | Set fluents                                       | Boolean array fluents (membership represented as boolean)                          |
+
+#### Compilation Order Matters
+
+When applying multiple compilers, **the order is crucial**. The compilation sequence depends on the features your problem uses:
+
+**General guideline:**
+1. First, remove **integer parameters** in actions (`IPAR`)
+2. Then, remove **high-level structures** (arrays, sets, etc.)
+3. Finally, remove **remaining numeric features** (integers, counts, etc.)
+
+**How to choose?**
+- Analyze your problem's features (arrays? integers? counts?)
+- Apply compilers that target those features
+
+---
+
+## Running Examples
+
+### Running Domain-Specific Models
+
+Navigate to the `domains/` folder to run real solvable problems:
+
+```bash
+cd docs/extensions/domains
+
+# Run 15-puzzle with different compilation strategies
+python 15-puzzle/15puzzle.py --compilation ut-integers --solving fast-downward
+python 15-puzzle/15puzzle.py --compilation logarithmic --solving fast-downward
+
+# Run other domains
+python sokoban/sokoban.py --compilation up --solving fast-downward
+python counters/counters.py --compilation count --solving fast-downward
+```
+
+### Understanding Command-Line Options
+
+For domain scripts:
+
+- `--compilation <strategy>`: Choose the compilation pipeline
+  - Options: `up`, `logarithmic`, `ut-integers`, `count`, `count-int`, `integers`, etc.
+  
+- `--solving <planner>`: Select the planner to use
+  - Options: `fast-downward`, `enhsp`, etc.
+
 ```
