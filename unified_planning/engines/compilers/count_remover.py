@@ -20,7 +20,7 @@ from unified_planning.exceptions import UPValueError
 from unified_planning.model.walkers import simplifier
 from unified_planning.engines.mixins.compiler import CompilationKind, CompilerMixin
 from unified_planning.engines.results import CompilerResult
-from unified_planning.model import Problem, Action, ProblemKind, OperatorKind, FNode
+from unified_planning.model import Problem, Action, ProblemKind, OperatorKind, FNode, Effect
 from unified_planning.model.problem_kind_versioning import LATEST_PROBLEM_KIND_VERSION
 from unified_planning.engines.compilers.utils import replace_action, get_fresh_name, updated_minimize_action_costs
 from typing import Dict, Optional, Tuple, List
@@ -29,11 +29,11 @@ from unified_planning.shortcuts import Not, And, Or, FALSE, TRUE
 
 class CountRemover(engines.engine.Engine, CompilerMixin):
     """
-    Removes Count expressions that appear inside comparisons by expanding them into boolean formulas.
-
-    Supports:
-    - Count vs constant
-    - Count vs Count
+    Compiler that removes count expressions by expanding them into equivalent boolean formulas.
+    Supported comparisons:
+    - Count(args) op constant
+    - constant op Count(args)
+    - Count(args1) op Count(args2)
     """
 
     def __init__(self):
@@ -126,9 +126,9 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
 
     # ==================== EXPRESSION TRANSFORMATION ====================
 
-    def _transform_count_comparison(self, new_problem: Problem, node: FNode) -> FNode:
+    def _transform_count_comparison(self, node: FNode) -> FNode:
         """
-        Transform comparisons involving Count expressions.
+        Transform comparisons involving Count expressions into DNF boolean formulas.
         Handles:
         - Count(args) op constant
         - constant op Count(args)
@@ -150,17 +150,16 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
             raise UPValueError(f"Unexpected Count comparison structure: {node}")
 
     def _transform_expression(self, new_problem: Problem, node: FNode) -> FNode:
-        """Transform expressions recursively."""
-        # Base cases: no transformation needed
+        """
+        Transform expressions recursively, replacing count expressions with boolean formulas.
+        """
         if node.is_fluent_exp() or node.is_parameter_exp() or node.is_constant():
             return node
 
-        # Check if this node is a comparison involving Count
         comparison_ops = {OperatorKind.LT, OperatorKind.LE, OperatorKind.EQUALS}
         if node.node_type in comparison_ops and any(arg.is_count() for arg in node.args):
-            return self._transform_count_comparison(new_problem, node)
+            return self._transform_count_comparison(node)
 
-        # Transform all arguments
         em = new_problem.environment.expression_manager
         new_args = [self._transform_expression(new_problem, arg) for arg in node.args]
         if node.is_exists() or node.is_forall():
@@ -170,7 +169,10 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
     # ==================== COUNT VS CONSTANT ====================
 
     def _exactly_k_combinations(self, arguments: List[FNode], k: int) -> List[FNode]:
-        """Generate all formulas where exactly k arguments are true."""
+        """
+        Generate all formulas representing exactly k arguments being true.
+        Returns list of conjunctions, one for each k-combination of true arguments.
+        """
         n = len(arguments)
         if k > n or k < 0:
             return []
@@ -184,11 +186,10 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
     def _exactly_k_true_formula(self, arguments: List[FNode], min_true: int, max_true: int) -> FNode:
         """
         Generate formula: "between min_true and max_true arguments are true".
-        Returns: Or of all combinations where exactly k args are true,
-                 for k in [min_true, max_true].
+        Returns: Or of all combinations where exactly k arguments are true, for k in [min_true, max_true],
+                 with optimizations for common cases.
         """
         n = len(arguments)
-        # Edge cases
         if min_true > n or max_true < 0:
             return FALSE()
         if min_true < 0:
@@ -197,21 +198,21 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
             max_true = n
         if min_true == 0 and max_true >= n:
             return TRUE()
-        # OPTIMIZED: Special cases
+        # Optimized special cases
         if min_true == max_true:
-            # Exact count - enumerate
+            # Exact count - enumerate combinations
             clauses = self._exactly_k_combinations(arguments, min_true)
         elif min_true == 0 and max_true == n - 1:
             # At most n-1 = not all true
             return Not(And(*arguments))
         elif min_true == 1 and max_true == n:
-            # At least 1
+            # At least 1 = any true
             return Or(*arguments)
         elif min_true == 0 and max_true == 1:
-            # At most 1
+            # At most 1 = none or exactly one
             clauses = []
-            clauses.append(And(*[Not(a) for a in arguments]))  # all false
-            clauses.extend(self._exactly_k_combinations(arguments, 1))  # exactly 1
+            clauses.append(And(*[Not(a) for a in arguments]))
+            clauses.extend(self._exactly_k_combinations(arguments, 1))
         else:
             # General range - enumerate all k values
             clauses = []
@@ -237,7 +238,6 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
         arguments = list(count_node.args)
         n = len(arguments)
 
-        # Determine min and max number of true arguments
         if op == OperatorKind.LE:
             min_true, max_true = 0, min(value, n)
         elif op == OperatorKind.EQUALS:
@@ -246,18 +246,15 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
             min_true, max_true = 0, min(value - 1, n)
         else:
             raise UPValueError(f"Operator {op} not supported (should be LT/LE/EQUALS)")
-
-        # Generate boolean formula
         return self._exactly_k_true_formula(arguments, min_true, max_true)
 
     def _expand_constant_vs_count(self, value: int, count_node: FNode, op: OperatorKind) -> FNode:
         """
-        Expand constant op Count(args) into boolean formula.
+        Expand constant op Count(args) into boolean formula by flipping the comparison.
         """
         arguments = list(count_node.args)
         n = len(arguments)
 
-        # Flip the comparison semanticsx
         if op == OperatorKind.LT:
             # value < Count means Count > value means Count >= value+1
             min_true, max_true = value + 1, n
@@ -273,27 +270,13 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
         # Generate boolean formula
         return self._exactly_k_true_formula(arguments, min_true, max_true)
 
-    def _satisfies_operator(self, k1: int, k2: int, op: OperatorKind) -> bool:
-        """Check if (k1, k2) satisfies the operator."""
-        if op == OperatorKind.LT:
-            return k1 < k2
-        elif op == OperatorKind.LE:
-            return k1 <= k2
-        elif op == OperatorKind.EQUALS:
-            return k1 == k2
-        else:
-            raise UPValueError(f"Operator {op} should be normalized by UP")
-
     # ==================== COUNT VS COUNT ====================
 
-    def _expand_count_vs_count(
-            self, count1: FNode, count2: FNode, op: OperatorKind
-    ) -> FNode:
+    def _expand_count_vs_count(self, count1: FNode, count2: FNode, op: OperatorKind) -> FNode:
         """
         Expand Count(args1) op Count(args2) into boolean formula.
-
-        Strategy: Enumerate all possible (k1, k2) pairs that satisfy the comparison,
-        then generate: Or over all valid pairs of (exactly k1 true in args1) ∧ (exactly k2 true in args2)
+        Enumerate all possible (k1, k2) pairs satisfying the comparison, then generate:
+        Or over all valid pairs of (exactly k1 true in args1) ∧ (exactly k2 true in args2)
         """
         args1 = list(count1.args)
         args2 = list(count2.args)
@@ -305,7 +288,7 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
         if len(valid_pairs) == 0:
             return FALSE()
 
-        # Generate formula for each pair
+        # Group k2 values by k1
         k1_to_k2s = {}
         for k1, k2 in valid_pairs:
             k1_to_k2s.setdefault(k1, []).append(k2)
@@ -319,12 +302,11 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
 
             formula1 = self._exactly_k_true_formula(args1, k1, k1)  # exactly k1
 
-            # Check if k2_list is continuous range
+            # Check if k2_list is a continuous range
             if k2_list == list(range(k2_min, k2_max + 1)):
-                # Continuous range - use optimized formula
                 formula2 = self._exactly_k_true_formula(args2, k2_min, k2_max)
             else:
-                # Non-continuous - enumerate each k2
+                # Non-continuous - enumerate each k2 separately
                 k2_clauses = [self._exactly_k_true_formula(args2, k2, k2) for k2 in k2_list]
                 formula2 = Or(*k2_clauses) if len(k2_clauses) > 1 else k2_clauses[0]
 
@@ -335,11 +317,13 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
             return Or(*clauses)
 
     def _get_valid_count_pairs(self, op: OperatorKind, n1: int, n2: int) -> List[Tuple[int, int]]:
-        """Get all valid (k1, k2) pairs for Count(args1) op Count(args2)."""
+        """
+        Get all valid (k1, k2) pairs for Count(args1) op Count(args2).
+        Returns list of tuples (k1, k2) where k1 in [0, n1] and k2 in [0, n2] and the pair satisfies the comparison.
+        """
         pairs = []
         for k1 in range(n1 + 1):
             for k2 in range(n2 + 1):
-                # Check if (k1, k2) satisfies the operator
                 if (
                         (op == OperatorKind.LT and k1 < k2) or
                         (op == OperatorKind.LE and k1 <= k2) or
@@ -350,33 +334,24 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
 
     # ==================== ACTION TRANSFORMATION ====================
 
-    def _transform_action(
-            self, problem: Problem, new_problem: Problem, action: Action
-    ) -> Action:
-        """Transform an action by transforming all its expressions."""
+    def _transform_action(self, new_problem: Problem, action: Action) -> Action:
+        """Transform an action by replacing all Count expressions in preconditions and effects."""
         new_action = action.clone()
         new_action.name = get_fresh_name(new_problem, action.name)
         new_action.clear_preconditions()
         new_action.clear_effects()
 
-        # Transform preconditions
         for precondition in action.preconditions:
             new_precondition = self._transform_expression(new_problem, precondition)
             new_action.add_precondition(new_precondition)
 
-        # Transform effects
         for effect in action.effects:
             self._transform_effect(new_problem, new_action, effect)
 
         return new_action
 
-    def _transform_effect(
-            self,
-            new_problem: Problem,
-            new_action: Action,
-            effect: "up.model.effect.Effect"
-    ):
-        """Transform a single effect."""
+    def _transform_effect(self, new_problem: Problem, new_action: Action, effect: Effect):
+        """Transform a single effect by replacing count expressions in value and condition."""
         new_fluent = self._transform_expression(new_problem, effect.fluent)
         new_value = self._transform_expression(new_problem, effect.value)
         new_condition = self._transform_expression(new_problem, effect.condition)
@@ -415,7 +390,7 @@ class CountRemover(engines.engine.Engine, CompilerMixin):
         # Transform actions
         new_to_old: Dict[Action, Action] = {}
         for action in problem.actions:
-            new_action = self._transform_action(problem, new_problem, action)
+            new_action = self._transform_action(new_problem, action)
             new_problem.add_action(new_action)
             new_to_old[new_action] = action
 

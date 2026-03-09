@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-"""This module defines the quantifiers remover class."""
+"""This module defines the arrays logarithmic remover class."""
 import math
 from itertools import product
 
@@ -41,9 +41,10 @@ import re
 
 class ArraysLogarithmicRemover(engines.engine.Engine, CompilerMixin):
     """
-    Arrays Logarithmic Removerr class:
-    The problem has to contain arrays/multiarrays of integers. They will be transformed into a bit boolean format to
-    represent the numbers.
+    Compiler that removes integer arrays by encoding each integer value as Boolean bits.
+
+    Integer and integer-array fluents are transformed into bit-level Boolean fluents,
+    preserving semantics through bitwise precondition/effect rewrites.
     """
 
     def __init__(self):
@@ -142,6 +143,7 @@ class ArraysLogarithmicRemover(engines.engine.Engine, CompilerMixin):
             node: "up.model.fnode.FNode",
             indexes: Optional["up.model.fnode.FNode"] = None,
     ) -> List["up.model.fnode.FNode"]:
+        """Return the bit-fluent expansion for an integer/int-array fluent expression."""
         assert node.is_fluent_exp()
 
         name_fluent = node.fluent().name.split('[')[0]
@@ -166,6 +168,7 @@ class ArraysLogarithmicRemover(engines.engine.Engine, CompilerMixin):
             fluent: "up.model.Fluent",
             save: bool = False
     ) -> Iterable[int]:
+        """Return all index tuples for an array fluent; optionally cache required bit width."""
         domain = []
         inner_fluent = fluent.type
 
@@ -175,7 +178,7 @@ class ArraysLogarithmicRemover(engines.engine.Engine, CompilerMixin):
 
         assert inner_fluent.is_int_type(), f"Fluent {fluent.name} has not type int. Only integer arrays supported."
 
-        #  save number of bits of the fluent
+        # Save number of bits required to encode the integer domain.
         if save:
             self.n_bits[fluent.name] = math.ceil(math.log2(inner_fluent.upper_bound + 1))
 
@@ -193,17 +196,13 @@ class ArraysLogarithmicRemover(engines.engine.Engine, CompilerMixin):
             new_problem: "up.model.AbstractProblem",
             node: "up.model.fnode.FNode"
     ) -> up.model.fnode.FNode:
+        """Rewrite expressions over encoded fluents into equivalent Boolean formulas."""
         operation_map = {
-            OperatorKind.EQUALS: 'equals',  # The only operator that works within arrays
+            OperatorKind.EQUALS: 'equals',  # Supported arithmetic comparisons on encoded integers.
             OperatorKind.LT: 'lt',
             OperatorKind.LE: 'le',
-            #OperatorKind.PLUS: 'plus',
-            #OperatorKind.MINUS: 'minus',
-            #OperatorKind.DIV: 'div',
-            #OperatorKind.TIMES: 'mult',
         }
         operation = operation_map.get(node.node_type)
-        # de mom suporta equals i lt
         if operation is not None:
             fluent, value = (node.arg(0), node.arg(1)) if node.arg(0).is_fluent_exp() else (node.arg(1), node.arg(0))
             if fluent.type.is_int_type():
@@ -227,24 +226,21 @@ class ArraysLogarithmicRemover(engines.engine.Engine, CompilerMixin):
                             iff_node.append(Iff(f, v))
                         return Or(or_node)
                     else:
-                        # Comparació fluent < constant
+                        # Compare encoded fluent < integer constant lexicographically.
                         value_bits = self._convert_value(value.constant_value(), len(new_fluents))
-                        # Lexicographic comparison: f < v
-                        # Find first position where f has 0 and v has 1
-                        # and all previous bits are equal
                         or_terms = []
-                        equals_prefix = []  # Acumula igualtat dels bits anteriors
+                        equals_prefix = []  # Equality constraints accumulated for more-significant bits.
 
                         for i in range(len(new_fluents) - 1, -1, -1):
                             f_bit = new_fluents[i]
                             v_bit = value_bits[i]
 
-                            if v_bit:  # v té 1 en aquesta posició
-                                # f < v si: (bits anteriors iguals) AND (f té 0 aquí) AND (v té 1)
+                            if v_bit:  # v has 1 at this position.
+                                # f < v when higher bits are equal and f has 0 at this position.
                                 term = And(equals_prefix + [Not(f_bit)])
                                 or_terms.append(term)
-                            # Si v té 0 en aquesta posició, no pot ser f < v amb aquest prefix
-                            # Afegeix igualtat d'aquest bit per al següent prefix
+                            # If v has 0 here, this position cannot witness f < v.
+                            # Extend prefix equality for the next bit.
                             if v_bit:
                                 equals_prefix.append(f_bit)
                             else:
@@ -254,7 +250,7 @@ class ArraysLogarithmicRemover(engines.engine.Engine, CompilerMixin):
 
                 elif operation == 'le':
                     if value.is_fluent_exp():
-                        # Fluent <= fluent (equals OR lt)
+                        # Fluent <= fluent is encoded as (equals OR less-than).
                         and_node = []
                         for f, v in zip(new_fluents, new_values):
                             and_node.append(Iff(f, v))
@@ -293,9 +289,6 @@ class ArraysLogarithmicRemover(engines.engine.Engine, CompilerMixin):
 
                 elif operation == 'plus' or operation == 'minus' or operation == 'div' or operation == 'mult':
                     raise NotImplementedError(f"Operation {operation} not supported")
-                #elif operation == 'minus':
-                #elif operation == 'div':
-                #elif operation == 'mult':
             elif fluent.type.is_array_type() and operation == 'equals':
                 new_fluents, new_values = self._convert_fluent_and_value(new_problem, fluent, value)
                 and_node = []
@@ -322,6 +315,7 @@ class ArraysLogarithmicRemover(engines.engine.Engine, CompilerMixin):
         return [b == '1' for b in bin(value)[2:].zfill(n_bits)]
 
     def _set_fluent_bits(self, problem, fluent, k_args, new_value, n_bits, object_ref: Optional[Object] = None):
+        """Set initial values for all bit fluents representing one encoded integer value."""
         for bit_index in range(n_bits):
             this_fluent = problem.fluent(f"{fluent.name}_{bit_index}")(*k_args, *(object_ref,) if object_ref is not None else ())
             problem.set_initial_value(this_fluent, new_value[bit_index])
@@ -332,7 +326,7 @@ class ArraysLogarithmicRemover(engines.engine.Engine, CompilerMixin):
             fluent: "up.model.fnode.FNode",
             value: "up.model.fnode.FNode",
     ) -> Tuple[List["up.model.fnode.FNode"], List["up.model.fnode.FNode"]]:
-        """Convert fluent and value to bits."""
+        """Convert a fluent/value pair into aligned bit-level representations."""
         name_fluent = fluent.fluent().name.split('[')[0]
         n_bits = self.n_bits[name_fluent]
         if fluent.type.is_int_type():
@@ -364,8 +358,7 @@ class ArraysLogarithmicRemover(engines.engine.Engine, CompilerMixin):
             problem: "up.model.AbstractProblem",
             compilation_kind: "up.engines.CompilationKind",
     ) -> CompilerResult:
-        """
-        """
+        """Main compilation"""
         assert isinstance(problem, Problem)
 
         new_to_old: Dict[Action, Action] = {}
@@ -379,13 +372,12 @@ class ArraysLogarithmicRemover(engines.engine.Engine, CompilerMixin):
         new_problem.initial_values.clear()
 
         for fluent in problem.fluents:
-            # Change the integer array fluents
+            # Transform integer-array fluents into bit fluents indexed by position objects.
             internal_type = fluent.type
             while internal_type.is_array_type():
                 internal_type = internal_type.elements_type
             if fluent.type.is_array_type() and internal_type.is_int_type():
                 Position = new_problem.environment.type_manager.UserType('Position')
-                #new_user_type = new_problem.environment.type_manager.UserType(fluent.name.capitalize(), Position)
                 new_parameter = up.model.Parameter('p', Position)
 
                 combination = self._get_fluent_domain(fluent, True)
@@ -466,11 +458,11 @@ class ArraysLogarithmicRemover(engines.engine.Engine, CompilerMixin):
                 fluent_name = fluent.fluent().name.split('[')[0]
                 if fluent_name in self.n_bits:
                     new_fluents, new_values = self._convert_fluent_and_value(new_problem, fluent, value)
-                    # For specific elements (e.g., puzzle[0][0] := 8)
+                    # Single encoded integer assignment
                     if fluent.fluent().type.is_int_type():
                         for f, v in zip(new_fluents, new_values):
                             new_action.add_effect(f, v, new_condition, effect.forall)
-                    # For arrays (e.g., puzzle := [[8,7,6],[0,4,1],[2,5,3]]) or sub-arrays (e.g., puzzle[0] := [8,7,6])
+                    # Array/sub-array assignment expanded element-wise
                     else:
                         for i in range(len(new_fluents)):
                             for f, v in zip(new_fluents[i], new_values[i]):
