@@ -77,11 +77,10 @@ extensions/
 ├── README.md                    # This file
 ├── tutorial.py                  # Demonstrating example (not solvable)
 └── domains/                     # Collection of planning problems
-    ├── README.md
     ├── compilation_solving.py   # Compilation & solving script
+    ├── handcrafted_reader.py    # Handcrafted pddl reader script
     ├── 15-puzzle/               # 15-Puzzle domain
     ├── sokoban/                 # Sokoban domain
-    ├── counters/                # Counters domain
     ├── dump-trucks/             # Dump-Trucks domain
     ├── labyrinth/               # Labyrinth domain
     ├── pancake-sorting/         # Pancake-Sorting domain
@@ -90,11 +89,12 @@ extensions/
 
 ### File Descriptions
 
-| File | Purpose |
-|------|---------|
-| `tutorial.py` | A minimal, didactic example demonstrating extensions (not designed to be solved) |
-| `domains/` | Comprehensive collection of planning problems with multiple domains |
-| `domains/compilation_solving.py` | Core script for applying compilation strategies and solving |
+| File | Purpose                                                                                         |
+|------|-------------------------------------------------------------------------------------------------|
+| `tutorial.py` | A minimal, didactic example demonstrating extensions (not designed to be solved)                |
+| `domains/` | Comprehensive collection of planning problems with multiple domains                             |
+| `domains/compilation_solving.py` | Core script for applying compilation strategies and solving                                     |
+| `domains/handcrafted_reader.py` | Core script for reading the handcrafted pddl files and calling `domains/compilation_solving.py` |
 
 ---
 
@@ -149,12 +149,12 @@ Navigate to the `domains/` folder to run real solvable problems:
 cd docs/extensions/domains
 
 # Run 15-puzzle with different compilation strategies
-python 15-puzzle/15puzzle.py --compilation ut-integers --solving fast-downward
-python 15-puzzle/15puzzle.py --compilation logarithmic --solving fast-downward
+python 15-puzzle/15puzzle.py --compilation uti --solving fast-downward
+python 15-puzzle/15puzzle.py --compilation log --solving fast-downward
 
 # Run other domains
 python sokoban/sokoban.py --compilation up --solving fast-downward
-python counters/counters.py --compilation count --solving fast-downward
+python counters/counters.py --compilation c --solving fast-downward
 ```
 
 ### Understanding Command-Line Options
@@ -162,9 +162,7 @@ python counters/counters.py --compilation count --solving fast-downward
 For domain scripts:
 
 - `--compilation <strategy>`: Choose the compilation pipeline
-  - Options: `up`, `logarithmic`, `ut-integers`, `count`, `count-int`, `integers`, etc.
+  - Options: `up`, `log`, `uti`, `c`, `ci`, `int`, etc.
   
 - `--solving <planner>`: Select the planner to use
   - Options: `fast-downward`, `enhsp`, etc.
-
-```
