@@ -166,7 +166,7 @@ class PuzznicDomain(Domain):
         move_block_right.add_effect(patterned(F)[r][c], True)
         move_block_right.add_effect(patterned(p)[r][c + 1], True)
         move_block_right.add_effect(patterned(p)[r][c], False)
-        move_block_right.add_effect(patterned(F)[r][c + 1], Or(patterned(p)[r][c], patterned(p)[r][c + 1]))
+        move_block_right.add_effect(patterned(F)[r][c + 1], False)
 
         move_block_left = InstantaneousAction('move_block_left', p=Pattern,
                                               r=IntType(0, rows - 1), c=IntType(0, columns - 1))
