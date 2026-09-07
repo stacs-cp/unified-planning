@@ -30,7 +30,7 @@ from unified_planning.model import (
     Object,
     Variable,
     Expression,
-    Effect,
+    Effect, Axiom,
 )
 from unified_planning.model.problem_kind_versioning import LATEST_PROBLEM_KIND_VERSION
 from unified_planning.model.walkers import ExpressionQuantifiersRemover
@@ -39,7 +39,7 @@ from unified_planning.engines.compilers.utils import (
     replace_action,
     updated_minimize_action_costs,
 )
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, OrderedDict
 from functools import partial
 
 
@@ -244,6 +244,22 @@ class QuantifiersRemover(engines.engine.Engine, CompilerMixin):
                 new_to_old[action] = original_action
             else:
                 raise NotImplementedError
+
+        # Process axioms: remove quantifiers from body conditions
+        new_axioms = []
+        for original_axiom in problem.axioms:
+            params = OrderedDict((p.name, p.type) for p in original_axiom.parameters)
+            new_axiom = Axiom(original_axiom.name, params, original_axiom.environment)
+            new_axiom.set_head(original_axiom.head.fluent)
+            for b in original_axiom.body:
+                new_b = expression_quantifier_remover.remove_quantifiers(b, problem)
+                new_axiom.add_body_condition(new_b)
+            new_axioms.append(new_axiom)
+
+        new_problem.clear_axioms()
+        for ax in new_axioms:
+            new_problem.add_axiom(ax)
+
         problem_timed_effects = new_problem.timed_effects
         new_problem.clear_timed_effects()
         for t, el in problem_timed_effects.items():
