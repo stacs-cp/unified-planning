@@ -202,9 +202,25 @@ class PuzznicDomain(Domain):
         matching_blocks.add_effect(patterned(F)[i][j], True, condition=And(
             Not(Equals(p, F)),
             patterned(p)[i][j],
-            Or(patterned(p)[i + 1][j], patterned(p)[i - 1][j],
-               patterned(p)[i][j + 1], patterned(p)[i][j - 1])
+            Or(
+                patterned(p)[i + 1][j],
+                patterned(p)[i - 1][j],
+                patterned(p)[i][j + 1],
+                patterned(p)[i][j - 1]
+            )
         ), forall=[i, j, p])
+        matching_blocks.add_effect(patterned(p)[i][j], False, condition=And(
+                Not(Equals(p, F)),
+                patterned(p)[i][j],
+                Or(
+                    patterned(p)[i + 1][j],
+                    patterned(p)[i - 1][j],
+                    patterned(p)[i][j + 1],
+                    patterned(p)[i][j - 1]
+                )
+            ),
+            forall=[i, j, p]
+        )
 
         problem.add_actions([move_block_right, move_block_left, fall_block, matching_blocks])
 
