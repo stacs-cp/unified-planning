@@ -707,7 +707,7 @@ def requires_csp(node: FNode) -> bool:
     - Comparisons <, <=, >, >=
     - Any other that contains the previous ones
     """
-    if node.is_constant() or node.is_parameter_exp() or node.is_object_exp():
+    if node.is_constant() or node.is_parameter_exp() or node.is_object_exp() or node.is_variable_exp():
         return False
 
     if node.is_fluent_exp():
@@ -966,13 +966,68 @@ def add_cp_constraints(
         return result
 
     # -- COUNT --
-    if node.node_type == OperatorKind.COUNT:
+    if node.is_count():
         # Sum of boolean children equals the count
         children = [add_cp_constraints(problem, a, variables, model, object_to_index) for a in node.args]
         n = len(children)
         count_var = model.NewIntVar(0, n, f"count_{id(node)}")
         model.Add(count_var == sum(children))
         return count_var
+
+    if node.is_forall() or node.is_exists():
+        # Expand quantifier into AND (forall) or OR (exists) of instantiations
+        import itertools
+
+        variables_list = list(node.variables())
+        body = node.arg(0)
+
+        # Compute all combinations of values for the quantifier variables
+        value_lists = []
+        for var in variables_list:
+            var_type = var.type
+            if var_type.is_user_type():
+                values = list(problem.objects(var_type))
+            elif var_type.is_int_type():
+                values = list(range(var_type.lower_bound, var_type.upper_bound + 1))
+            else:
+                raise NotImplementedError(
+                    f"Cannot expand quantifier over variable of type {var_type}"
+                )
+            value_lists.append(values)
+
+        # For each combination, substitute variables in body and compile
+        em = problem.environment.expression_manager
+        instantiations = []
+        for combination in itertools.product(*value_lists):
+            # Build substitution mapping
+            subs = {}
+            for var, val in zip(variables_list, combination):
+                if var.type.is_user_type():
+                    subs[em.VariableExp(var)] = em.ObjectExp(val)
+                else:  # int
+                    subs[em.VariableExp(var)] = em.Int(val)
+
+            substituted = body.substitute(subs).simplify()
+            instantiations.append(substituted)
+
+        # Compile each instantiation as CP-SAT constraint
+        child_vars = [
+            add_cp_constraints(problem, inst, variables, model, object_to_index)
+            for inst in instantiations
+        ]
+
+        # Combine: AND for forall, OR for exists
+        if node.is_forall():
+            result_var = model.NewBoolVar(f"forall_{id(node)}")
+            model.AddBoolAnd(child_vars).OnlyEnforceIf(result_var)
+            model.AddBoolOr([v.Not() for v in child_vars]).OnlyEnforceIf(result_var.Not())
+        else:  # exists
+            result_var = model.NewBoolVar(f"exists_{id(node)}")
+            model.AddBoolOr(child_vars).OnlyEnforceIf(result_var)
+            model.AddBoolAnd([v.Not() for v in child_vars]).OnlyEnforceIf(result_var.Not())
+
+        variables[node] = result_var
+        return result_var
 
     raise NotImplementedError(f"Node type {node.node_type} not implemented in CP-SAT translation")
 
