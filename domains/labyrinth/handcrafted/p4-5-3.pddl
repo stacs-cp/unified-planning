@@ -1,4 +1,4 @@
-(define (problem labyrinth-size-4-rotations-15-seed-3)
+(define (problem labyrinth-size-4-rotations-5-seed-3)
 (:domain labyrinth)
 (:objects
 	pos0 pos1 pos2 pos3  - gridpos
@@ -14,44 +14,44 @@
 
 	(card-at card0 pos0 pos0)
 	(card-at card1 pos1 pos0)
-	(card-at card5 pos2 pos0)
+	(card-at card14 pos2 pos0)
 	(card-at card3 pos3 pos0)
-	(card-at card7 pos0 pos1)
-	(card-at card11 pos1 pos1)
-	(card-at card8 pos2 pos1)
-	(card-at card14 pos3 pos1)
+	(card-at card4 pos0 pos1)
+	(card-at card5 pos1 pos1)
+	(card-at card2 pos2 pos1)
+	(card-at card7 pos3 pos1)
 	(card-at card10 pos0 pos2)
-	(card-at card13 pos1 pos2)
-	(card-at card9 pos2 pos2)
+	(card-at card11 pos1 pos2)
+	(card-at card8 pos2 pos2)
 	(card-at card6 pos3 pos2)
 	(card-at card12 pos0 pos3)
-	(card-at card2 pos1 pos3)
-	(card-at card4 pos2 pos3)
+	(card-at card13 pos1 pos3)
+	(card-at card9 pos2 pos3)
 	(card-at card15 pos3 pos3)
 
 	(BLOCKED card0 N)
 	(BLOCKED card0 S)
 
 
-	(BLOCKED card5 W)
+	(BLOCKED card14 S)
 
 	(BLOCKED card3 E)
 
+	(BLOCKED card4 E)
+
+	(BLOCKED card5 W)
+
+	(BLOCKED card2 N)
+	(BLOCKED card2 W)
+
 	(BLOCKED card7 W)
-
-
-	(BLOCKED card8 E)
-	(BLOCKED card8 S)
-
-	(BLOCKED card14 S)
 
 	(BLOCKED card10 N)
 	(BLOCKED card10 W)
 
-	(BLOCKED card13 S)
 
-	(BLOCKED card9 N)
-	(BLOCKED card9 E)
+	(BLOCKED card8 E)
+	(BLOCKED card8 S)
 
 	(BLOCKED card6 E)
 	(BLOCKED card6 S)
@@ -59,10 +59,10 @@
 	(BLOCKED card12 N)
 	(BLOCKED card12 E)
 
-	(BLOCKED card2 N)
-	(BLOCKED card2 W)
+	(BLOCKED card13 S)
 
-	(BLOCKED card4 E)
+	(BLOCKED card9 N)
+	(BLOCKED card9 E)
 
 	(BLOCKED card15 N)
 	(BLOCKED card15 E)
