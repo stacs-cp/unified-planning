@@ -508,7 +508,7 @@ class IntegerFluentsGeneralRemover(engines.engine.Engine, CompilerMixin):
 
         new_actions = []
         for idx, solution in enumerate(solutions):
-            action_name = f"{old_action.name}_d{idx}"
+            action_name = (old_action.name if len(solutions) == 1 else f"{old_action.name}_d{idx}")
             new_action = InstantaneousAction(
                 action_name, _parameters=params, _env=problem.environment
             )
